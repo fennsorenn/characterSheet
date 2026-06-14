@@ -1,0 +1,30 @@
+:root {
+  /* Design tokens — theming and dark mode flip these, nothing else. */
+  --bg: #faf9f7;
+  --fg: #1c1b1a;
+  --muted: #6b6864;
+  --accent: #7a1f1f;
+  --line: #d8d4cf;
+  --field-hover: #efece8;
+  --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1a1917;
+    --fg: #ece9e4;
+    --muted: #9c9892;
+    --accent: #d98a8a;
+    --line: #34322f;
+    --field-hover: #262421;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--fg);
+}
