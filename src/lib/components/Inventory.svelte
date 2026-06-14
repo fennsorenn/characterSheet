@@ -8,6 +8,8 @@
   import { catalogLookup } from '../stores/catalog.js';
   import NumberField from './NumberField.svelte';
 
+  let { variant = 'full' }: { variant?: string } = $props();
+
   // Show a short note about an item's mechanical effect, so it's clear why
   // equipping it changed AC/saves. Resolved live from the catalog.
   function effectNote(name: string, source: string): string {
@@ -25,7 +27,7 @@
   }
 </script>
 
-<section class="block">
+<section class="block" data-variant={variant}>
   <h3>Inventory</h3>
   {#if $character.inventory.length === 0}
     <p class="empty">Nothing yet — use quick import above to add items. Equip armor to see AC update.</p>

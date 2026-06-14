@@ -2,6 +2,8 @@
   import { character, togglePrepared, removeSpell } from '../stores/character.js';
   import { catalogLookup } from '../stores/catalog.js';
 
+  let { variant = 'full' }: { variant?: string } = $props();
+
   // Spell level read live from the catalog (cantrip = 0).
   function level(name: string, source: string): string {
     const sp = $catalogLookup.getItem(name, source);
@@ -10,7 +12,7 @@
   }
 </script>
 
-<section class="block">
+<section class="block" data-variant={variant}>
   <h3>Spells</h3>
   {#if $character.spells.length === 0}
     <p class="empty">No spells — add them via quick import.</p>

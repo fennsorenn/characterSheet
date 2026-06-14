@@ -3,13 +3,24 @@
   import { character, cycleSkillProficiency } from '../stores/character.js';
   import StatValue from './StatValue.svelte';
 
+  let { variant = 'full' }: { variant?: string } = $props();
   const titleCase = (s: string) => s.replace(/\b\w/g, (c) => c.toUpperCase());
+
+  // Compact variant lists only skills the character is trained in.
+  const shown = $derived(
+    variant === 'compact'
+      ? SKILLS.filter((s) => ($character.skillProficiencies[s] ?? 'none') !== 'none')
+      : SKILLS
+  );
 </script>
 
-<section class="block">
+<section class="block" data-variant={variant}>
   <h3>Skills</h3>
+  {#if shown.length === 0}
+    <p class="empty">No proficient skills yet.</p>
+  {/if}
   <ul>
-    {#each SKILLS as skill}
+    {#each shown as skill}
       {@const level = $character.skillProficiencies[skill] ?? 'none'}
       <li>
         <button
@@ -29,6 +40,7 @@
 <style>
   .block { border: 1px solid var(--line); border-radius: 8px; padding: 0.75rem 1rem; }
   h3 { margin: 0 0 0.6rem; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+  .empty { color: var(--muted); font-size: 0.85rem; margin: 0; }
   ul { list-style: none; margin: 0; padding: 0; columns: 2; column-gap: 1.5rem; }
   li { display: flex; align-items: center; gap: 0.5rem; padding: 0.15rem 0; break-inside: avoid; }
   .dot {

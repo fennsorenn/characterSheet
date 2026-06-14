@@ -4,16 +4,20 @@
   import NumberField from './NumberField.svelte';
   import StatValue from './StatValue.svelte';
 
+  let { variant = 'full' }: { variant?: string } = $props();
+  const full = $derived(variant !== 'compact');
   const level = $derived(totalLevel($character));
 </script>
 
-<section class="block">
+<section class="block" data-variant={variant}>
   <h3>Defenses &amp; Core</h3>
   <div class="row">
     <div class="stat big">
       <span class="k">AC</span>
       <span class="v"><StatValue node="ac" /></span>
-      <span class="sub">base <NumberField value={$character.acBase} min={0} max={30} onchange={setAcBase} /></span>
+      {#if full}
+        <span class="sub">base <NumberField value={$character.acBase} min={0} max={30} onchange={setAcBase} /></span>
+      {/if}
     </div>
     <div class="stat">
       <span class="k">Initiative</span>
@@ -23,25 +27,27 @@
       <span class="k">Prof. Bonus</span>
       <span class="v"><StatValue node="prof.bonus" signed /></span>
     </div>
-    <div class="stat">
-      <span class="k">Passive Perc.</span>
-      <span class="v"><StatValue node="passive.perception" /></span>
-    </div>
-    <div class="stat">
-      <span class="k">Level</span>
-      <span class="v">
-        <NumberField value={level} min={1} max={20} onchange={(v) => setClassLevel(0, v)} />
-      </span>
-    </div>
-    {#if $character.spellcasting}
+    {#if full}
       <div class="stat">
-        <span class="k">Spell DC</span>
-        <span class="v"><StatValue node="spell.dc" /></span>
+        <span class="k">Passive Perc.</span>
+        <span class="v"><StatValue node="passive.perception" /></span>
       </div>
       <div class="stat">
-        <span class="k">Spell Atk</span>
-        <span class="v"><StatValue node="spell.attack" signed /></span>
+        <span class="k">Level</span>
+        <span class="v">
+          <NumberField value={level} min={1} max={20} onchange={(v) => setClassLevel(0, v)} />
+        </span>
       </div>
+      {#if $character.spellcasting}
+        <div class="stat">
+          <span class="k">Spell DC</span>
+          <span class="v"><StatValue node="spell.dc" /></span>
+        </div>
+        <div class="stat">
+          <span class="k">Spell Atk</span>
+          <span class="v"><StatValue node="spell.attack" signed /></span>
+        </div>
+      {/if}
     {/if}
   </div>
 </section>

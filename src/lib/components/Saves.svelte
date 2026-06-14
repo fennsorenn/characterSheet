@@ -3,10 +3,11 @@
   import { character, toggleSaveProficiency } from '../stores/character.js';
   import StatValue from './StatValue.svelte';
 
+  let { variant = 'full' }: { variant?: string } = $props();
   const proficient = $derived(new Set($character.saveProficiencies));
 </script>
 
-<section class="block">
+<section class="block" data-variant={variant}>
   <h3>Saving Throws</h3>
   <ul>
     {#each ABILITIES as abil}
