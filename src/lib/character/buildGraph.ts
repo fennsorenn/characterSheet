@@ -3,9 +3,11 @@ import {
   ABILITIES,
   SKILLS,
   SKILL_ABILITY,
-  PROFICIENCY_MULTIPLIER
+  PROFICIENCY_MULTIPLIER,
+  skillNodeId
 } from './abilities.js';
 import { totalLevel, type Character } from './schema.js';
+import { computeEquipmentEffects, type CatalogLookup } from './equipment.js';
 
 /**
  * Build a fully-wired {@link CalcGraph} from a character document.
@@ -25,8 +27,11 @@ import { totalLevel, type Character } from './schema.js';
  *   ac, initiative, passive.perception
  *   spell.dc, spell.attack (only if the character is a spellcaster)
  */
-export function buildGraph(character: Character): CalcGraph {
+export function buildGraph(character: Character, lookup?: CatalogLookup): CalcGraph {
   const g = new CalcGraph();
+  const equipment = lookup
+    ? computeEquipmentEffects(character, lookup)
+    : { modifiers: [] };
 
   // Ability scores and their modifiers.
   for (const abil of ABILITIES) {
@@ -73,11 +78,15 @@ export function buildGraph(character: Character): CalcGraph {
     10 + c.get(skillNodeId('perception'))
   );
 
-  // Armor class: base + dex modifier (modifiers layer item/buff bonuses on top).
-  g.set('ac.base', character.acBase);
-  g.define('ac', ['ac.base', 'ability.dex.mod'], (c) =>
-    c.get('ac.base') + c.get('ability.dex.mod')
-  );
+  // Armor class: armor base + (dex modifier, capped by armor category). Worn
+  // armor overrides the unarmored base; item/buff bonuses layer on as modifiers.
+  g.set('ac.armor', equipment.acArmor ?? character.acBase);
+  g.set('ac.maxDex', equipment.acMaxDex ?? 99);
+  g.define('ac', ['ac.armor', 'ability.dex.mod', 'ac.maxDex'], (c) => {
+    const cap = c.get('ac.maxDex');
+    const dex = c.get('ability.dex.mod');
+    return c.get('ac.armor') + (cap <= 0 ? 0 : Math.min(dex, cap));
+  });
 
   // Spellcasting, when the character has a casting ability.
   if (character.spellcasting) {
@@ -90,8 +99,8 @@ export function buildGraph(character: Character): CalcGraph {
     );
   }
 
-  // Layer the character's own modifiers (equipped items, active buffs) on top.
-  for (const mod of character.modifiers) {
+  // Layer modifiers from equipped items and the character's own buffs on top.
+  for (const mod of [...equipment.modifiers, ...character.modifiers]) {
     if (mod.active === false) continue;
     if (!g.has(mod.target)) continue;
     g.addModifier(mod.target, {
@@ -105,7 +114,4 @@ export function buildGraph(character: Character): CalcGraph {
   return g;
 }
 
-/** Stable node id for a skill (spaces → dots). */
-export function skillNodeId(skill: string): string {
-  return `skill.${skill.replace(/\s+/g, '.')}`;
-}
+export { skillNodeId };

@@ -3,10 +3,12 @@ import {
   buildGraph,
   createCharacter,
   type Ability,
+  type CatalogRef,
   type Character,
   type ProficiencyLevel,
   type Skill
 } from '../character/index.js';
+import { catalogLookup } from './catalog.js';
 
 /**
  * Reactive character document + its derived calc graph.
@@ -38,8 +40,13 @@ store.subscribe((c) => {
   }
 });
 
-/** The live calc graph; recomputed whenever the character changes. */
-export const graph = derived(store, ($c) => buildGraph($c));
+/**
+ * The live calc graph; recomputed when the character *or* the catalog changes,
+ * so equipping a catalog item updates derived numbers (and their explanations).
+ */
+export const graph = derived([store, catalogLookup], ([$c, $lookup]) =>
+  buildGraph($c, $lookup)
+);
 
 export const character = { subscribe: store.subscribe };
 
@@ -89,6 +96,68 @@ export function cycleSkillProficiency(skill: Skill) {
     else skillProficiencies[skill] = next;
     return { ...c, skillProficiencies };
   });
+}
+
+// --- Inventory & spells (fed by quick import) ---
+
+/** Add a catalog item to the inventory, or bump quantity if already held. */
+export function addInventoryItem(ref: CatalogRef) {
+  update((c) => {
+    const idx = c.inventory.findIndex(
+      (i) => i.name === ref.name && i.source === ref.source
+    );
+    if (idx >= 0) {
+      const inventory = c.inventory.map((i, n) =>
+        n === idx ? { ...i, quantity: i.quantity + 1 } : i
+      );
+      return { ...c, inventory };
+    }
+    return {
+      ...c,
+      inventory: [...c.inventory, { ...ref, quantity: 1, equipped: false }]
+    };
+  });
+}
+
+export function toggleEquipped(index: number) {
+  update((c) => ({
+    ...c,
+    inventory: c.inventory.map((i, n) =>
+      n === index ? { ...i, equipped: !i.equipped } : i
+    )
+  }));
+}
+
+export function setItemQuantity(index: number, quantity: number) {
+  update((c) => ({
+    ...c,
+    inventory: c.inventory
+      .map((i, n) => (n === index ? { ...i, quantity: Math.max(0, quantity) } : i))
+      .filter((i) => i.quantity > 0)
+  }));
+}
+
+export function removeInventoryItem(index: number) {
+  update((c) => ({ ...c, inventory: c.inventory.filter((_, n) => n !== index) }));
+}
+
+/** Add a spell to the known/prepared list, ignoring duplicates. */
+export function addSpell(ref: CatalogRef) {
+  update((c) => {
+    if (c.spells.some((s) => s.name === ref.name && s.source === ref.source)) return c;
+    return { ...c, spells: [...c.spells, { ...ref, prepared: false }] };
+  });
+}
+
+export function togglePrepared(index: number) {
+  update((c) => ({
+    ...c,
+    spells: c.spells.map((s, n) => (n === index ? { ...s, prepared: !s.prepared } : s))
+  }));
+}
+
+export function removeSpell(index: number) {
+  update((c) => ({ ...c, spells: c.spells.filter((_, n) => n !== index) }));
 }
 
 export function resetCharacter() {

@@ -20,4 +20,9 @@ export {
   type CharacterModifier
 } from './schema.js';
 export { buildGraph, skillNodeId } from './buildGraph.js';
+export {
+  computeEquipmentEffects,
+  type CatalogLookup,
+  type EquipmentEffects
+} from './equipment.js';
 export { labelForNode } from './labels.js';

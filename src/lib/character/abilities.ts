@@ -48,3 +48,8 @@ export const PROFICIENCY_MULTIPLIER: Record<ProficiencyLevel, number> = {
   proficient: 1,
   expertise: 2
 };
+
+/** Stable calc-node id for a skill (spaces → dots). */
+export function skillNodeId(skill: string): string {
+  return `skill.${skill.replace(/\s+/g, '.')}`;
+}

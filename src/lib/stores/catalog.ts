@@ -6,6 +6,7 @@ import {
   clearCachedCatalogs,
   SearchIndex,
   type Catalog,
+  type NamedEntry,
   type LoadStage
 } from '../data/index.js';
 
@@ -27,6 +28,25 @@ const state = writable<CatalogState>({ catalog: null, stage: 'idle', error: null
 export const searchIndex = derived(state, ($s) =>
   $s.catalog ? new SearchIndex($s.catalog) : null
 );
+
+const itemKey = (name: string, source: string) =>
+  `${name.toLowerCase()}|${source.toLowerCase()}`;
+
+/**
+ * Item lookup for the calc graph — equipped items resolve their mechanical
+ * effects (armor AC, magic bonuses) through this. Rebuilt with the catalog.
+ */
+export const catalogLookup = derived(state, ($s) => {
+  const map = new Map<string, NamedEntry>();
+  if ($s.catalog) {
+    for (const item of $s.catalog.entries.item) {
+      map.set(itemKey(item.name, item.source), item);
+    }
+  }
+  return {
+    getItem: (name: string, source: string) => map.get(itemKey(name, source))
+  };
+});
 
 export const catalogState = { subscribe: state.subscribe };
 

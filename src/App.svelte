@@ -22,8 +22,12 @@
 
   {#if showData || !$catalogState.catalog}
     <DataImport />
-    <QuickSearch />
     <hr />
+  {/if}
+
+  <!-- Quick import stays available whenever data is loaded. -->
+  {#if $catalogState.catalog}
+    <QuickSearch />
   {/if}
 
   <CharacterSheet />

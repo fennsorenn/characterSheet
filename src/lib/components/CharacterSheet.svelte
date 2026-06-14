@@ -4,6 +4,8 @@
   import Defenses from './Defenses.svelte';
   import Saves from './Saves.svelte';
   import Skills from './Skills.svelte';
+  import Inventory from './Inventory.svelte';
+  import SpellList from './SpellList.svelte';
   import ExplainPopover from './ExplainPopover.svelte';
 </script>
 
@@ -24,6 +26,12 @@
     </div>
     <div class="col">
       <Skills />
+    </div>
+    <div class="col">
+      <Inventory />
+    </div>
+    <div class="col">
+      <SpellList />
     </div>
   </div>
 </div>
