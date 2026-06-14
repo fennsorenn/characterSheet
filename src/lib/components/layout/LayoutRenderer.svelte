@@ -41,15 +41,35 @@
 </div>
 
 <style>
+  /* A real 12-column grid that fills the available width. Block sizes map to
+     column spans that scale across breakpoints; `dense` packs blocks to fill
+     gaps left by differing spans. Full-width blocks always span every column. */
   .grid {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    grid-auto-flow: row dense;
     gap: 1rem;
     align-items: start;
   }
-  .cell.size-narrow { grid-column: span 1; }
-  .cell.size-wide { grid-column: span 2; }
-  .cell.size-full { grid-column: span 4; }
+  .cell.size-narrow { grid-column: span 3; }
+  .cell.size-wide { grid-column: span 6; }
+  .cell.size-full { grid-column: 1 / -1; }
+
+  /* Ultrawide: pack more blocks per row. */
+  @media (min-width: 1700px) {
+    .cell.size-narrow { grid-column: span 2; }
+    .cell.size-wide { grid-column: span 4; }
+  }
+  /* Tablet: narrow → half, wide → full. */
+  @media (max-width: 1100px) {
+    .cell.size-narrow { grid-column: span 6; }
+    .cell.size-wide { grid-column: 1 / -1; }
+  }
+  /* Mobile: single column. */
+  @media (max-width: 680px) {
+    .cell.size-narrow,
+    .cell.size-wide { grid-column: 1 / -1; }
+  }
 
   .editing .cell {
     border: 1px dashed var(--line);
@@ -59,15 +79,4 @@
   .editing .cell:hover { border-color: var(--accent); }
   .cell.drag-target { outline: 2px dashed var(--accent); outline-offset: 2px; }
   .missing { color: var(--accent); padding: 1rem; }
-
-  @media (max-width: 900px) {
-    .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .cell.size-full,
-    .cell.size-wide { grid-column: span 2; }
-    .cell.size-narrow { grid-column: span 1; }
-  }
-  @media (max-width: 560px) {
-    .grid { grid-template-columns: 1fr; }
-    .cell { grid-column: span 1 !important; }
-  }
 </style>

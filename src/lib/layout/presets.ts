@@ -24,57 +24,62 @@ function buildLayout(id: string, name: string, specs: Spec[]): SheetLayout {
 
 export function builtinPresets(): SheetLayout[] {
   return [
+    // General-purpose. Abilities + skills as the tall left spine, combat state
+    // and trackers tiling the rest; sizes chosen so rows fill the 12-col grid.
     buildLayout('default', 'Default', [
-      ['abilityScores'],
-      ['defenses'],
-      ['hitPoints'],
-      ['conditions'],
-      ['effects'],
-      ['saves'],
-      ['skills'],
-      ['inventory'],
-      ['resources'],
-      ['spells'],
-      ['spellSlots']
-    ]),
-    buildLayout('caster', 'Caster', [
-      ['abilityScores', 'compact', 'full'],
-      ['defenses', 'compact', 'wide'],
-      ['hitPoints', 'full', 'narrow'],
-      ['spellSlots'],
-      ['spells'],
-      ['effects'],
-      ['conditions'],
-      ['saves'],
-      ['skills'],
-      ['resources'],
-      ['inventory']
-    ]),
-    buildLayout('martial', 'Martial', [
-      ['abilityScores'],
-      ['defenses'],
-      ['hitPoints'],
-      ['resources'],
-      ['conditions'],
-      ['effects'],
-      ['inventory'],
-      ['saves'],
-      ['skills'],
-      ['spells'],
-      ['spellSlots']
-    ]),
-    buildLayout('compact', 'Compact', [
-      ['abilityScores', 'compact', 'full'],
-      ['defenses', 'compact', 'narrow'],
+      ['abilityScores', 'full', 'narrow'],
+      ['defenses', 'full', 'wide'],
       ['hitPoints', 'full', 'narrow'],
       ['conditions', 'full', 'wide'],
       ['effects', 'full', 'narrow'],
       ['saves', 'full', 'narrow'],
-      ['skills', 'compact', 'narrow'],
-      ['resources', 'full', 'wide'],
+      ['skills', 'full', 'wide'],
       ['inventory', 'full', 'wide'],
+      ['resources', 'full', 'wide'],
       ['spells', 'full', 'narrow'],
-      ['spellSlots', 'full', 'wide']
+      ['spellSlots', 'full', 'narrow']
+    ]),
+    // Caster: spell slots and spell list up top and prominent.
+    buildLayout('caster', 'Caster', [
+      ['abilityScores', 'compact', 'full'],
+      ['defenses', 'compact', 'narrow'],
+      ['hitPoints', 'full', 'narrow'],
+      ['effects', 'full', 'narrow'],
+      ['conditions', 'full', 'narrow'],
+      ['spellSlots', 'full', 'wide'],
+      ['spells', 'full', 'wide'],
+      ['saves', 'full', 'narrow'],
+      ['skills', 'full', 'narrow'],
+      ['resources', 'full', 'wide'],
+      ['inventory', 'full', 'wide']
+    ]),
+    // Martial: HP, resources, and gear front and centre.
+    buildLayout('martial', 'Martial', [
+      ['abilityScores', 'full', 'wide'],
+      ['defenses', 'full', 'wide'],
+      ['hitPoints', 'full', 'narrow'],
+      ['resources', 'full', 'narrow'],
+      ['conditions', 'full', 'wide'],
+      ['effects', 'full', 'narrow'],
+      ['saves', 'full', 'narrow'],
+      ['inventory', 'full', 'wide'],
+      ['skills', 'full', 'wide'],
+      ['spells', 'full', 'narrow'],
+      ['spellSlots', 'full', 'narrow']
+    ]),
+    // Compact: everything narrow and terse, packs densely on any width.
+    buildLayout('compact', 'Compact', [
+      ['abilityScores', 'compact', 'full'],
+      ['defenses', 'compact', 'narrow'],
+      ['hitPoints', 'full', 'narrow'],
+      ['saves', 'full', 'narrow'],
+      ['effects', 'full', 'narrow'],
+      ['conditions', 'full', 'narrow'],
+      ['skills', 'compact', 'narrow'],
+      ['resources', 'full', 'narrow'],
+      ['inventory', 'full', 'narrow'],
+      ['spells', 'full', 'narrow'],
+      ['spellSlots', 'full', 'narrow']
     ])
   ];
 }

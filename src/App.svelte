@@ -34,7 +34,9 @@
 </main>
 
 <style>
-  main { max-width: 960px; margin: 0 auto; padding: 1.5rem 1rem; }
+  /* Use the full viewport width; the grid handles internal columns. A generous
+     cap keeps line lengths sane on very large monitors without wasting space. */
+  main { max-width: 2400px; margin: 0 auto; padding: 1.25rem clamp(1rem, 2.5vw, 2.5rem); }
   .top { display: flex; align-items: baseline; justify-content: space-between; }
   h1 { color: var(--accent); margin: 0; }
   small { color: var(--muted); font-weight: 400; font-size: 0.6em; }
