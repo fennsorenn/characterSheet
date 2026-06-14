@@ -1,0 +1,28 @@
+import type { Character, RestType } from './schema.js';
+
+/**
+ * Rest utilities — pure functions returning a new character.
+ *
+ * Short rest: features that recharge on a short rest refill; HP and spell slots
+ * are unchanged (they require hit dice / a long rest in the base rules).
+ * Long rest: everything refills — all features, all spell slots, and HP to max.
+ * A long rest also satisfies anything that recharges on a short rest.
+ */
+export function applyRest(character: Character, type: RestType): Character {
+  const isLong = type === 'long';
+
+  const resources = character.resources.map((r) =>
+    isLong || r.recharge === 'short' ? { ...r, used: 0 } : r
+  );
+
+  if (!isLong) {
+    return { ...character, resources };
+  }
+
+  return {
+    ...character,
+    resources,
+    spellSlots: character.spellSlots.map((s) => ({ ...s, expended: 0 })),
+    hp: { ...character.hp, current: character.hp.max }
+  };
+}

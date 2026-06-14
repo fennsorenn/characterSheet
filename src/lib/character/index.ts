@@ -12,13 +12,18 @@ export {
   CHARACTER_SCHEMA_VERSION,
   createCharacter,
   totalLevel,
+  emptySpellSlots,
   type Character,
   type ClassEntry,
   type CatalogRef,
   type InventoryItem,
   type SpellRef,
-  type CharacterModifier
+  type CharacterModifier,
+  type Resource,
+  type RestType,
+  type SpellSlotLevel
 } from './schema.js';
+export { applyRest } from './rest.js';
 export { buildGraph, skillNodeId } from './buildGraph.js';
 export {
   computeEquipmentEffects,

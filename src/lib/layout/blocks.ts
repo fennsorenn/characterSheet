@@ -25,6 +25,24 @@ export const BLOCK_META: Record<string, BlockMeta> = {
     defaultVariant: 'full',
     defaultSize: 'wide'
   },
+  hitPoints: {
+    label: 'Hit Points',
+    variants: [{ key: 'full', label: 'Full', verbosity: 'full' }],
+    defaultVariant: 'full',
+    defaultSize: 'narrow'
+  },
+  spellSlots: {
+    label: 'Spell Slots',
+    variants: [{ key: 'full', label: 'Full', verbosity: 'full' }],
+    defaultVariant: 'full',
+    defaultSize: 'wide'
+  },
+  resources: {
+    label: 'Resources',
+    variants: [{ key: 'full', label: 'Full', verbosity: 'full' }],
+    defaultVariant: 'full',
+    defaultSize: 'wide'
+  },
   saves: {
     label: 'Saving Throws',
     variants: [{ key: 'full', label: 'Full', verbosity: 'full' }],

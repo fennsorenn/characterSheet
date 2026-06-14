@@ -19,10 +19,13 @@ describe('defaultLayout', () => {
     expect(ids(defaultLayout())).toEqual([
       'abilityScores',
       'defenses',
+      'hitPoints',
       'saves',
       'skills',
       'inventory',
-      'spells'
+      'resources',
+      'spells',
+      'spellSlots'
     ]);
   });
 
@@ -60,9 +63,9 @@ describe('layout operations', () => {
 
   it('reorders a block to another position (drag)', () => {
     const l = defaultLayout();
-    const from = l.blocks[5].id; // spells
-    const to = l.blocks[0].id; // abilityScores
-    expect(ids(reorderBlock(l, from, to))[0]).toBe('spells');
+    const fromBlock = l.blocks[l.blocks.length - 1]; // last block
+    const to = l.blocks[0].id; // move it to the front
+    expect(ids(reorderBlock(l, fromBlock.id, to))[0]).toBe(fromBlock.type);
   });
 
   it('sets variant and size, and cycles size', () => {

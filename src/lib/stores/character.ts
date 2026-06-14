@@ -1,11 +1,14 @@
 import { writable, derived, get } from 'svelte/store';
 import {
+  applyRest,
   buildGraph,
   createCharacter,
   type Ability,
   type CatalogRef,
   type Character,
   type ProficiencyLevel,
+  type Resource,
+  type RestType,
   type Skill
 } from '../character/index.js';
 import { catalogLookup } from './catalog.js';
@@ -158,6 +161,75 @@ export function togglePrepared(index: number) {
 
 export function removeSpell(index: number) {
   update((c) => ({ ...c, spells: c.spells.filter((_, n) => n !== index) }));
+}
+
+// --- Hit points ---
+
+export function setHp(field: 'current' | 'max' | 'temp', value: number) {
+  update((c) => ({ ...c, hp: { ...c.hp, [field]: Math.max(0, value) } }));
+}
+
+// --- Resources (limited-use features) ---
+
+export function addResource(resource: Omit<Resource, 'id'>) {
+  update((c) => ({
+    ...c,
+    resources: [...c.resources, { ...resource, id: crypto.randomUUID() }]
+  }));
+}
+
+export function removeResource(id: string) {
+  update((c) => ({ ...c, resources: c.resources.filter((r) => r.id !== id) }));
+}
+
+/** Spend (+1) or restore (-1) a use, clamped to [0, max]. */
+export function adjustResource(id: string, delta: number) {
+  update((c) => ({
+    ...c,
+    resources: c.resources.map((r) =>
+      r.id === id ? { ...r, used: Math.min(r.max, Math.max(0, r.used + delta)) } : r
+    )
+  }));
+}
+
+export function setResourceMax(id: string, max: number) {
+  update((c) => ({
+    ...c,
+    resources: c.resources.map((r) =>
+      r.id === id ? { ...r, max: Math.max(0, max), used: Math.min(r.used, Math.max(0, max)) } : r
+    )
+  }));
+}
+
+// --- Spell slots ---
+
+export function setSlotMax(level: number, max: number) {
+  update((c) => ({
+    ...c,
+    spellSlots: c.spellSlots.map((s, i) =>
+      i === level - 1
+        ? { max: Math.max(0, max), expended: Math.min(s.expended, Math.max(0, max)) }
+        : s
+    )
+  }));
+}
+
+/** Expend (+1) or recover (-1) a slot at a level, clamped to [0, max]. */
+export function adjustSlot(level: number, delta: number) {
+  update((c) => ({
+    ...c,
+    spellSlots: c.spellSlots.map((s, i) =>
+      i === level - 1
+        ? { ...s, expended: Math.min(s.max, Math.max(0, s.expended + delta)) }
+        : s
+    )
+  }));
+}
+
+// --- Rest ---
+
+export function rest(type: RestType) {
+  update((c) => applyRest(c, type));
 }
 
 export function resetCharacter() {

@@ -34,6 +34,28 @@ export interface SpellRef extends CatalogRef {
   prepared?: boolean;
 }
 
+/** When a spent resource recovers. */
+export type RestType = 'short' | 'long';
+
+/**
+ * A limited-use feature tracked as a pool of uses — Action Surge, Channel
+ * Divinity, Bardic Inspiration, Ki, Rage, etc. `used` counts spent uses;
+ * remaining = max - used. Recovers on the matching rest.
+ */
+export interface Resource {
+  id: string;
+  name: string;
+  max: number;
+  used: number;
+  recharge: RestType;
+}
+
+/** One spell-slot level: how many slots and how many are spent. */
+export interface SpellSlotLevel {
+  max: number;
+  expended: number;
+}
+
 /**
  * An ad-hoc contribution the user (or an equipped item / active buff) layers
  * onto a calc node — e.g. a +1 ring on `ac`, or Bless on attack rolls. Targeted
@@ -65,6 +87,15 @@ export interface Character {
   inventory: InventoryItem[];
   spells: SpellRef[];
   modifiers: CharacterModifier[];
+  /** Limited-use features (uses tracked as a spent pool). */
+  resources: Resource[];
+  /** Spell slots for levels 1-9 (index 0 = level 1). */
+  spellSlots: SpellSlotLevel[];
+}
+
+/** Nine empty spell-slot levels. */
+export function emptySpellSlots(): SpellSlotLevel[] {
+  return Array.from({ length: 9 }, () => ({ max: 0, expended: 0 }));
 }
 
 /** A fresh level-1 character with sensible defaults. */
@@ -86,7 +117,9 @@ export function createCharacter(partial: Partial<Character> = {}): Character {
     acBase: partial.acBase ?? 10,
     inventory: partial.inventory ?? [],
     spells: partial.spells ?? [],
-    modifiers: partial.modifiers ?? []
+    modifiers: partial.modifiers ?? [],
+    resources: partial.resources ?? [],
+    spellSlots: partial.spellSlots ?? emptySpellSlots()
   };
 }
 

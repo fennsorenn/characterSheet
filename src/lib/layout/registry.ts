@@ -5,6 +5,9 @@ import Saves from '../components/Saves.svelte';
 import Skills from '../components/Skills.svelte';
 import Inventory from '../components/Inventory.svelte';
 import SpellList from '../components/SpellList.svelte';
+import HitPoints from '../components/HitPoints.svelte';
+import SpellSlots from '../components/SpellSlots.svelte';
+import Resources from '../components/Resources.svelte';
 
 /**
  * Maps block type keys to their Svelte components. Kept apart from the pure
@@ -19,7 +22,10 @@ const COMPONENTS: Record<string, BlockComponent> = {
   saves: Saves as BlockComponent,
   skills: Skills as BlockComponent,
   inventory: Inventory as BlockComponent,
-  spells: SpellList as BlockComponent
+  spells: SpellList as BlockComponent,
+  hitPoints: HitPoints as BlockComponent,
+  spellSlots: SpellSlots as BlockComponent,
+  resources: Resources as BlockComponent
 };
 
 export function componentFor(type: string): BlockComponent | undefined {
