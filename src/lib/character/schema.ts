@@ -56,6 +56,26 @@ export interface SpellSlotLevel {
   expended: number;
 }
 
+/** A flat numeric contribution a buff makes to a calc node. */
+export interface BuffModifier {
+  target: string;
+  value: number;
+  type?: string;
+}
+
+/**
+ * A toggleable temporary effect (Shield of Faith, Haste, cover, a custom
+ * bonus). When active, its modifiers feed the calc graph like any other; only
+ * one concentration effect can be active at a time.
+ */
+export interface Buff {
+  id: string;
+  name: string;
+  modifiers: BuffModifier[];
+  active: boolean;
+  concentration?: boolean;
+}
+
 /**
  * An ad-hoc contribution the user (or an equipped item / active buff) layers
  * onto a calc node — e.g. a +1 ring on `ac`, or Bless on attack rolls. Targeted
@@ -91,6 +111,12 @@ export interface Character {
   resources: Resource[];
   /** Spell slots for levels 1-9 (index 0 = level 1). */
   spellSlots: SpellSlotLevel[];
+  /** Toggleable temporary effects feeding the modifier stack. */
+  buffs: Buff[];
+  /** Active 5e condition names (display/status tracking). */
+  conditions: string[];
+  /** Exhaustion level (0-6); applies a d20 penalty under 2024 rules. */
+  exhaustion: number;
 }
 
 /** Nine empty spell-slot levels. */
@@ -119,7 +145,10 @@ export function createCharacter(partial: Partial<Character> = {}): Character {
     spells: partial.spells ?? [],
     modifiers: partial.modifiers ?? [],
     resources: partial.resources ?? [],
-    spellSlots: partial.spellSlots ?? emptySpellSlots()
+    spellSlots: partial.spellSlots ?? emptySpellSlots(),
+    buffs: partial.buffs ?? [],
+    conditions: partial.conditions ?? [],
+    exhaustion: partial.exhaustion ?? 0
   };
 }
 

@@ -21,9 +21,17 @@ export {
   type CharacterModifier,
   type Resource,
   type RestType,
-  type SpellSlotLevel
+  type SpellSlotLevel,
+  type Buff,
+  type BuffModifier
 } from './schema.js';
 export { applyRest } from './rest.js';
+export {
+  CONDITIONS,
+  buffModifiers,
+  exhaustionModifiers,
+  effectModifiers
+} from './effects.js';
 export { buildGraph, skillNodeId } from './buildGraph.js';
 export {
   computeEquipmentEffects,

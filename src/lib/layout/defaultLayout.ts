@@ -11,6 +11,8 @@ export function defaultLayout(): SheetLayout {
     'abilityScores',
     'defenses',
     'hitPoints',
+    'conditions',
+    'effects',
     'saves',
     'skills',
     'inventory',

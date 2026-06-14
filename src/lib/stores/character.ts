@@ -4,6 +4,7 @@ import {
   buildGraph,
   createCharacter,
   type Ability,
+  type Buff,
   type CatalogRef,
   type Character,
   type ProficiencyLevel,
@@ -224,6 +225,53 @@ export function adjustSlot(level: number, delta: number) {
         : s
     )
   }));
+}
+
+// --- Buffs & effects ---
+
+export function addBuff(buff: Omit<Buff, 'id'>) {
+  update((c) => ({ ...c, buffs: [...c.buffs, { ...buff, id: crypto.randomUUID() }] }));
+}
+
+export function removeBuff(id: string) {
+  update((c) => ({ ...c, buffs: c.buffs.filter((b) => b.id !== id) }));
+}
+
+/**
+ * Toggle a buff. Activating a concentration buff drops any other concentration
+ * buff, since you can only concentrate on one effect at a time.
+ */
+export function toggleBuff(id: string) {
+  update((c) => {
+    const target = c.buffs.find((b) => b.id === id);
+    if (!target) return c;
+    const activating = !target.active;
+    const buffs = c.buffs.map((b) => {
+      if (b.id === id) return { ...b, active: activating };
+      // Turning on a concentration buff ends other concentration effects.
+      if (activating && target.concentration && b.concentration && b.active) {
+        return { ...b, active: false };
+      }
+      return b;
+    });
+    return { ...c, buffs };
+  });
+}
+
+// --- Conditions & exhaustion ---
+
+export function toggleCondition(name: string) {
+  update((c) => {
+    const has = c.conditions.includes(name);
+    const conditions = has
+      ? c.conditions.filter((n) => n !== name)
+      : [...c.conditions, name];
+    return { ...c, conditions };
+  });
+}
+
+export function setExhaustion(level: number) {
+  update((c) => ({ ...c, exhaustion: Math.min(6, Math.max(0, level)) }));
 }
 
 // --- Rest ---

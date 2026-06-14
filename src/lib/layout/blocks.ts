@@ -43,6 +43,18 @@ export const BLOCK_META: Record<string, BlockMeta> = {
     defaultVariant: 'full',
     defaultSize: 'wide'
   },
+  effects: {
+    label: 'Effects (Buffs)',
+    variants: [{ key: 'full', label: 'Full', verbosity: 'full' }],
+    defaultVariant: 'full',
+    defaultSize: 'wide'
+  },
+  conditions: {
+    label: 'Conditions',
+    variants: [{ key: 'full', label: 'Full', verbosity: 'full' }],
+    defaultVariant: 'full',
+    defaultSize: 'wide'
+  },
   saves: {
     label: 'Saving Throws',
     variants: [{ key: 'full', label: 'Full', verbosity: 'full' }],

@@ -8,6 +8,7 @@ import {
 } from './abilities.js';
 import { totalLevel, type Character } from './schema.js';
 import { computeEquipmentEffects, type CatalogLookup } from './equipment.js';
+import { effectModifiers } from './effects.js';
 
 /**
  * Build a fully-wired {@link CalcGraph} from a character document.
@@ -99,8 +100,13 @@ export function buildGraph(character: Character, lookup?: CatalogLookup): CalcGr
     );
   }
 
-  // Layer modifiers from equipped items and the character's own buffs on top.
-  for (const mod of [...equipment.modifiers, ...character.modifiers]) {
+  // Layer modifiers: equipped items, manual modifiers, then temporary effects
+  // (active buffs and exhaustion) — all introspectable in the explain popover.
+  for (const mod of [
+    ...equipment.modifiers,
+    ...character.modifiers,
+    ...effectModifiers(character)
+  ]) {
     if (mod.active === false) continue;
     if (!g.has(mod.target)) continue;
     g.addModifier(mod.target, {
