@@ -43,7 +43,9 @@
       {#each $character.resources as r (r.id)}
         <li>
           <span class="name">{r.name}</span>
-          <PipTracker max={r.max} used={r.used} onSet={(u) => adjustResource(r.id, u - r.used)} />
+          <span data-volatile="frequent">
+            <PipTracker max={r.max} used={r.used} onSet={(u) => adjustResource(r.id, u - r.used)} />
+          </span>
           <span class="max">max <NumberField value={r.max} min={0} onchange={(v) => setResourceMax(r.id, v)} width="2ch" /></span>
           <span class="tag">{r.recharge}</span>
           <button class="rm" aria-label="Remove" onclick={() => removeResource(r.id)}>×</button>

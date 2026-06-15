@@ -28,3 +28,51 @@ body {
   background: var(--bg);
   color: var(--fg);
 }
+
+/* ----- Print / PDF ----------------------------------------------------------
+   The print view (PrintView.svelte) renders the active layout on a page-sized
+   white sheet. These rules are global so they reach into the block components,
+   which Svelte's scoped styles cannot. */
+
+/* Force a light, paper-friendly palette regardless of the screen theme. */
+.print-pages {
+  --bg: #fff;
+  --fg: #111;
+  --muted: #555;
+  --accent: #7a1f1f;
+  --line: #999;
+  --field-hover: #f0f0f0;
+}
+
+/* On paper, use a clean two-column grid independent of the viewport width. */
+.print-pages .grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 0.6rem !important;
+}
+.print-pages .cell.size-narrow { grid-column: span 1 !important; }
+.print-pages .cell.size-wide,
+.print-pages .cell.size-full { grid-column: 1 / -1 !important; }
+.print-pages .block { break-inside: avoid; }
+
+/* Value redaction by prefill level. visibility keeps the labelled box so the
+   field can be filled in by hand. */
+.print-pages.hide-frequent [data-volatile='frequent'] { visibility: hidden; }
+.print-pages.hide-occasional [data-volatile='occasional'] { visibility: hidden; }
+.print-pages.hide-all [data-volatile],
+.print-pages.hide-all .stat-value,
+.print-pages.hide-all .number-field,
+.print-pages.hide-all .pip.on { visibility: hidden; }
+
+@media print {
+  body { background: #fff; }
+  /* Hide the live app and the print toolbar; print only the page sheet. */
+  .app-root { display: none !important; }
+  .print-toolbar { display: none !important; }
+  .print-overlay { position: static !important; background: #fff !important; }
+  .print-scroll { overflow: visible !important; padding: 0 !important; display: block !important; }
+  .print-pages {
+    width: 100% !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+  }
+}

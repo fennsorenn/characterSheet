@@ -12,7 +12,7 @@
   {#if variant === 'compact'}
     <div class="row">
       {#each ABILITIES as abil}
-        <div class="ab">
+        <div class="ab" data-volatile="occasional">
           <span class="name">{ABILITY_NAMES[abil].slice(0, 3)}</span>
           <span class="mod"><StatValue node={`ability.${abil}.mod`} signed /></span>
           <NumberField
@@ -29,8 +29,8 @@
       {#each ABILITIES as abil}
         <div class="ability">
           <div class="name">{ABILITY_NAMES[abil].slice(0, 3)}</div>
-          <div class="modbig"><StatValue node={`ability.${abil}.mod`} signed /></div>
-          <div class="score">
+          <div class="modbig" data-volatile="occasional"><StatValue node={`ability.${abil}.mod`} signed /></div>
+          <div class="score" data-volatile="occasional">
             <NumberField
               value={$character.abilities[abil]}
               min={1}

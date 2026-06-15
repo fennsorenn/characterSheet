@@ -12,8 +12,8 @@
 
 <section class="block" data-variant={variant}>
   <h3>Hit Points</h3>
-  <div class="bar"><span style="width: {pct}%"></span></div>
-  <div class="row">
+  <div class="bar" data-volatile="frequent"><span style="width: {pct}%"></span></div>
+  <div class="row" data-volatile="frequent">
     <span class="grp">
       <NumberField value={$character.hp.current} min={0} onchange={(v) => setHp('current', v)} width="3.5ch" />
       <span class="sep">/</span>

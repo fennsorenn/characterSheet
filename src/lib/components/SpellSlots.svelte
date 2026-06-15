@@ -30,7 +30,9 @@
         {@const slot = $character.spellSlots[l - 1]}
         <li>
           <span class="lvl">Level {l}</span>
-          <PipTracker max={slot.max} used={slot.expended} onSet={(u) => adjustSlot(l, u - slot.expended)} />
+          <span data-volatile="frequent">
+            <PipTracker max={slot.max} used={slot.expended} onSet={(u) => adjustSlot(l, u - slot.expended)} />
+          </span>
         </li>
       {/each}
     </ul>
