@@ -68,4 +68,24 @@ describe('spellTags', () => {
     expect(conditionIcon('frightened')).toBe('frightened');
     expect(conditionIcon('deafened')).toBe('affliction');
   });
+
+  it('detects buff sub-tags from structured tags and formulaic text', () => {
+    // Structured: ADV (advantage) and MAC (modifies AC).
+    expect(ids({ name: 'Foresight', source: 'X', miscTags: ['ADV'] })).toContain('buff:advantage');
+    expect(ids({ name: 'Barkskin', source: 'X', miscTags: ['MAC'] })).toContain('buff:ac');
+
+    // Text: resistance, vision, movement, condition immunity.
+    expect(ids({ name: 'X', source: 'X', entries: ['You have resistance to fire damage.'] })).toContain('buff:resistance');
+    expect(ids({ name: 'X', source: 'X', entries: ['You gain darkvision out to 60 feet.'] })).toContain('buff:vision');
+    expect(ids({ name: 'X', source: 'X', entries: ['The target gains a flying speed of 60 feet.'] })).toContain('buff:movement');
+    expect(ids({ name: 'X', source: 'X', entries: ["The target can't be frightened."] })).toContain('buff:condimmune');
+
+    // Bonus die (Bless-style), but not a debuff that subtracts (Bane-style).
+    expect(
+      ids({ name: 'Bless', source: 'X', entries: ['roll a {@dice 1d4} and add the number rolled to the attack roll or saving throw'] })
+    ).toContain('buff:bonusdie');
+    expect(
+      ids({ name: 'Bane', source: 'X', entries: ['subtract a {@dice 1d4} from the attack roll or saving throw'] })
+    ).not.toContain('buff:bonusdie');
+  });
 });

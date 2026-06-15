@@ -99,7 +99,67 @@ export function spellTags(spell: NamedEntry): SpellTag[] {
     tags.push({ id: 'prop:summon', icon: 'summon', label: 'Summons a creature' });
   }
 
+  // Buff sub-tags. 5etools has no generic "buff" flag, but the effects are
+  // formulaic: some are structured (miscTags ADV/MAC), the rest are detected
+  // from the spell text with high-signal phrasings.
+  for (const tag of buffTags(spell)) tags.push(tag);
+
   return tags;
+}
+
+const BUFF_TEXT: { id: string; icon: string; label: string; re: RegExp }[] = [
+  { id: 'buff:resistance', icon: 'resistance', label: 'Grants damage resistance', re: /\bresistance to\b/i },
+  {
+    id: 'buff:condimmune',
+    icon: 'ward',
+    label: 'Grants condition immunity',
+    re: /can(?:not|’t|'t) be (?:charmed|frightened|poisoned|paralyzed|blinded|deafened|stunned|put to sleep|grappled|restrained)|immun\w* to (?:being )?(?:charmed|frightened|poison)/i
+  },
+  {
+    id: 'buff:movement',
+    icon: 'movement',
+    label: 'Grants or boosts movement',
+    re: /gains? a (?:fly|flying|swim|swimming|climb|climbing|burrow|burrowing) speed|speed increases|your speed is doubled/i
+  },
+  { id: 'buff:vision', icon: 'vision', label: 'Grants special vision', re: /\bdarkvision\b|\bblindsight\b|\btruesight\b|\btremorsense\b/i },
+  {
+    id: 'buff:bonusdie',
+    icon: 'dice',
+    label: 'Adds a die / reroll',
+    re: /\breroll|roll an additional|(?:add|adding) (?:a |an |the |one )?(?:\d?d\d+|number rolled)[^.]{0,30}to (?:your |the )?(?:attack|saving throw|ability check|d20|roll)/i
+  }
+];
+
+/** Detect buff sub-tags from structured miscTags and formulaic spell text. */
+function buffTags(spell: NamedEntry): SpellTag[] {
+  const out: SpellTag[] = [];
+  const misc = arr(spell.miscTags);
+  if (misc.includes('ADV')) out.push({ id: 'buff:advantage', icon: 'advantage', label: 'Grants advantage' });
+  if (misc.includes('MAC')) out.push({ id: 'buff:ac', icon: 'shield', label: 'Modifies AC' });
+
+  const body = entriesText(spell);
+  for (const t of BUFF_TEXT) {
+    if (t.re.test(body)) out.push({ id: t.id, icon: t.icon, label: t.label });
+  }
+  return out;
+}
+
+/** Flatten a spell's entry text (with {@tags} reduced to their display word). */
+function entriesText(spell: NamedEntry): string {
+  const parts: string[] = [];
+  const walk = (x: unknown) => {
+    if (typeof x === 'string') parts.push(x);
+    else if (Array.isArray(x)) x.forEach(walk);
+    else if (x && typeof x === 'object') {
+      const o = x as Record<string, unknown>;
+      walk(o.entries);
+      walk(o.items);
+      walk(o.entry);
+    }
+  };
+  walk(spell.entries);
+  walk((spell as Record<string, unknown>).entriesHigherLevel);
+  return parts.join(' ').replace(/\{@\w+ ([^}|]+)(\|[^}]*)?\}/g, '$1');
 }
 
 function hasConcentration(spell: NamedEntry): boolean {

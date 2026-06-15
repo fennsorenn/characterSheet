@@ -28,3 +28,6 @@ Spell tags & conditions — dodging, striking-arrows, impact-point, on-target,
 meditation, candle-light, ghost-ally, despair, puppet, terror, grab, oppression,
 stone-block, tripwire, imprisoned, coma (**Lorc**); healing, team-idea, blindfold,
 invisible (**Delapouite**).
+
+Buff sub-tags — energy-shield, aura, wingfoot, eyeball (**Lorc**); upgrade,
+rolling-dices (**Delapouite**). The AC-modifier buff reuses the checked-shield icon.
