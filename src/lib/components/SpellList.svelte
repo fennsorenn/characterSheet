@@ -1,111 +1,195 @@
 <script lang="ts">
-  import { character, togglePrepared, removeSpell } from '../stores/character.js';
+  import { character, setSpellStatus, setSpellGranted, removeSpell } from '../stores/character.js';
   import { catalogLookup } from '../stores/catalog.js';
-  import { spellTags, type SpellTag } from '../character/index.js';
+  import { spellTags, spellStatus, grantedSpellsFromItems, type SpellTag } from '../character/index.js';
   import Icon from './Icon.svelte';
 
   let { variant = 'full' }: { variant?: string } = $props();
 
-  // Filter state: a spell is shown only if it has every selected tag (AND).
-  let selected = $state<Set<string>>(new Set());
+  let selectedTags = $state<Set<string>>(new Set());
+  let statusFilter = $state<'all' | 'prepared' | 'favorite' | 'known' | 'granted'>('all');
 
-  interface Tagged {
-    index: number;
+  interface Row {
+    index: number | null; // null = derived from an equipped item
     name: string;
     source: string;
-    prepared: boolean;
+    status: 'known' | 'prepared' | 'favorite';
+    grantedBy?: string;
     level: string;
+    levelNum: number;
     tags: SpellTag[];
   }
 
-  const tagged = $derived.by((): Tagged[] =>
-    $character.spells.map((s, index) => {
-      const entry = $catalogLookup.getSpell(s.name, s.source);
-      const level =
-        entry && typeof entry.level === 'number'
-          ? entry.level === 0
-            ? 'cantrip'
-            : `lvl ${entry.level}`
-          : '';
-      return {
+  const granted = $derived(grantedSpellsFromItems($character, $catalogLookup));
+
+  const rows = $derived.by((): Row[] => {
+    const manualKeys = new Set(
+      $character.spells.map((s) => `${s.name}|${s.source}`.toLowerCase())
+    );
+    const base = [
+      ...$character.spells.map((s, index) => ({
         index,
         name: s.name,
         source: s.source,
-        prepared: !!s.prepared,
-        level,
-        tags: entry ? spellTags(entry) : []
-      };
-    })
-  );
+        status: spellStatus(s),
+        grantedBy: s.grantedBy
+      })),
+      ...granted
+        .filter((g) => !manualKeys.has(`${g.name}|${g.source}`.toLowerCase()))
+        .map((g) => ({
+          index: null,
+          name: g.name,
+          source: g.source,
+          status: 'known' as const,
+          grantedBy: g.grantedBy
+        }))
+    ];
+    return base
+      .map((r) => {
+        const entry = $catalogLookup.getSpell(r.name, r.source);
+        const levelNum = entry && typeof entry.level === 'number' ? entry.level : 99;
+        const level = levelNum === 99 ? '' : levelNum === 0 ? 'cantrip' : `lvl ${levelNum}`;
+        return { ...r, level, levelNum, tags: entry ? spellTags(entry) : [] };
+      })
+      .sort(
+        (a, b) =>
+          Number(!!a.grantedBy) - Number(!!b.grantedBy) ||
+          a.levelNum - b.levelNum ||
+          a.name.localeCompare(b.name)
+      );
+  });
 
-  // Unique tags across all spells, for the filter bar (stable group order).
-  const groupRank = (id: string) =>
-    id.startsWith('school:') ? 0 : id.startsWith('damage:') ? 1 : id.startsWith('cond:') ? 2 : 3;
+  const counts = $derived.by(() => {
+    const nonG = rows.filter((r) => !r.grantedBy);
+    return {
+      prepared: nonG.filter((r) => r.status === 'prepared').length,
+      spellbook: nonG.length,
+      favorite: nonG.filter((r) => r.status === 'favorite').length,
+      granted: rows.filter((r) => r.grantedBy).length
+    };
+  });
+
+  // Tag filter options (unique across rows).
   const allTags = $derived.by((): SpellTag[] => {
     const map = new Map<string, SpellTag>();
-    for (const t of tagged) for (const tag of t.tags) if (!map.has(tag.id)) map.set(tag.id, tag);
-    return [...map.values()].sort((a, b) => groupRank(a.id) - groupRank(b.id) || a.id.localeCompare(b.id));
+    for (const r of rows) for (const t of r.tags) if (!map.has(t.id)) map.set(t.id, t);
+    return [...map.values()];
   });
 
   const shown = $derived(
-    selected.size === 0
-      ? tagged
-      : tagged.filter((t) => {
-          const ids = new Set(t.tags.map((x) => x.id));
-          return [...selected].every((id) => ids.has(id));
-        })
+    rows.filter((r) => {
+      if (statusFilter === 'granted' && !r.grantedBy) return false;
+      if (statusFilter !== 'granted' && statusFilter !== 'all') {
+        if (r.grantedBy || r.status !== statusFilter) return false;
+      }
+      if (selectedTags.size) {
+        const ids = new Set(r.tags.map((t) => t.id));
+        if (![...selectedTags].every((id) => ids.has(id))) return false;
+      }
+      return true;
+    })
   );
 
-  function toggle(id: string) {
-    const next = new Set(selected);
+  function toggleTag(id: string) {
+    const next = new Set(selectedTags);
     next.has(id) ? next.delete(id) : next.add(id);
-    selected = next;
+    selectedTags = next;
   }
+
+  const STATUS_FILTERS: [typeof statusFilter, string][] = [
+    ['all', 'All'],
+    ['prepared', 'Prepared'],
+    ['favorite', 'Favorites'],
+    ['granted', 'Granted']
+  ];
 </script>
 
 <section class="block" data-variant={variant}>
-  <h3>Spells</h3>
-  {#if $character.spells.length === 0}
+  <header class="head">
+    <h3>Spells</h3>
+    {#if $character.spells.length > 0 || granted.length > 0}
+      <span class="counts">
+        <span title="Currently prepared">{counts.prepared} prep</span>
+        <span title="In your spellbook (known)">· {counts.spellbook} book</span>
+        <span title="Favorites — kept handy for swapping">· ★{counts.favorite}</span>
+        {#if counts.granted}<span title="Granted by items/features — don't count, can't swap">· {counts.granted} granted</span>{/if}
+      </span>
+    {/if}
+  </header>
+
+  {#if $character.spells.length === 0 && granted.length === 0}
     <p class="empty">No spells — add them via quick import.</p>
   {:else}
+    <div class="statusfilter">
+      {#each STATUS_FILTERS as [val, label]}
+        <button class:on={statusFilter === val} onclick={() => (statusFilter = val)}>{label}</button>
+      {/each}
+    </div>
+
     {#if allTags.length > 0}
-      <div class="filterbar">
+      <div class="tagfilter">
         {#each allTags as tag (tag.id)}
-          <button
-            class="ftag"
-            class:on={selected.has(tag.id)}
-            title={tag.label}
-            onclick={() => toggle(tag.id)}
-          ><Icon name={tag.icon} /></button>
+          <button class="ftag" class:on={selectedTags.has(tag.id)} title={tag.label} onclick={() => toggleTag(tag.id)}>
+            <Icon name={tag.icon} />
+          </button>
         {/each}
-        {#if selected.size > 0}
-          <button class="clear" onclick={() => (selected = new Set())}>clear</button>
-        {/if}
+        {#if selectedTags.size > 0}<button class="clear" onclick={() => (selectedTags = new Set())}>clear</button>{/if}
       </div>
     {/if}
 
     <ul>
-      {#each shown as s (s.name + s.source)}
-        <li>
+      {#each shown as r (r.name + r.source)}
+        <li class:granted={r.grantedBy}>
           <div class="top">
-            <label class="prep" title="Prepared">
-              <input type="checkbox" checked={s.prepared} onchange={() => togglePrepared(s.index)} />
-            </label>
-            <span class="name">{s.name}</span>
-            <span class="lvl">{s.level}</span>
-            <span class="src">{s.source}</span>
-            <button class="rm" aria-label="Remove" onclick={() => removeSpell(s.index)}>×</button>
+            {#if r.grantedBy}
+              <span class="status gicon" title={`Granted by ${r.grantedBy} — always available, doesn't count`}>⚡</span>
+            {:else if r.index !== null}
+              <button
+                class="status prep"
+                class:on={r.status === 'prepared'}
+                title="Prepared"
+                onclick={() => setSpellStatus(r.index!, r.status === 'prepared' ? 'known' : 'prepared')}
+              >✓</button>
+              <button
+                class="status fav"
+                class:on={r.status === 'favorite'}
+                title="Favorite — keep handy"
+                onclick={() => setSpellStatus(r.index!, r.status === 'favorite' ? 'known' : 'favorite')}
+              >★</button>
+            {/if}
+            <span class="name">{r.name}</span>
+            <span class="lvl">{r.level}</span>
+            {#if r.grantedBy}
+              <span class="src gby" title="Granted by">{r.grantedBy}</span>
+            {:else}
+              <span class="src">{r.source}</span>
+            {/if}
+            {#if r.index !== null}
+              <button
+                class="grant"
+                class:on={r.grantedBy}
+                title={r.grantedBy ? 'Unmark granted' : 'Mark as granted by a feature/item'}
+                onclick={() => setSpellGranted(r.index!, r.grantedBy ? undefined : 'Feature')}
+              >⚑</button>
+              <button class="rm" aria-label="Remove" onclick={() => removeSpell(r.index!)}>×</button>
+            {/if}
           </div>
-          {#if s.tags.length > 0}
+          {#if r.grantedBy && r.index !== null}
+            <input
+              class="gsource"
+              value={r.grantedBy}
+              title="Granting feature/item"
+              onchange={(e) => setSpellGranted(r.index!, (e.target as HTMLInputElement).value)}
+            />
+          {/if}
+          {#if r.tags.length > 0}
             <div class="tags">
-              {#each s.tags as tag (tag.id)}
-                <span class="tag" title={tag.label}><Icon name={tag.icon} /></span>
-              {/each}
+              {#each r.tags as t (t.id)}<span class="tag" title={t.label}><Icon name={t.icon} /></span>{/each}
             </div>
           {/if}
         </li>
       {:else}
-        <li class="nomatch">No spells match the selected tags.</li>
+        <li class="empty">No spells match.</li>
       {/each}
     </ul>
   {/if}
@@ -113,44 +197,37 @@
 
 <style>
   .block { border: 1px solid var(--line); border-radius: 8px; padding: 0.75rem 1rem; }
-  h3 { margin: 0 0 0.6rem; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+  .head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
+  h3 { margin: 0; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+  .counts { font-size: 0.72rem; color: var(--muted); }
   .empty { color: var(--muted); font-size: 0.85rem; margin: 0; }
 
-  .filterbar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.25rem;
-    align-items: center;
-    padding-bottom: 0.5rem;
-    margin-bottom: 0.4rem;
-    border-bottom: 1px solid var(--line);
-  }
-  .ftag {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.5rem;
-    height: 1.5rem;
-    border: 1px solid var(--line);
-    border-radius: 5px;
-    background: var(--bg);
-    color: var(--muted);
-    cursor: pointer;
-  }
+  .statusfilter { display: flex; gap: 0.3rem; margin-bottom: 0.4rem; }
+  .statusfilter button { font: inherit; font-size: 0.72rem; padding: 0.15rem 0.5rem; border: 1px solid var(--line); background: var(--bg); color: var(--muted); border-radius: 999px; cursor: pointer; }
+  .statusfilter button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  .tagfilter { display: flex; flex-wrap: wrap; gap: 0.2rem; align-items: center; padding-bottom: 0.4rem; margin-bottom: 0.4rem; border-bottom: 1px solid var(--line); }
+  .ftag { display: inline-flex; align-items: center; justify-content: center; width: 1.4rem; height: 1.4rem; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); color: var(--muted); cursor: pointer; }
   .ftag.on { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .ftag :global(.icon) { width: 0.95rem; height: 0.95rem; }
-  .clear { font: inherit; font-size: 0.75rem; border: none; background: none; color: var(--accent); cursor: pointer; margin-left: 0.25rem; }
+  .ftag :global(.icon) { width: 0.9rem; height: 0.9rem; }
+  .clear { font: inherit; font-size: 0.7rem; border: none; background: none; color: var(--accent); cursor: pointer; }
 
   ul { list-style: none; margin: 0; padding: 0; }
-  li { padding: 0.3rem 0; border-bottom: 1px solid var(--line); }
-  .top { display: flex; align-items: center; gap: 0.5rem; }
+  li { padding: 0.28rem 0; border-bottom: 1px solid var(--line); }
+  li.granted { background: var(--field-hover); border-radius: 5px; padding: 0.28rem 0.3rem; }
+  .top { display: flex; align-items: center; gap: 0.4rem; }
+  .status { width: 1.3rem; height: 1.3rem; flex: none; font: inherit; font-size: 0.8rem; line-height: 1; border: 1px solid var(--line); background: var(--bg); color: var(--muted); border-radius: 4px; cursor: pointer; }
+  .status.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .status.gicon { border: none; background: none; color: var(--accent); cursor: default; }
   .name { flex: 1; font-weight: 500; }
   .lvl { font-size: 0.72rem; color: var(--accent); }
-  .src { font-size: 0.7rem; text-transform: uppercase; color: var(--muted); }
-  .rm { background: none; border: none; color: var(--muted); font-size: 1.1rem; cursor: pointer; line-height: 1; }
+  .src { font-size: 0.68rem; text-transform: uppercase; color: var(--muted); }
+  .src.gby { text-transform: none; font-style: italic; color: var(--accent); }
+  .grant { width: 1.3rem; height: 1.3rem; flex: none; font: inherit; font-size: 0.75rem; border: 1px solid var(--line); background: var(--bg); color: var(--muted); border-radius: 4px; cursor: pointer; }
+  .grant.on { color: var(--accent); border-color: var(--accent); }
+  .rm { background: none; border: none; color: var(--muted); font-size: 1.05rem; cursor: pointer; line-height: 1; }
   .rm:hover { color: var(--accent); }
-  .tags { display: flex; flex-wrap: wrap; gap: 0.2rem; margin: 0.15rem 0 0 1.4rem; color: var(--muted); }
-  .tag { display: inline-flex; }
-  .tag :global(.icon) { width: 0.85rem; height: 0.85rem; }
-  .nomatch { color: var(--muted); font-size: 0.85rem; }
+  .gsource { margin: 0.2rem 0 0 1.7rem; width: calc(100% - 1.7rem); font: inherit; font-size: 0.75rem; padding: 0.15rem 0.3rem; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--fg); }
+  .tags { display: flex; flex-wrap: wrap; gap: 0.18rem; margin: 0.15rem 0 0 1.7rem; color: var(--muted); }
+  .tag :global(.icon) { width: 0.8rem; height: 0.8rem; }
 </style>

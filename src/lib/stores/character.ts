@@ -18,7 +18,8 @@ import {
   type ProficiencyLevel,
   type Resource,
   type RestType,
-  type Skill
+  type Skill,
+  type SpellStatus
 } from '../character/index.js';
 import { catalogLookup } from './catalog.js';
 
@@ -207,14 +208,24 @@ export function setItemProficient(index: number, proficient: boolean) {
 export function addSpell(ref: CatalogRef) {
   update((c) => {
     if (c.spells.some((s) => s.name === ref.name && s.source === ref.source)) return c;
-    return { ...c, spells: [...c.spells, { ...ref, prepared: false }] };
+    return { ...c, spells: [...c.spells, { ...ref, status: 'known' as const }] };
   });
 }
 
-export function togglePrepared(index: number) {
+export function setSpellStatus(index: number, status: SpellStatus) {
   update((c) => ({
     ...c,
-    spells: c.spells.map((s, n) => (n === index ? { ...s, prepared: !s.prepared } : s))
+    spells: c.spells.map((s, n) =>
+      n === index ? { ...s, status, prepared: undefined } : s
+    )
+  }));
+}
+
+/** Mark/unmark a spell as granted by a feature/item (sets the source label). */
+export function setSpellGranted(index: number, grantedBy: string | undefined) {
+  update((c) => ({
+    ...c,
+    spells: c.spells.map((s, n) => (n === index ? { ...s, grantedBy: grantedBy || undefined } : s))
   }));
 }
 

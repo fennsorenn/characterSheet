@@ -46,8 +46,21 @@ export interface InventoryItem extends CatalogRef {
 /** Max items a character can be attuned to at once (5e). */
 export const ATTUNEMENT_LIMIT = 3;
 
+/** How a spell sits in the spellbook (mutually exclusive). */
+export type SpellStatus = 'known' | 'prepared' | 'favorite';
+
 export interface SpellRef extends CatalogRef {
+  /** Preparation status; defaults to 'known'. */
+  status?: SpellStatus;
+  /** If granted by a feature/item: the source. Doesn't count toward limits. */
+  grantedBy?: string;
+  /** @deprecated legacy flag, migrated to `status` on read. */
   prepared?: boolean;
+}
+
+/** Effective status, migrating the legacy `prepared` flag. */
+export function spellStatus(ref: SpellRef): SpellStatus {
+  return ref.status ?? (ref.prepared ? 'prepared' : 'known');
 }
 
 /** When a spent resource recovers. */
