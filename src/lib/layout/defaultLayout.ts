@@ -18,6 +18,7 @@ export function defaultLayout(): SheetLayout {
     'skills',
     'attacks',
     'features',
+    'traits',
     'inventory',
     'resources',
     'spells',

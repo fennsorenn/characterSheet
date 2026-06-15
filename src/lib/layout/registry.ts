@@ -13,6 +13,7 @@ import Conditions from '../components/Conditions.svelte';
 import RestLevelUp from '../components/RestLevelUp.svelte';
 import Attacks from '../components/Attacks.svelte';
 import Features from '../components/Features.svelte';
+import Traits from '../components/Traits.svelte';
 
 /**
  * Maps block type keys to their Svelte components. Kept apart from the pure
@@ -35,7 +36,8 @@ const COMPONENTS: Record<string, BlockComponent> = {
   conditions: Conditions as BlockComponent,
   restLevelUp: RestLevelUp as BlockComponent,
   attacks: Attacks as BlockComponent,
-  features: Features as BlockComponent
+  features: Features as BlockComponent,
+  traits: Traits as BlockComponent
 };
 
 export function componentFor(type: string): BlockComponent | undefined {

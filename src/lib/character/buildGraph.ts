@@ -15,7 +15,9 @@ import {
 } from './equipment.js';
 import { effectModifiers } from './effects.js';
 import { asiModifiers } from './abilityChoices.js';
-import { featAbilityModifiers } from './featAbilities.js';
+import { grantNumericModifiers, type GrantPool } from './grants.js';
+
+const EMPTY_POOL: GrantPool = { numeric: [], sets: [], choices: [] };
 
 /**
  * Build a fully-wired {@link CalcGraph} from a character document.
@@ -35,11 +37,17 @@ import { featAbilityModifiers } from './featAbilities.js';
  *   ac, initiative, passive.perception
  *   spell.dc, spell.attack (only if the character is a spellcaster)
  */
-export function buildGraph(character: Character, lookup?: CatalogLookup): CalcGraph {
+export function buildGraph(character: Character, lookup?: CatalogLookup, grants: GrantPool = EMPTY_POOL): CalcGraph {
   const g = new CalcGraph();
   const equipment: EquipmentEffects = lookup
     ? computeEquipmentEffects(character, lookup)
     : { modifiers: [], abilitySets: {} };
+
+  // Feature-granted proficiencies (Resilient's save, a race's skill, …) raise
+  // the proficiency tier alongside the character's own, generically.
+  const grantedSaves = new Set(grants.sets.filter((s) => s.category === 'saveProf').map((s) => s.member.toLowerCase()));
+  const grantedSkills = new Set(grants.sets.filter((s) => s.category === 'skillProf').map((s) => s.member.toLowerCase()));
+  const grantedExpertise = new Set(grants.sets.filter((s) => s.category === 'expertise').map((s) => s.member.toLowerCase()));
 
   // Ability scores and their modifiers. An item that sets a score to a fixed
   // value (e.g. Belt of Giant Strength) overrides only if it's higher.
@@ -61,7 +69,8 @@ export function buildGraph(character: Character, lookup?: CatalogLookup): CalcGr
   // Saving throws: ability mod + proficiency bonus when proficient.
   const saveProf = new Set(character.saveProficiencies);
   for (const abil of ABILITIES) {
-    g.set(`save.${abil}.profMult`, saveProf.has(abil) ? 1 : 0);
+    const proficient = saveProf.has(abil) || grantedSaves.has(abil);
+    g.set(`save.${abil}.profMult`, proficient ? 1 : 0);
     g.define(
       `save.${abil}`,
       [`ability.${abil}.mod`, 'prof.bonus', `save.${abil}.profMult`],
@@ -74,7 +83,9 @@ export function buildGraph(character: Character, lookup?: CatalogLookup): CalcGr
   // Skills: governing ability mod + (possibly halved/doubled) proficiency.
   for (const skill of SKILLS) {
     const abil = SKILL_ABILITY[skill];
-    const level = character.skillProficiencies[skill] ?? 'none';
+    let level = character.skillProficiencies[skill] ?? 'none';
+    if (grantedExpertise.has(skill)) level = 'expertise';
+    else if (grantedSkills.has(skill) && PROFICIENCY_MULTIPLIER[level] < 1) level = 'proficient';
     const id = skillNodeId(skill);
     g.set(`${id}.profMult`, PROFICIENCY_MULTIPLIER[level]);
     g.define(id, [`ability.${abil}.mod`, 'prof.bonus', `${id}.profMult`], (c) =>
@@ -129,7 +140,7 @@ export function buildGraph(character: Character, lookup?: CatalogLookup): CalcGr
     ...character.modifiers,
     ...effectModifiers(character),
     ...asiModifiers(character),
-    ...(lookup?.getFeat ? featAbilityModifiers(character, lookup.getFeat) : [])
+    ...grantNumericModifiers(grants)
   ]) {
     if (mod.active === false) continue;
     if (!g.has(mod.target)) continue;

@@ -71,12 +71,22 @@ export {
 } from './features.js';
 export { asiModifiers, asiTotal } from './abilityChoices.js';
 export {
-  featAbilityModifiers,
-  featAbilityChoices,
-  featAbilityKey,
-  FEAT_ABILITY_PREFIX,
-  type FeatAbilityChoice
-} from './featAbilities.js';
+  gatherGrants,
+  grantNumericModifiers,
+  grantKey,
+  setMembers,
+  maxNumeric,
+  universeMembers,
+  memberLabel,
+  GRANT_PREFIX,
+  DAMAGE_TYPES,
+  type GrantPool,
+  type GrantChoice,
+  type SetGrant,
+  type NumericGrant,
+  type SetCategory,
+  type Universe
+} from './grants.js';
 export {
   countAtLevel,
   featureOptionalProgressions,

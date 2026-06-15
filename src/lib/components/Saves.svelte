@@ -1,21 +1,26 @@
 <script lang="ts">
-  import { ABILITIES, ABILITY_NAMES } from '../character/index.js';
-  import { character, toggleSaveProficiency } from '../stores/character.js';
+  import { ABILITIES, ABILITY_NAMES, setMembers } from '../character/index.js';
+  import { character, grantPool, toggleSaveProficiency } from '../stores/character.js';
   import StatValue from './StatValue.svelte';
 
   let { variant = 'full' }: { variant?: string } = $props();
   const proficient = $derived(new Set($character.saveProficiencies));
+  // Feature-granted save proficiencies (Resilient, …), keyed to their sources.
+  const granted = $derived(new Map(setMembers($grantPool, 'saveProf').map((m) => [m.member.toLowerCase(), m.sources])));
 </script>
 
 <section class="block" data-variant={variant}>
   <h3>Saving Throws</h3>
   <ul>
     {#each ABILITIES as abil}
+      {@const grantedBy = granted.get(abil)}
       <li>
         <button
           class="dot"
-          class:on={proficient.has(abil)}
+          class:on={proficient.has(abil) || !!grantedBy}
+          class:granted={!!grantedBy && !proficient.has(abil)}
           aria-label="Toggle {ABILITY_NAMES[abil]} save proficiency"
+          title={grantedBy ? `Granted by ${grantedBy.join(', ')}` : undefined}
           onclick={() => toggleSaveProficiency(abil)}
         ></button>
         <span class="name">{ABILITY_NAMES[abil]}</span>
@@ -40,6 +45,8 @@
     flex: none;
   }
   .dot.on { background: var(--accent); border-color: var(--accent); }
+  /* Granted (not manually toggled) reads as a hollow accent ring. */
+  .dot.granted { background: transparent; box-shadow: inset 0 0 0 2px var(--bg), 0 0 0 1.5px var(--accent); }
   .name { flex: 1; }
   .val { font-weight: 600; }
 </style>

@@ -157,6 +157,8 @@ export interface Character {
   featureOptions: Record<string, string>;
   /** Ability score increases chosen per ASI feature (key -> ability deltas). */
   abilityChoices: Record<string, Partial<Record<Ability, number>>>;
+  /** Picked members for set-valued grant `choose` blocks (skills, resistances, …). */
+  grantChoices: Record<string, string[]>;
   /** Picked optional features (maneuvers, invocations, metamagic, …) by slot key. */
   optionalChoices: Record<string, CatalogRef>;
   /** Feats taken in an ASI-or-feat slot, keyed by that slot (cascade into feats). */
@@ -207,6 +209,7 @@ export function createCharacter(partial: Partial<Character> = {}): Character {
     spellChoices: partial.spellChoices ?? {},
     featureOptions: partial.featureOptions ?? {},
     abilityChoices: partial.abilityChoices ?? {},
+    grantChoices: partial.grantChoices ?? {},
     optionalChoices: partial.optionalChoices ?? {},
     featChoices: partial.featChoices ?? {},
     featureMeta: partial.featureMeta ?? {}

@@ -1,16 +1,28 @@
 <script lang="ts">
-  import { SKILLS, SKILL_ABILITY, skillNodeId } from '../character/index.js';
-  import { character, cycleSkillProficiency } from '../stores/character.js';
+  import { SKILLS, SKILL_ABILITY, skillNodeId, setMembers, type ProficiencyLevel, type Skill } from '../character/index.js';
+  import { character, grantPool, cycleSkillProficiency } from '../stores/character.js';
   import StatValue from './StatValue.svelte';
 
   let { variant = 'full' }: { variant?: string } = $props();
   const titleCase = (s: string) => s.replace(/\b\w/g, (c) => c.toUpperCase());
 
-  // Compact variant lists only skills the character is trained in.
+  // Feature-granted skill proficiency / expertise, keyed to their sources.
+  const grantedProf = $derived(new Map(setMembers($grantPool, 'skillProf').map((m) => [m.member.toLowerCase(), m.sources])));
+  const grantedExp = $derived(new Map(setMembers($grantPool, 'expertise').map((m) => [m.member.toLowerCase(), m.sources])));
+
+  // Effective tier: the higher of the manual toggle and any grant.
+  const RANK: Record<ProficiencyLevel, number> = { none: 0, half: 1, proficient: 2, expertise: 3 };
+  function effective(skill: Skill): { level: ProficiencyLevel; sources: string[] } {
+    let level = ($character.skillProficiencies[skill] ?? 'none') as ProficiencyLevel;
+    const sources: string[] = [];
+    if (grantedProf.has(skill) && RANK[level] < RANK.proficient) { level = 'proficient'; sources.push(...grantedProf.get(skill)!); }
+    if (grantedExp.has(skill)) { level = 'expertise'; sources.push(...grantedExp.get(skill)!); }
+    return { level, sources };
+  }
+
+  // Compact variant lists only skills the character is trained in (incl. granted).
   const shown = $derived(
-    variant === 'compact'
-      ? SKILLS.filter((s) => ($character.skillProficiencies[s] ?? 'none') !== 'none')
-      : SKILLS
+    variant === 'compact' ? SKILLS.filter((s) => effective(s).level !== 'none') : SKILLS
   );
 </script>
 
@@ -21,12 +33,12 @@
   {/if}
   <ul>
     {#each shown as skill}
-      {@const level = $character.skillProficiencies[skill] ?? 'none'}
+      {@const eff = effective(skill)}
       <li>
         <button
-          class="dot {level}"
+          class="dot {eff.level}"
           aria-label="Cycle {skill} proficiency"
-          title={level}
+          title={eff.sources.length ? `${eff.level} (granted by ${eff.sources.join(', ')})` : eff.level}
           onclick={() => cycleSkillProficiency(skill)}
         ></button>
         <span class="name">{titleCase(skill)}</span>

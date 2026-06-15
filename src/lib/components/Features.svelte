@@ -1,6 +1,7 @@
 <script lang="ts">
   import {
     character,
+    grantPool,
     setRace,
     setBackground,
     removeFeat,
@@ -23,15 +24,14 @@
     resolveFeatures,
     featureChoices,
     featureOptionalProgressions,
-    featAbilityChoices,
     type Feature,
     type OptionalProgression,
-    type FeatAbilityChoice
+    type GrantChoice
   } from '../character/index.js';
   import type { CatalogRef } from '../character/index.js';
   import { parseTaggedString, renderToHtml } from '../render/tags.js';
   import AsiEditor from './AsiEditor.svelte';
-  import FeatAbilityEditor from './FeatAbilityEditor.svelte';
+  import GrantChoiceEditor from './GrantChoiceEditor.svelte';
 
   let { variant = 'full' }: { variant?: string } = $props();
 
@@ -48,18 +48,14 @@
   const progressions = $derived<OptionalProgression[]>(
     $catalogState.catalog ? featureOptionalProgressions($character, $catalogState.catalog) : []
   );
-  const getFeat = (n: string, s: string) =>
-    ($catalogState.catalog?.entries.feat ?? []).find(
-      (f) => f.name.toLowerCase() === n.toLowerCase() && String(f.source).toLowerCase() === s.toLowerCase()
-    );
-  const featAbil = $derived<FeatAbilityChoice[]>(
-    $catalogState.catalog ? featAbilityChoices($character, getFeat) : []
-  );
-  const abilityFieldsFor = (f: Feature) =>
-    f.group === 'Feat' ? featAbil.filter((c) => c.featName === f.name) : [];
-  const abilityValue = (c: FeatAbilityChoice) => $character.abilityChoices[c.key] ?? {};
-  const abilityChosenCount = (c: FeatAbilityChoice) =>
-    Object.values(abilityValue(c)).filter((v) => v).length;
+  // Generic grant choices (ability bonuses, proficiencies, resistances, …),
+  // matched to their owning feature row by source name.
+  const grantFieldsFor = (f: Feature) => $grantPool.choices.filter((c) => c.source === f.name);
+  const grantChosenCount = (c: GrantChoice) =>
+    c.category === 'ability'
+      ? Object.values($character.abilityChoices[c.key] ?? {}).filter((v) => v).length
+      : ($character.grantChoices[c.key] ?? []).filter(Boolean).length;
+  const grantPending = (c: GrantChoice) => Math.max(0, c.count - grantChosenCount(c));
 
   // --- optional-feature progressions (maneuvers, invocations, metamagic, …) ---
   const slotKey = (p: OptionalProgression, i: number) => `${p.key}|${i}`;
@@ -101,7 +97,7 @@
     if (isAsi(f) && Object.keys(asiValue(f)).length === 0 && !featValue(f)) n += 1;
     n += optionsFor(f).filter((o) => !$character.featureOptions[o.key]).length;
     n += spellsFor(f).filter((s) => !$character.spellChoices[s.key]).length;
-    n += abilityFieldsFor(f).reduce((m, c) => m + Math.max(0, c.count - abilityChosenCount(c)), 0);
+    n += grantFieldsFor(f).reduce((m, c) => m + grantPending(c), 0);
     return n;
   }
   // Surface pending features even if they'd auto-hide; explicit hide still wins.
@@ -174,10 +170,11 @@
       <button class="mini" onclick={() => toggleExpand(f)}>{expanded.has(featKey(f)) ? '▾' : '▸'}</button>
     </div>
 
-    {#if optionsFor(f).length > 0 || spellsFor(f).length > 0 || isAsi(f) || abilityFieldsFor(f).length > 0}
+    {#if optionsFor(f).length > 0 || spellsFor(f).length > 0 || isAsi(f) || grantFieldsFor(f).length > 0}
       <div class="choices">
-        {#each abilityFieldsFor(f) as field (field.key)}
-          <FeatAbilityEditor choice={field} value={abilityValue(field)} />
+        {#each grantFieldsFor(f) as field (field.key)}
+          <span class="grantlabel" class:pending={grantPending(field) > 0}>{field.label}</span>
+          <GrantChoiceEditor choice={field} />
         {/each}
         {#if isAsi(f)}
           <select class="opt" value={asiMode(f)} title="Ability increase or feat"
@@ -369,6 +366,8 @@
   .mini:hover { opacity: 1; }
   .choices { display: flex; flex-wrap: wrap; gap: 0.3rem; padding: 0.15rem 0 0.25rem 0.2rem; }
   .opt { font-size: 0.74rem; }
+  .grantlabel { font-size: 0.72rem; color: var(--muted); align-self: center; }
+  .grantlabel.pending { color: var(--accent); font-weight: 600; }
   .pill { display: inline-flex; align-items: center; gap: 0.1rem; font: inherit; font-size: 0.76rem; border-radius: 999px; cursor: pointer; }
   .pill.empty { padding: 0.1rem 0.5rem; border: 1px dashed var(--accent); background: var(--bg); color: var(--accent); }
   .pill.picked { padding: 0.1rem 0.2rem 0.1rem 0.5rem; border: 1px solid var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }

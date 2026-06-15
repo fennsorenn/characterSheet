@@ -10,10 +10,12 @@ import {
   buildGraph,
   computeEquipmentEffects,
   createCharacter,
+  gatherGrants,
   type Ability,
   type Buff,
   type CatalogRef,
   type Character,
+  type GrantPool,
   type LevelUpPlan,
   type ProficiencyLevel,
   type Resource,
@@ -21,7 +23,9 @@ import {
   type Skill,
   type SpellStatus
 } from '../character/index.js';
-import { catalogLookup } from './catalog.js';
+import { catalogLookup, catalogState } from './catalog.js';
+
+const EMPTY_POOL: GrantPool = { numeric: [], sets: [], choices: [] };
 
 /**
  * Reactive character document + its derived calc graph.
@@ -57,8 +61,13 @@ store.subscribe((c) => {
  * The live calc graph; recomputed when the character *or* the catalog changes,
  * so equipping a catalog item updates derived numbers (and their explanations).
  */
-export const graph = derived([store, catalogLookup], ([$c, $lookup]) =>
-  buildGraph($c, $lookup)
+/** The unified feature-grant pool (proficiencies, resistances, ability bonuses, …). */
+export const grantPool = derived([store, catalogState], ([$c, $cat]) =>
+  $cat.catalog ? gatherGrants($c, $cat.catalog) : EMPTY_POOL
+);
+
+export const graph = derived([store, catalogLookup, grantPool], ([$c, $lookup, $grants]) =>
+  buildGraph($c, $lookup, $grants)
 );
 
 /** Per-ability score overrides from items (effective value differs from base). */
@@ -174,6 +183,16 @@ export function setFeatureOption(key: string, value: string | undefined) {
     if (value) featureOptions[key] = value;
     else delete featureOptions[key];
     return { ...c, featureOptions };
+  });
+}
+
+/** Set or clear the picked members for a set-valued grant choose block. */
+export function setGrantChoice(key: string, members: string[]) {
+  update((c) => {
+    const grantChoices = { ...c.grantChoices };
+    if (members.length) grantChoices[key] = members;
+    else delete grantChoices[key];
+    return { ...c, grantChoices };
   });
 }
 

@@ -1,6 +1,6 @@
 import { ABILITIES, type Ability } from './abilities.js';
 import type { Character, CharacterModifier } from './schema.js';
-import { FEAT_ABILITY_PREFIX } from './featAbilities.js';
+import { GRANT_PREFIX } from './grants.js';
 
 /**
  * Ability Score Improvements are stored per ASI feature as ability deltas
@@ -22,7 +22,7 @@ function labelFor(key: string): string {
 export function asiModifiers(character: Character): CharacterModifier[] {
   const out: CharacterModifier[] = [];
   for (const [key, increases] of Object.entries(character.abilityChoices ?? {})) {
-    if (key.startsWith(FEAT_ABILITY_PREFIX)) continue; // owned by featAbilityModifiers
+    if (key.startsWith(GRANT_PREFIX)) continue; // owned by the grant pool (grants.ts)
     const source = labelFor(key);
     for (const a of ABILITIES) {
       const amount = increases[a];
@@ -38,7 +38,7 @@ export function asiModifiers(character: Character): CharacterModifier[] {
 export function asiTotal(character: Character, ability: Ability): number {
   let n = 0;
   for (const [key, inc] of Object.entries(character.abilityChoices ?? {})) {
-    if (key.startsWith(FEAT_ABILITY_PREFIX)) continue;
+    if (key.startsWith(GRANT_PREFIX)) continue;
     n += inc[ability] ?? 0;
   }
   return n;
