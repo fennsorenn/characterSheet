@@ -1,8 +1,9 @@
 <script lang="ts">
   import { character, graph, setItemProficient } from '../stores/character.js';
   import { catalogLookup } from '../stores/catalog.js';
-  import { weaponAttacks, ABILITY_NAMES } from '../character/index.js';
+  import { weaponAttacks, iconForItem, ABILITY_NAMES } from '../character/index.js';
   import StatValue from './StatValue.svelte';
+  import Icon from './Icon.svelte';
 
   let { variant = 'full' }: { variant?: string } = $props();
 
@@ -25,6 +26,7 @@
       {#each attacks as a (a.id)}
         {@const idx = Number(a.id.slice(1))}
         <li>
+          <span class="wicon"><Icon name={iconForItem({ name: a.name })} /></span>
           <span class="name">{a.name}</span>
           <span class="hit" title="{ABILITY_NAMES[a.ability]} attack">
             <StatValue node={`attack.${a.id}.hit`} signed />
@@ -52,12 +54,14 @@
   ul { list-style: none; margin: 0; padding: 0; }
   li {
     display: grid;
-    grid-template-columns: 1fr auto auto auto;
+    grid-template-columns: auto 1fr auto auto auto;
     align-items: center;
     gap: 0.6rem;
     padding: 0.3rem 0;
     border-bottom: 1px solid var(--line);
   }
+  .wicon { color: var(--muted); display: inline-flex; }
+  .wicon :global(.icon) { width: 1.05rem; height: 1.05rem; }
   .name { font-weight: 600; }
   .hit { font-weight: 700; }
   .dmg { font-size: 0.85rem; color: var(--muted); font-variant-numeric: tabular-nums; }

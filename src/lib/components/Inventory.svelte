@@ -7,14 +7,20 @@
     removeInventoryItem
   } from '../stores/character.js';
   import { catalogLookup } from '../stores/catalog.js';
-  import { ATTUNEMENT_LIMIT } from '../character/index.js';
+  import { ATTUNEMENT_LIMIT, iconForItem } from '../character/index.js';
   import NumberField from './NumberField.svelte';
+  import Icon from './Icon.svelte';
 
   let { variant = 'full' }: { variant?: string } = $props();
 
   const attunedCount = $derived($character.inventory.filter((i) => i.attuned).length);
   const needsAttune = (name: string, source: string) =>
     !!$catalogLookup.getItem(name, source)?.reqAttune;
+
+  // Icon for an item — uses the catalog entry's type/dmgType when available,
+  // otherwise resolves from the name alone.
+  const iconFor = (name: string, source: string) =>
+    iconForItem($catalogLookup.getItem(name, source) ?? { name });
 
   // Show a short note about an item's mechanical effect, so it's clear why
   // equipping it changed AC/saves. Resolved live from the catalog.
@@ -53,6 +59,7 @@
           <span class="qty">
             <NumberField value={item.quantity} min={0} onchange={(v) => setItemQuantity(i, v)} />
           </span>
+          <span class="itemicon"><Icon name={iconFor(item.name, item.source)} /></span>
           <span class="name" class:equipped={item.equipped}>{item.name}</span>
           {#if needsAttune(item.name, item.source)}
             <button
@@ -90,6 +97,8 @@
   ul { list-style: none; margin: 0; padding: 0; }
   li { display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0; border-bottom: 1px solid var(--line); }
   .qty { width: 2.5ch; }
+  .itemicon { color: var(--muted); display: inline-flex; }
+  .itemicon :global(.icon) { width: 1.05rem; height: 1.05rem; }
   .name { flex: 1; }
   .name.equipped { font-weight: 600; }
   .src { font-size: 0.7rem; text-transform: uppercase; color: var(--muted); }

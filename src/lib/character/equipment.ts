@@ -1,6 +1,7 @@
 import { abilityModifier } from '../calc/index.js';
 import type { NamedEntry } from '../data/catalog.js';
 import { ABILITIES, SKILLS, skillNodeId, type Ability } from './abilities.js';
+import { iconForItem } from './itemIcons.js';
 import type { Character, CharacterModifier, InventoryItem } from './schema.js';
 
 /**
@@ -32,29 +33,11 @@ export interface EquipmentEffects {
 export interface AbilitySet {
   value: number;
   source: string;
-  /** Equipment-slot icon name (see Icon.svelte / SLOT_ICONS). */
+  /** Icon name (see Icon.svelte / SLOT_ICONS) for the source item. */
   icon: string;
 }
 
-/** Map an item to an equipment-slot icon name, falling back to generic magic. */
-export function itemIcon(item: NamedEntry): string {
-  const name = item.name.toLowerCase();
-  const type = baseType(item.type);
-  if (/belt|girdle|sash/.test(name)) return 'waist';
-  if (/boots|slippers|shoes|sandals|footsteps|footwear/.test(name)) return 'feet';
-  if (/gauntlet|glove/.test(name)) return 'hands';
-  if (/bracers|vambrace|armband/.test(name)) return 'arms';
-  if (/cloak|cape|mantle|shawl/.test(name)) return 'shoulders';
-  if (/goggles|lenses|spectacles|glasses|eyes\b|monocle/.test(name)) return 'eyes';
-  if (/helm|circlet|crown|tiara|diadem|\bhat\b|\bcap\b|hood|headband|mask/.test(name))
-    return 'head';
-  if (/amulet|necklace|periapt|medallion|talisman|pendant|brooch|scarab|torc/.test(name))
-    return 'neck';
-  if (type === 'RG' || /\bring\b|bracelet/.test(name)) return 'ring';
-  if (/robe|vestment|armor|mail|plate|breastplate|cuirass/.test(name)) return 'body';
-  if (type === 'WD' || type === 'RD' || /\bwand\b|\brod\b|\bstaff\b/.test(name)) return 'implement';
-  return 'magic';
-}
+export { iconForItem } from './itemIcons.js';
 
 /** A computed weapon attack for an equipped weapon. */
 export interface WeaponAttack {
@@ -134,7 +117,7 @@ export function computeEquipmentEffects(
     if (statics) {
       for (const a of ABILITIES) {
         if (typeof statics[a] === 'number' && statics[a] > (abilitySets[a]?.value ?? 0)) {
-          abilitySets[a] = { value: statics[a], source: item.name, icon: itemIcon(item) };
+          abilitySets[a] = { value: statics[a], source: item.name, icon: iconForItem(item) };
         }
       }
     }

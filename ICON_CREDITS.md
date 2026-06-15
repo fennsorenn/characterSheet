@@ -1,25 +1,18 @@
 # Icon credits
 
-Equipment-slot icons (`src/lib/components/icons.generated.ts`) are sourced from
+The icons in `src/lib/components/icons.generated.ts` are sourced from
 [game-icons.net](https://game-icons.net/), licensed under
-[CC BY 3.0](https://creativecommons.org/licenses/by/3.0/).
+[CC BY 3.0](https://creativecommons.org/licenses/by/3.0/). They were recoloured
+to `currentColor` and had their backgrounds stripped; no other modifications
+were made.
 
 Icons used, by author:
 
-| Slot       | Icon            | Author     |
-| ---------- | --------------- | ---------- |
-| head       | visored-helm    | Lorc       |
-| eyes       | spectacles      | Lorc       |
-| neck       | gem-pendant     | Lorc       |
-| shoulders  | cape            | Delapouite |
-| body       | breastplate     | Lorc       |
-| hands      | gloves          | Delapouite |
-| arms       | bracer          | Delapouite |
-| waist      | belt-armor      | Delapouite |
-| feet       | leather-boot    | Lorc       |
-| ring       | ring            | Delapouite |
-| implement  | crystal-wand    | Lorc       |
-| magic      | sparkles        | Delapouite |
+**Lorc** — visored-helm, spectacles, gem-pendant, breastplate, leather-boot,
+broadsword, battle-axe, plain-dagger, spear-hook, scythe, whip, trident,
+halberd, fishing-net, pocket-bow, broadhead-arrow, checked-shield, crystal-wand,
+wizard-staff, crystal-ball, potion-ball, scroll-unfurled, poison-bottle, lyre,
+hammer-nails, swap-bag.
 
-The icons were recoloured (`currentColor`) and stripped of their background;
-no other modifications were made.
+**Delapouite** — cape, gloves, bracer, belt-armor, ring, sparkles,
+flanged-mace, sickle, flail, wood-club, sling, steak, coins-pile.

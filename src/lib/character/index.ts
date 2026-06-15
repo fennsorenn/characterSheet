@@ -52,5 +52,6 @@ export {
   type EquipmentEffects,
   type WeaponAttack
 } from './equipment.js';
+export { iconForItem, slotIcon } from './itemIcons.js';
 export { ATTUNEMENT_LIMIT } from './schema.js';
 export { labelForNode } from './labels.js';

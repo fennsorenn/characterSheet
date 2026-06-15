@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildGraph } from './buildGraph.js';
 import { createCharacter } from './schema.js';
-import { weaponAttacks, itemIcon, type CatalogLookup } from './equipment.js';
+import { weaponAttacks, iconForItem, type CatalogLookup } from './equipment.js';
 import type { NamedEntry } from '../data/catalog.js';
 
 /** A lookup backed by a fixed set of catalog items. */
@@ -166,15 +166,49 @@ describe('ability-setting items', () => {
     ability: { static: { str: 21 } }
   };
 
-  it('picks an equipment-slot icon by item kind', () => {
-    expect(itemIcon({ name: 'Belt of Hill Giant Strength', source: 'DMG' })).toBe('waist');
-    expect(itemIcon({ name: 'Headband of Intellect', source: 'DMG' })).toBe('head');
-    expect(itemIcon({ name: 'Amulet of Health', source: 'DMG' })).toBe('neck');
-    expect(itemIcon({ name: 'Gauntlets of Ogre Power', source: 'DMG' })).toBe('hands');
-    expect(itemIcon({ name: 'Winged Boots', source: 'DMG' })).toBe('feet');
-    expect(itemIcon({ name: 'Ring of Protection', source: 'DMG', type: 'RG' })).toBe('ring');
-    expect(itemIcon({ name: 'Cloak of Protection', source: 'DMG' })).toBe('shoulders');
-    expect(itemIcon({ name: 'Mystery Orb', source: 'X' })).toBe('magic');
+  it('resolves wondrous items to their equipment slot by name', () => {
+    expect(iconForItem({ name: 'Belt of Hill Giant Strength' })).toBe('waist');
+    expect(iconForItem({ name: 'Headband of Intellect' })).toBe('head');
+    expect(iconForItem({ name: 'Amulet of Health' })).toBe('neck');
+    expect(iconForItem({ name: 'Gauntlets of Ogre Power' })).toBe('hands');
+    expect(iconForItem({ name: 'Winged Boots' })).toBe('feet');
+    expect(iconForItem({ name: 'Ring of Protection', type: 'RG' })).toBe('ring');
+    expect(iconForItem({ name: 'Cloak of Protection' })).toBe('shoulders');
+  });
+
+  it('falls back to gear (not magic) for unrecognised items', () => {
+    expect(iconForItem({ name: 'Mystery Trinket' })).toBe('gear');
+    expect(iconForItem({ name: 'Bag of Holding', type: 'G' })).toBe('gear');
+  });
+
+  it('icons weapons by type, subtype, and damage type', () => {
+    expect(iconForItem({ name: 'Longsword', type: 'M', dmgType: 'S' })).toBe('sword');
+    expect(iconForItem({ name: 'Battleaxe', type: 'M', dmgType: 'S' })).toBe('axe');
+    expect(iconForItem({ name: 'Warhammer', type: 'M', dmgType: 'B' })).toBe('mace');
+    expect(iconForItem({ name: 'Sickle', type: 'M', dmgType: 'S' })).toBe('sickle');
+    expect(iconForItem({ name: 'Dagger', type: 'M', dmgType: 'P' })).toBe('dagger');
+    expect(iconForItem({ name: 'Spear', type: 'M', dmgType: 'P' })).toBe('spear');
+    // Unknown melee falls back to its damage type.
+    expect(iconForItem({ name: 'Weird Bludgeon', type: 'M', dmgType: 'B' })).toBe('mace');
+  });
+
+  it('icons ranged weapons and ammunition', () => {
+    expect(iconForItem({ name: 'Longbow', type: 'R' })).toBe('bow');
+    expect(iconForItem({ name: 'Heavy Crossbow', type: 'R' })).toBe('bow');
+    expect(iconForItem({ name: 'Sling', type: 'R' })).toBe('sling');
+    expect(iconForItem({ name: 'Arrows (20)', type: 'A' })).toBe('arrow');
+  });
+
+  it('icons common item types', () => {
+    expect(iconForItem({ name: 'Plate Armor', type: 'HA' })).toBe('body');
+    expect(iconForItem({ name: 'Shield', type: 'S' })).toBe('shield');
+    expect(iconForItem({ name: 'Potion of Healing', type: 'P' })).toBe('potion');
+    expect(iconForItem({ name: 'Spell Scroll', type: 'SC' })).toBe('scroll');
+    expect(iconForItem({ name: 'Wand of Magic Missiles', type: 'WD' })).toBe('wand');
+    expect(iconForItem({ name: 'Staff of Power', type: 'ST' })).toBe('staff');
+    expect(iconForItem({ name: "Thieves' Tools", type: 'AT' })).toBe('tools');
+    expect(iconForItem({ name: 'Lute', type: 'INS' })).toBe('instrument');
+    expect(iconForItem({ name: 'Poison, Basic', type: 'G' })).toBe('poison');
   });
 
   it('sets the ability score when attuned, only if higher', () => {
