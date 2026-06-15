@@ -53,5 +53,6 @@ export {
   type WeaponAttack
 } from './equipment.js';
 export { iconForItem, slotIcon, iconForSchool, iconForDamageType } from './itemIcons.js';
+export { spellTags, conditionIcon, type SpellTag } from './spellTags.js';
 export { ATTUNEMENT_LIMIT } from './schema.js';
 export { labelForNode } from './labels.js';

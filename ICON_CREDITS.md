@@ -23,3 +23,8 @@ magic-shield, magic-gate, third-eye, charm, fireball, domino-mask, grim-reaper,
 cycle, chemical-drop, hammer-drop, snowflake-2, small-fire, lightning-arc,
 skull-crack, arrowhead, brain, sunbeams, claw-slashes, sonic-boom.
 (Poison damage reuses the poison-bottle item icon.)
+
+Spell tags & conditions — dodging, striking-arrows, impact-point, on-target,
+meditation, candle-light, ghost-ally, despair, puppet, terror, grab, oppression,
+stone-block, tripwire, imprisoned, coma (**Lorc**); healing, team-idea, blindfold,
+invisible (**Delapouite**).
