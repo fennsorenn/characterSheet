@@ -214,15 +214,26 @@ function parseSetEntries(
   });
 }
 
-/** Walk a class's starting proficiencies + saving throws (first class only). */
-function gatherClass(entry: NamedEntry, character: Character, pool: GrantPool): void {
+/**
+ * Walk a class's proficiencies. The first ("starting") class grants full
+ * `startingProficiencies` plus its saving throws; additional classes grant only
+ * the reduced `multiclassing.proficienciesGained` subset and no saves (5e
+ * multiclassing rules).
+ */
+function gatherClass(entry: NamedEntry, character: Character, pool: GrantPool, isFirst: boolean): void {
   const source = entry.name;
-  // `proficiency: ["wis","cha"]` are the class's saving-throw proficiencies.
-  for (const a of arr(entry.proficiency)) if (typeof a === 'string') pool.sets.push({ category: 'saveProf', member: a, source });
-  const sp = entry.startingProficiencies;
-  if (sp && typeof sp === 'object') {
+  let profs: unknown;
+  if (isFirst) {
+    // Saving-throw proficiencies come only from the starting class.
+    for (const a of arr(entry.proficiency)) if (typeof a === 'string') pool.sets.push({ category: 'saveProf', member: a, source });
+    profs = entry.startingProficiencies;
+  } else {
+    profs = (entry.multiclassing as { proficienciesGained?: unknown } | undefined)?.proficienciesGained;
+  }
+  if (profs && typeof profs === 'object') {
+    const prefix = isFirst ? 'sp' : 'mc';
     for (const [field, { category, universe }] of Object.entries(CLASS_SUBFIELDS)) {
-      parseSetEntries(arr((sp as Record<string, unknown>)[field]), { category, universe, field: `sp.${field}`, source }, character, pool);
+      parseSetEntries(arr((profs as Record<string, unknown>)[field]), { category, universe, field: `${prefix}.${field}`, source }, character, pool);
     }
   }
 }
@@ -294,9 +305,11 @@ export function gatherGrants(character: Character, catalog: Catalog): GrantPool 
     ...allFeatRefs(character).map((ref) => findRef(catalog.entries.feat, ref))
   ];
   for (const entry of sources) if (entry) gatherFrom(entry, character, pool);
-  // Starting proficiencies/saves come from the first ("starting") class.
-  const firstClass = character.classes[0] && findRef(catalog.entries.class, character.classes[0]);
-  if (firstClass) gatherClass(firstClass, character, pool);
+  // Class proficiencies: full from the first class, the multiclass subset from the rest.
+  character.classes.forEach((cls, i) => {
+    const entry = findRef(catalog.entries.class, cls);
+    if (entry) gatherClass(entry, character, pool, i === 0);
+  });
   return pool;
 }
 

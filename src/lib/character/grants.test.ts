@@ -45,7 +45,15 @@ function catalog(): Catalog {
         armor: ['light', 'medium', 'heavy', 'shield'],
         weapons: ['simple', 'martial'],
         skills: [{ choose: { from: ['athletics', 'perception', 'survival'], count: 2 } }]
-      }
+      },
+      multiclassing: { proficienciesGained: { armor: ['light', 'medium', 'shield'], weapons: ['simple', 'martial'] } }
+    },
+    {
+      name: 'Cleric',
+      source: 'PHB',
+      proficiency: ['wis', 'cha'],
+      startingProficiencies: { armor: ['light', 'medium', 'shield'] },
+      multiclassing: { proficienciesGained: { armor: ['light', 'medium', 'shield'] } }
     }
   ] as never;
   return c;
@@ -95,6 +103,23 @@ describe('gatherGrants', () => {
     const skillChoice = pool.choices.find((ch) => ch.source === 'Fighter' && ch.category === 'skillProf');
     expect(skillChoice?.count).toBe(2);
     expect(skillChoice?.from).toEqual(['athletics', 'perception', 'survival']);
+  });
+
+  it('grants only the multiclass subset (no saves, no heavy armor) from additional classes', () => {
+    // Cleric as a second class: armor light/medium/shield only — no wis/cha saves.
+    const c = createCharacter({
+      classes: [
+        { name: 'Fighter', source: 'PHB', level: 1 },
+        { name: 'Cleric', source: 'PHB', level: 1 }
+      ]
+    });
+    const pool = gatherGrants(c, catalog());
+    // Saves come from Fighter (first) only.
+    expect(setMembers(pool, 'saveProf').map((m) => m.member).sort()).toEqual(['con', 'str']);
+    // Cleric contributes armor but no saving throws.
+    const clericArmor = pool.sets.filter((s) => s.source === 'Cleric' && s.category === 'armorProf');
+    expect(clericArmor.map((s) => s.member)).toEqual(['light', 'medium', 'shield']);
+    expect(pool.sets.some((s) => s.source === 'Cleric' && s.category === 'saveProf')).toBe(false);
   });
 });
 
