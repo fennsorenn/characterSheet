@@ -1,0 +1,12 @@
+import pw from '/opt/node22/lib/node_modules/playwright/index.js';
+const { chromium } = pw;
+const b = await chromium.launch();
+const p = await b.newPage();
+await p.setViewportSize({ width: 760, height: 900 });
+await p.goto('http://localhost:3000/', { waitUntil: 'networkidle' });
+await p.setInputFiles('input[type=file]', '/tmp/5etools.zip');
+await p.waitForSelector('.loaded', { timeout: 60000 });
+await p.fill('.search input', 'fireball');
+await p.waitForSelector('.results li .name', { timeout: 5000 });
+await p.screenshot({ path: '/tmp/sheet-smoke.png' });
+await b.close();

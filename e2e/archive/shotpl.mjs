@@ -1,0 +1,14 @@
+import pw from '/opt/node22/lib/node_modules/playwright/index.js';
+const { chromium } = pw;
+const b = await chromium.launch();
+const ctx = await b.newContext();
+const p = await ctx.newPage();
+await p.setViewportSize({ width: 1200, height: 900 });
+await p.goto('http://localhost:3000/', { waitUntil: 'networkidle' });
+await p.click('button:has-text("Print / PDF")');
+await p.waitForSelector('.print-pages');
+await p.click('button:has-text("Edit print layout")');
+await p.waitForSelector('.print-pages .controls');
+await p.waitForTimeout(250);
+await p.screenshot({ path: '/tmp/print-layout-edit.png' });
+await b.close();

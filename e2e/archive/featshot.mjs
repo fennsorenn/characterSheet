@@ -1,0 +1,21 @@
+import pw from '/opt/node22/lib/node_modules/playwright/index.js';
+const { chromium } = pw;
+const b = await chromium.launch();
+const ctx = await b.newContext();
+const p = await ctx.newPage();
+await p.setViewportSize({ width: 940, height: 1500 });
+await p.goto('http://localhost:3000/', { waitUntil: 'networkidle' });
+await p.setInputFiles('input[type=file]', '/tmp/5etools.zip');
+await p.waitForSelector('.data-toggle:has-text("Data ✓")', { timeout: 60000 });
+const lvl = p.locator('.cell', { hasText: 'Defenses' }).locator('.stat', { hasText: 'Level' }).locator('input');
+await lvl.click(); await lvl.fill('3'); await lvl.press('Enter'); await p.waitForTimeout(150);
+const feat = p.locator('.cell', { hasText: 'Features & Traits' });
+await feat.locator('.line', { hasText: 'Fighter subclass' }).locator('select').selectOption({ index: 2 });
+await p.waitForTimeout(150);
+// expand the Action Surge feature to show body
+const as = feat.locator('.features li', { hasText: 'Action Surge' });
+if (await as.count()) await as.locator('.fhead').click();
+await p.waitForTimeout(200);
+await feat.screenshot({ path: '/tmp/features.png' });
+console.log('shot ok');
+await b.close();

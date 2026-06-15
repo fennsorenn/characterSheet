@@ -1,0 +1,12 @@
+import pw from '/opt/node22/lib/node_modules/playwright/index.js';
+const { chromium } = pw;
+const b = await chromium.launch();
+const ctx = await b.newContext();
+const p = await ctx.newPage();
+await p.setViewportSize({ width: 1000, height: 760 });
+await p.goto('http://localhost:3000/', { waitUntil: 'networkidle' });
+await p.selectOption('.preset', { label: 'Caster' });
+await p.click('button.edit');
+await p.waitForTimeout(250);
+await p.screenshot({ path: '/tmp/sheet-presets.png' });
+await b.close();

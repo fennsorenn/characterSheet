@@ -1,0 +1,14 @@
+import pw from '/opt/node22/lib/node_modules/playwright/index.js';
+const { chromium } = pw;
+const b = await chromium.launch();
+const ctx = await b.newContext();
+const p = await ctx.newPage();
+await p.setViewportSize({ width: 1000, height: 760 });
+await p.goto('http://localhost:3000/', { waitUntil: 'networkidle' });
+const con = p.locator('.ability', { hasText: 'Con' }).first().locator('input');
+await con.click(); await con.fill('14'); await con.press('Enter');
+await p.locator('.cell', { hasText: 'Rest & Level Up' }).locator('button:has-text("Level Up")').click();
+await p.waitForSelector('.modal');
+await p.waitForTimeout(200);
+await p.screenshot({ path: '/tmp/levelup-modal.png' });
+await b.close();

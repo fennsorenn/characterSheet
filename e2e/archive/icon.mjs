@@ -1,0 +1,36 @@
+import pw from '/opt/node22/lib/node_modules/playwright/index.js';
+const { chromium } = pw;
+const b = await chromium.launch();
+const ctx = await b.newContext();
+const p = await ctx.newPage();
+await p.setViewportSize({ width: 1100, height: 1000 });
+const errors = [];
+p.on('console', m => { if (m.type()==='error') errors.push(m.text()); });
+p.on('pageerror', e => errors.push(String(e)));
+await p.goto('http://localhost:3000/', { waitUntil: 'networkidle' });
+await p.setInputFiles('input[type=file]', '/tmp/5etools.zip');
+await p.waitForSelector('.data-toggle:has-text("Data ✓")', { timeout: 60000 });
+
+const strBox = p.locator('.ability', { hasText: 'Str' }).first();
+const si = strBox.locator('input'); await si.click(); await si.fill('16'); await si.press('Enter');
+await p.fill('.search input', 'belt of hill giant');
+await p.waitForSelector('.results li .add');
+await p.locator('.results li', { hasText: 'Belt of Hill Giant Strength' }).first().locator('.add').click();
+await p.waitForTimeout(150);
+const inv = p.locator('.cell', { hasText: 'Inventory' }).locator('li', { hasText: 'Belt of Hill Giant' }).first();
+await inv.locator('input[type=checkbox]').check();
+await inv.locator('button.attune').click();
+await p.waitForTimeout(250);
+
+const eff = strBox.locator('.eff');
+const val = await eff.locator('.value').innerText();
+const icon = await eff.locator('.icon').innerText();
+const tooltip = await eff.getAttribute('title');
+const hasNote = await eff.locator('.note').count();
+console.log('value text (incl icon):', JSON.stringify(val));
+console.log('icon:', JSON.stringify(icon));
+console.log('tooltip (title):', tooltip);
+console.log('click-note removed:', hasNote === 0);
+console.log('errors:', errors.length ? errors.slice(0,3) : 'none');
+await p.screenshot({ path: '/tmp/icon.png', clip: { x: 30, y: 300, width: 360, height: 150 } });
+await b.close();
