@@ -20,6 +20,7 @@ describe('defaultLayout', () => {
       'abilityScores',
       'defenses',
       'hitPoints',
+      'restLevelUp',
       'conditions',
       'effects',
       'saves',

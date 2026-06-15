@@ -4,8 +4,7 @@
     addResource,
     removeResource,
     adjustResource,
-    setResourceMax,
-    rest
+    setResourceMax
   } from '../stores/character.js';
   import type { RestType } from '../character/index.js';
   import NumberField from './NumberField.svelte';
@@ -28,13 +27,7 @@
 </script>
 
 <section class="block" data-variant={variant}>
-  <header class="head">
-    <h3>Resources</h3>
-    <span class="rests">
-      <button onclick={() => rest('short')}>Short rest</button>
-      <button class="long" onclick={() => rest('long')}>Long rest</button>
-    </span>
-  </header>
+  <h3>Resources</h3>
 
   {#if $character.resources.length === 0}
     <p class="empty">Track limited-use features — Action Surge, Channel Divinity, Rage, Ki…</p>
@@ -67,11 +60,7 @@
 
 <style>
   .block { border: 1px solid var(--line); border-radius: 8px; padding: 0.75rem 1rem; }
-  .head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; }
-  h3 { margin: 0; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
-  .rests { display: flex; gap: 0.4rem; }
-  .rests button { font: inherit; font-size: 0.75rem; padding: 0.2rem 0.5rem; border: 1px solid var(--line); background: var(--bg); color: var(--fg); border-radius: 5px; cursor: pointer; }
-  .rests .long { border-color: var(--accent); color: var(--accent); }
+  h3 { margin: 0 0 0.6rem; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
   .empty { color: var(--muted); font-size: 0.85rem; margin: 0; }
   ul { list-style: none; margin: 0; padding: 0; }
   li { display: flex; align-items: center; gap: 0.6rem; padding: 0.3rem 0; border-bottom: 1px solid var(--line); }

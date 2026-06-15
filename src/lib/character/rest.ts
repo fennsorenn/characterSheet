@@ -1,4 +1,5 @@
 import type { Character, RestType } from './schema.js';
+import { recoverHitDice } from './levelup.js';
 
 /**
  * Rest utilities — pure functions returning a new character.
@@ -23,6 +24,7 @@ export function applyRest(character: Character, type: RestType): Character {
     ...character,
     resources,
     spellSlots: character.spellSlots.map((s) => ({ ...s, expended: 0 })),
-    hp: { ...character.hp, current: character.hp.max }
+    hp: { ...character.hp, current: character.hp.max },
+    hitDice: recoverHitDice(character.hitDice)
   };
 }

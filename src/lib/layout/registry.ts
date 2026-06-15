@@ -10,6 +10,7 @@ import SpellSlots from '../components/SpellSlots.svelte';
 import Resources from '../components/Resources.svelte';
 import Effects from '../components/Effects.svelte';
 import Conditions from '../components/Conditions.svelte';
+import RestLevelUp from '../components/RestLevelUp.svelte';
 
 /**
  * Maps block type keys to their Svelte components. Kept apart from the pure
@@ -29,7 +30,8 @@ const COMPONENTS: Record<string, BlockComponent> = {
   spellSlots: SpellSlots as BlockComponent,
   resources: Resources as BlockComponent,
   effects: Effects as BlockComponent,
-  conditions: Conditions as BlockComponent
+  conditions: Conditions as BlockComponent,
+  restLevelUp: RestLevelUp as BlockComponent
 };
 
 export function componentFor(type: string): BlockComponent | undefined {

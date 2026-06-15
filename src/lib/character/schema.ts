@@ -23,6 +23,15 @@ export interface ClassEntry {
   source: string;
   level: number;
   subclass?: string;
+  /** Hit die faces for this class (d10 → 10), used by rest/level-up. */
+  hitDie?: number;
+}
+
+/** A pool of hit dice of one size; `used` are spent (recover on a long rest). */
+export interface HitDicePool {
+  die: number;
+  max: number;
+  used: number;
 }
 
 export interface InventoryItem extends CatalogRef {
@@ -117,6 +126,8 @@ export interface Character {
   conditions: string[];
   /** Exhaustion level (0-6); applies a d20 penalty under 2024 rules. */
   exhaustion: number;
+  /** Hit dice pools by die size, for short-rest healing. */
+  hitDice: HitDicePool[];
 }
 
 /** Nine empty spell-slot levels. */
@@ -135,7 +146,7 @@ export function createCharacter(partial: Partial<Character> = {}): Character {
     id: partial.id ?? crypto.randomUUID(),
     name: partial.name ?? 'New Character',
     abilities,
-    classes: partial.classes ?? [{ name: 'Fighter', source: 'PHB', level: 1 }],
+    classes: partial.classes ?? [{ name: 'Fighter', source: 'PHB', level: 1, hitDie: 10 }],
     saveProficiencies: partial.saveProficiencies ?? ['str', 'con'],
     skillProficiencies: partial.skillProficiencies ?? {},
     spellcasting: partial.spellcasting,
@@ -148,7 +159,8 @@ export function createCharacter(partial: Partial<Character> = {}): Character {
     spellSlots: partial.spellSlots ?? emptySpellSlots(),
     buffs: partial.buffs ?? [],
     conditions: partial.conditions ?? [],
-    exhaustion: partial.exhaustion ?? 0
+    exhaustion: partial.exhaustion ?? 0,
+    hitDice: partial.hitDice ?? [{ die: 10, max: 1, used: 0 }]
   };
 }
 

@@ -23,9 +23,20 @@ export {
   type RestType,
   type SpellSlotLevel,
   type Buff,
-  type BuffModifier
+  type BuffModifier,
+  type HitDicePool
 } from './schema.js';
 export { applyRest } from './rest.js';
+export {
+  hpGainAverage,
+  hpGainRoll,
+  totalHpGain,
+  conModifier,
+  applyLevelUp,
+  spendHitDie,
+  recoverHitDice,
+  type LevelUpPlan
+} from './levelup.js';
 export {
   CONDITIONS,
   buffModifiers,

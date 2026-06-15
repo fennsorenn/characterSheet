@@ -31,6 +31,12 @@ export const BLOCK_META: Record<string, BlockMeta> = {
     defaultVariant: 'full',
     defaultSize: 'narrow'
   },
+  restLevelUp: {
+    label: 'Rest & Level Up',
+    variants: [{ key: 'full', label: 'Full', verbosity: 'full' }],
+    defaultVariant: 'full',
+    defaultSize: 'narrow'
+  },
   spellSlots: {
     label: 'Spell Slots',
     variants: [{ key: 'full', label: 'Full', verbosity: 'full' }],

@@ -1,12 +1,15 @@
 import { writable, derived, get } from 'svelte/store';
 import {
   applyRest,
+  applyLevelUp,
+  spendHitDie as spendHitDiePure,
   buildGraph,
   createCharacter,
   type Ability,
   type Buff,
   type CatalogRef,
   type Character,
+  type LevelUpPlan,
   type ProficiencyLevel,
   type Resource,
   type RestType,
@@ -274,10 +277,28 @@ export function setExhaustion(level: number) {
   update((c) => ({ ...c, exhaustion: Math.min(6, Math.max(0, level)) }));
 }
 
-// --- Rest ---
+// --- Rest & level up ---
 
 export function rest(type: RestType) {
   update((c) => applyRest(c, type));
+}
+
+export function levelUp(plan: LevelUpPlan) {
+  update((c) => applyLevelUp(c, plan));
+}
+
+export function spendHitDie(die: number, heal: number) {
+  update((c) => spendHitDiePure(c, die, heal));
+}
+
+/** Manually adjust a hit-die pool's spent count (for ad-hoc tracking). */
+export function adjustHitDie(die: number, delta: number) {
+  update((c) => ({
+    ...c,
+    hitDice: c.hitDice.map((p) =>
+      p.die === die ? { ...p, used: Math.min(p.max, Math.max(0, p.used + delta)) } : p
+    )
+  }));
 }
 
 export function resetCharacter() {
