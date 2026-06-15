@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { character } from '../../stores/character.js';
+  import { character, graph } from '../../stores/character.js';
   import { totalLevel } from '../../character/index.js';
   import {
     pageSize,
@@ -10,7 +10,25 @@
     printNow
   } from '../../stores/print.js';
   import { PREFILL_LABELS, type PrefillLevel } from '../../print/redaction.js';
+  import { collectSheetValues } from '../../print/sheetValues.js';
+  import { buildCharacterPdf } from '../../print/pdf.js';
   import LayoutRenderer from '../layout/LayoutRenderer.svelte';
+
+  // Build and download a form-fillable PDF, prefilled per the current options.
+  async function downloadFillablePdf() {
+    const values = collectSheetValues($character, $graph);
+    const bytes = await buildCharacterPdf(values, {
+      prefill: $prefill,
+      custom: $customRedaction
+    });
+    const blob = new Blob([bytes as BlobPart], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${$character.name || 'character'}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   const LEVELS = Object.keys(PREFILL_LABELS) as PrefillLevel[];
   const subtitle = $derived(
@@ -55,6 +73,7 @@
     {/if}
 
     <span class="spacer"></span>
+    <button onclick={downloadFillablePdf} title="Download an editable AcroForm PDF">Fillable PDF</button>
     <button class="print" onclick={printNow}>Print / Save PDF</button>
   </div>
 
