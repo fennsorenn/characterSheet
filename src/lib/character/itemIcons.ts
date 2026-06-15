@@ -123,3 +123,50 @@ export function iconForDamageType(damage: unknown): string | null {
   if (DAMAGE_WORDS.has(lower)) return lower;
   return DAMAGE_CODES[damage.toUpperCase()] ?? null;
 }
+
+/** Human label for an icon name, for tooltips. Falls back to a title-cased key. */
+const ICON_LABELS: Record<string, string> = {
+  head: 'Head slot',
+  eyes: 'Eyes slot',
+  neck: 'Neck slot',
+  shoulders: 'Shoulders slot',
+  body: 'Body / armor',
+  hands: 'Hands slot',
+  arms: 'Arms slot',
+  waist: 'Waist / belt',
+  feet: 'Feet slot',
+  ring: 'Ring',
+  magic: 'Magic item',
+  sword: 'Sword (slashing)',
+  axe: 'Axe',
+  dagger: 'Dagger (piercing)',
+  spear: 'Spear',
+  mace: 'Mace / hammer (bludgeoning)',
+  sickle: 'Sickle',
+  scythe: 'Scythe',
+  whip: 'Whip',
+  flail: 'Flail',
+  trident: 'Trident',
+  polearm: 'Polearm',
+  net: 'Net',
+  club: 'Club',
+  bow: 'Bow / ranged weapon',
+  sling: 'Sling',
+  arrow: 'Ammunition',
+  shield: 'Shield',
+  wand: 'Wand / rod',
+  staff: 'Staff',
+  focus: 'Spellcasting focus',
+  potion: 'Potion',
+  scroll: 'Scroll',
+  poison: 'Poison',
+  food: 'Food & drink',
+  instrument: 'Instrument',
+  tools: 'Tools',
+  treasure: 'Treasure / coins',
+  gear: 'Adventuring gear'
+};
+
+export function iconLabel(name: string): string {
+  return ICON_LABELS[name] ?? name.charAt(0).toUpperCase() + name.slice(1);
+}

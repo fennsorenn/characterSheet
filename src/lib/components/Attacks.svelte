@@ -1,7 +1,13 @@
 <script lang="ts">
   import { character, graph, setItemProficient } from '../stores/character.js';
   import { catalogLookup } from '../stores/catalog.js';
-  import { weaponAttacks, iconForItem, iconForDamageType, ABILITY_NAMES } from '../character/index.js';
+  import {
+    weaponAttacks,
+    iconForItem,
+    iconForDamageType,
+    iconLabel,
+    ABILITY_NAMES
+  } from '../character/index.js';
   import StatValue from './StatValue.svelte';
   import Icon from './Icon.svelte';
 
@@ -25,8 +31,9 @@
     <ul>
       {#each attacks as a (a.id)}
         {@const idx = Number(a.id.slice(1))}
+        {@const wic = iconForItem({ name: a.name })}
         <li>
-          <span class="wicon"><Icon name={iconForItem({ name: a.name })} /></span>
+          <span class="wicon" title={iconLabel(wic)}><Icon name={wic} /></span>
           <span class="name">{a.name}</span>
           <span class="hit" title="{ABILITY_NAMES[a.ability]} attack">
             <StatValue node={`attack.${a.id}.hit`} signed />

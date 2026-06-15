@@ -7,7 +7,7 @@
     removeInventoryItem
   } from '../stores/character.js';
   import { catalogLookup } from '../stores/catalog.js';
-  import { ATTUNEMENT_LIMIT, iconForItem } from '../character/index.js';
+  import { ATTUNEMENT_LIMIT, iconForItem, iconLabel } from '../character/index.js';
   import NumberField from './NumberField.svelte';
   import Icon from './Icon.svelte';
 
@@ -52,6 +52,7 @@
     <ul>
       {#each $character.inventory as item, i (item.name + item.source)}
         {@const note = effectNote(item.name, item.source)}
+        {@const ic = iconFor(item.name, item.source)}
         <li>
           <label class="equip" title="Equipped">
             <input type="checkbox" checked={item.equipped} onchange={() => toggleEquipped(i)} />
@@ -59,7 +60,7 @@
           <span class="qty">
             <NumberField value={item.quantity} min={0} onchange={(v) => setItemQuantity(i, v)} />
           </span>
-          <span class="itemicon"><Icon name={iconFor(item.name, item.source)} /></span>
+          <span class="itemicon" title={iconLabel(ic)}><Icon name={ic} /></span>
           <span class="name" class:equipped={item.equipped}>{item.name}</span>
           {#if needsAttune(item.name, item.source)}
             <button
