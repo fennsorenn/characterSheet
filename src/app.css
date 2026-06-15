@@ -65,9 +65,13 @@ body {
 
 @media print {
   body { background: #fff; }
-  /* Hide the live app and the print toolbar; print only the page sheet. */
+  /* Hide the live app, the print toolbars, and any edit chrome; print only the
+     page sheet. */
   .app-root { display: none !important; }
-  .print-toolbar { display: none !important; }
+  .print-toolbar,
+  .edit-row { display: none !important; }
+  .print-pages .controls { display: none !important; }
+  .print-pages .cell { border: none !important; }
   .print-overlay { position: static !important; background: #fff !important; }
   .print-scroll { overflow: visible !important; padding: 0 !important; display: block !important; }
   .print-pages {

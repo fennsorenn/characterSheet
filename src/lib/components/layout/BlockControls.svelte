@@ -1,11 +1,13 @@
 <script lang="ts">
   import { blockMeta } from '../../layout/blocks.js';
-  import { moveBlock, removeBlock, setVariant, cycleSize } from '../../stores/layout.js';
+  import { getLayoutController } from '../../layout/controller.js';
   import type { BlockInstance } from '../../layout/types.js';
 
   // The edit-mode toolbar shown on each block: change variant, resize, reorder,
   // or remove. Drag handle lives here too (the parent cell is draggable).
+  // Acts on whichever layout the surrounding controller manages.
   let { block }: { block: BlockInstance } = $props();
+  const ctrl = getLayoutController();
   const meta = $derived(blockMeta(block.type));
 </script>
 
@@ -17,7 +19,7 @@
     <select
       value={block.variant}
       title="Template / verbosity"
-      onchange={(e) => setVariant(block.id, (e.target as HTMLSelectElement).value)}
+      onchange={(e) => ctrl.setVariant(block.id, (e.target as HTMLSelectElement).value)}
     >
       {#each meta.variants as v}
         <option value={v.key}>{v.label}</option>
@@ -25,10 +27,10 @@
     </select>
   {/if}
 
-  <button title="Resize" onclick={() => cycleSize(block.id)}>{block.size}</button>
-  <button title="Move up" onclick={() => moveBlock(block.id, -1)}>↑</button>
-  <button title="Move down" onclick={() => moveBlock(block.id, 1)}>↓</button>
-  <button class="rm" title="Remove" onclick={() => removeBlock(block.id)}>✕</button>
+  <button title="Resize" onclick={() => ctrl.cycleSize(block.id)}>{block.size}</button>
+  <button title="Move up" onclick={() => ctrl.moveBlock(block.id, -1)}>↑</button>
+  <button title="Move down" onclick={() => ctrl.moveBlock(block.id, 1)}>↓</button>
+  <button class="rm" title="Remove" onclick={() => ctrl.removeBlock(block.id)}>✕</button>
 </div>
 
 <style>

@@ -22,6 +22,27 @@ function buildLayout(id: string, name: string, specs: Spec[]): SheetLayout {
   return { id, name, blocks };
 }
 
+/**
+ * Default arrangement for the dedicated print layout. On paper the grid is two
+ * columns (narrow = half, wide/full = full), so sizes are chosen for a dense,
+ * legible single-or-few-page sheet.
+ */
+export function printDefaultLayout(): SheetLayout {
+  return buildLayout('print', 'Print', [
+    ['abilityScores', 'full', 'full'],
+    ['defenses', 'full', 'full'],
+    ['hitPoints', 'full', 'narrow'],
+    ['saves', 'full', 'narrow'],
+    ['skills', 'full', 'narrow'],
+    ['conditions', 'full', 'narrow'],
+    ['resources', 'full', 'narrow'],
+    ['effects', 'full', 'narrow'],
+    ['inventory', 'full', 'full'],
+    ['spells', 'full', 'narrow'],
+    ['spellSlots', 'full', 'narrow']
+  ]);
+}
+
 export function builtinPresets(): SheetLayout[] {
   return [
     // General-purpose. Abilities + skills as the tall left spine, combat state

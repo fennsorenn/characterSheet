@@ -1,15 +1,19 @@
 <script lang="ts">
-  import { layout, editMode, reorderBlock } from '../../stores/layout.js';
+  import { getLayoutController } from '../../layout/controller.js';
   import { componentFor } from '../../layout/registry.js';
   import BlockControls from './BlockControls.svelte';
 
-  // Renders the layout into a responsive grid. In edit mode each block gets a
-  // control bar and becomes draggable for reordering. The grid maps block sizes
-  // (narrow/wide/full) to column spans and reflows on small screens.
+  // Renders the controller's layout into a responsive grid. In edit mode each
+  // block gets a control bar and becomes draggable for reordering. The grid maps
+  // block sizes (narrow/wide/full) to column spans and reflows on small screens.
+  // The controller (screen vs print) comes from context, so this is reused as-is.
+  const ctrl = getLayoutController();
+  const layout = ctrl.layout;
+  const editMode = ctrl.editMode;
   let dragId = $state<string | null>(null);
 
   function onDrop(targetId: string) {
-    if (dragId && dragId !== targetId) reorderBlock(dragId, targetId);
+    if (dragId && dragId !== targetId) ctrl.reorderBlock(dragId, targetId);
     dragId = null;
   }
 </script>

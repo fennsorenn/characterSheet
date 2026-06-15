@@ -12,7 +12,30 @@
   import { PREFILL_LABELS, type PrefillLevel } from '../../print/redaction.js';
   import { collectSheetValues } from '../../print/sheetValues.js';
   import { buildCharacterPdf } from '../../print/pdf.js';
+  import { get } from 'svelte/store';
+  import { setLayoutController } from '../../layout/controller.js';
+  import { BLOCK_META } from '../../layout/blocks.js';
+  import { layout as screenLayout } from '../../stores/layout.js';
+  import {
+    printController,
+    printEditMode,
+    togglePrintEdit,
+    resetPrintLayout,
+    adoptLayout
+  } from '../../stores/printLayout.js';
   import LayoutRenderer from '../layout/LayoutRenderer.svelte';
+
+  // The print sheet edits its own dedicated layout, independent of the screen.
+  setLayoutController(printController);
+
+  const blockTypes = Object.entries(BLOCK_META);
+  let addType = $state('');
+
+  function onAddBlock(e: Event) {
+    const type = (e.target as HTMLSelectElement).value;
+    if (type) printController.addBlock(type);
+    addType = '';
+  }
 
   // Build and download a form-fillable PDF, prefilled per the current options.
   async function downloadFillablePdf() {
@@ -72,10 +95,29 @@
       </span>
     {/if}
 
+    <button class="edit" class:on={$printEditMode} onclick={togglePrintEdit}>
+      {$printEditMode ? 'Done editing' : 'Edit print layout'}
+    </button>
+
     <span class="spacer"></span>
     <button onclick={downloadFillablePdf} title="Download an editable AcroForm PDF">Fillable PDF</button>
     <button class="print" onclick={printNow}>Print / Save PDF</button>
   </div>
+
+  {#if $printEditMode}
+    <div class="edit-row">
+      <span class="hint">Customize the print sheet independently of your screen layout.</span>
+      <span class="spacer"></span>
+      <select value={addType} onchange={onAddBlock} title="Add a block">
+        <option value="">+ Add block…</option>
+        {#each blockTypes as [type, meta]}
+          <option value={type}>{meta.label}</option>
+        {/each}
+      </select>
+      <button onclick={() => adoptLayout(get(screenLayout))}>Copy screen layout</button>
+      <button onclick={resetPrintLayout}>Reset</button>
+    </div>
+  {/if}
 
   <div class="print-scroll">
     <div class="print-pages {$printClasses}">
@@ -108,6 +150,25 @@
   }
   .print-toolbar label { font-size: 0.8rem; color: var(--muted); display: inline-flex; gap: 0.35rem; align-items: center; }
   .print-toolbar .custom { display: inline-flex; gap: 0.75rem; }
+  .edit-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: var(--field-hover);
+    border-bottom: 1px solid var(--line);
+    flex-wrap: wrap;
+  }
+  .edit-row .hint { font-size: 0.8rem; color: var(--muted); }
+  .edit-row select, .edit-row button {
+    font: inherit; font-size: 0.85rem;
+    padding: 0.3rem 0.6rem;
+    border: 1px solid var(--line);
+    background: var(--bg); color: var(--fg);
+    border-radius: 6px; cursor: pointer;
+  }
+  .edit { border-color: var(--line); }
+  .edit.on { border-color: var(--accent) !important; color: var(--accent); }
   .spacer { flex: 1; }
   .print-toolbar select, .print-toolbar button {
     font: inherit; font-size: 0.85rem;

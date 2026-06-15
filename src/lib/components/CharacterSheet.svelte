@@ -11,9 +11,14 @@
     renameLayout,
     deleteLayout
   } from '../stores/layout.js';
+  import { screenController } from '../stores/layout.js';
+  import { setLayoutController } from '../layout/controller.js';
   import { BLOCK_META } from '../layout/blocks.js';
   import LayoutRenderer from './layout/LayoutRenderer.svelte';
   import ExplainPopover from './ExplainPopover.svelte';
+
+  // The renderer below edits the active screen layout.
+  setLayoutController(screenController);
 
   const blockTypes = Object.entries(BLOCK_META);
   let addType = $state('');

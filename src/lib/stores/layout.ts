@@ -3,6 +3,7 @@ import { builtinPresets } from '../layout/presets.js';
 import * as ops from '../layout/operations.js';
 import * as lib from '../layout/library.js';
 import type { LayoutLibrary } from '../layout/library.js';
+import type { LayoutController } from '../layout/controller.js';
 import type { BlockSize, SheetLayout } from '../layout/types.js';
 
 /**
@@ -102,3 +103,15 @@ export const saveAsPreset = (name: string) =>
   store.update((s) => lib.duplicateLayout(s, s.activeId, name));
 
 export const toggleEdit = () => editMode.update((v) => !v);
+
+/** Controller wired to the active screen layout, for LayoutRenderer/BlockControls. */
+export const screenController: LayoutController = {
+  layout,
+  editMode: { subscribe: editMode.subscribe },
+  addBlock,
+  removeBlock,
+  moveBlock,
+  reorderBlock,
+  setVariant,
+  cycleSize
+};
