@@ -153,6 +153,15 @@ export interface Character {
   hitDice: HitDicePool[];
   /** Player-picked spells for "choose a spell" features, keyed by choice slot. */
   spellChoices: Record<string, CatalogRef>;
+  /** Picked option for multi-block features (e.g. Magic Initiate class), by key. */
+  featureOptions: Record<string, string>;
+  /** Per-feature UI overrides (hidden / custom tags), keyed by `name|source`. */
+  featureMeta: Record<string, FeatureMeta>;
+}
+
+export interface FeatureMeta {
+  hidden?: boolean;
+  tags?: string[];
 }
 
 /** Nine empty spell-slot levels. */
@@ -189,7 +198,9 @@ export function createCharacter(partial: Partial<Character> = {}): Character {
     conditions: partial.conditions ?? [],
     exhaustion: partial.exhaustion ?? 0,
     hitDice: partial.hitDice ?? [{ die: 10, max: 1, used: 0 }],
-    spellChoices: partial.spellChoices ?? {}
+    spellChoices: partial.spellChoices ?? {},
+    featureOptions: partial.featureOptions ?? {},
+    featureMeta: partial.featureMeta ?? {}
   };
 }
 

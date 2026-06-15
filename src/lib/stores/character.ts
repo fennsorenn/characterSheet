@@ -147,6 +147,40 @@ export function setSpellChoice(key: string, spell: CatalogRef | undefined) {
   });
 }
 
+/** Pick the option for a multi-block feature (e.g. Magic Initiate's class). */
+export function setFeatureOption(key: string, value: string | undefined) {
+  update((c) => {
+    const featureOptions = { ...c.featureOptions };
+    if (value) featureOptions[key] = value;
+    else delete featureOptions[key];
+    return { ...c, featureOptions };
+  });
+}
+
+// --- Feature meta: hidden / custom tags (keyed by `name|source`) ---
+
+function mergeMeta(c: Character, key: string, patch: Partial<Character['featureMeta'][string]>): Character {
+  const featureMeta = { ...c.featureMeta, [key]: { ...c.featureMeta[key], ...patch } };
+  // Drop empty meta entries.
+  const m = featureMeta[key];
+  if (!m.hidden && (!m.tags || m.tags.length === 0)) delete featureMeta[key];
+  return { ...c, featureMeta };
+}
+
+export function setFeatureHidden(key: string, hidden: boolean) {
+  update((c) => mergeMeta(c, key, { hidden }));
+}
+export function addFeatureTag(key: string, tag: string) {
+  update((c) => {
+    const tags = c.featureMeta[key]?.tags ?? [];
+    if (tags.includes(tag)) return c;
+    return mergeMeta(c, key, { tags: [...tags, tag] });
+  });
+}
+export function removeFeatureTag(key: string, tag: string) {
+  update((c) => mergeMeta(c, key, { tags: (c.featureMeta[key]?.tags ?? []).filter((t) => t !== tag) }));
+}
+
 export function setAcBase(acBase: number) {
   update((c) => ({ ...c, acBase }));
 }

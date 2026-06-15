@@ -69,13 +69,16 @@ export {
   type FeatureGroup
 } from './features.js';
 export {
-  featureSpellChoices,
+  featureChoices,
+  blockSpellChoices,
   spellMatchesChoice,
   choiceGrantedSpells,
   parseChoiceFilter,
   choiceLabel,
   type ChoiceFilter,
-  type ChoiceSlot
+  type FeatureChoices,
+  type SpellChoiceField,
+  type OptionChoice
 } from './spellChoices.js';
 export { ATTUNEMENT_LIMIT } from './schema.js';
 export { labelForNode } from './labels.js';

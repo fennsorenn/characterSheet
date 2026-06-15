@@ -25,6 +25,27 @@ export interface ChoiceSlot {
   label: string;
 }
 
+/** One spell to pick (a field). Several may come from a single choose with count. */
+export interface SpellChoiceField {
+  key: string;
+  featureName: string;
+  label: string;
+  filter: ChoiceFilter;
+}
+
+/** A "which option" choice (e.g. Magic Initiate: pick a class) gating sub-choices. */
+export interface OptionChoice {
+  key: string;
+  featureName: string;
+  label: string;
+  options: { value: string; label: string }[];
+}
+
+export interface FeatureChoices {
+  options: OptionChoice[];
+  spells: SpellChoiceField[];
+}
+
 const titleCase = (s: string) => s.replace(/\b\w/g, (c) => c.toUpperCase());
 
 export function parseChoiceFilter(spec: string): ChoiceFilter {
@@ -73,9 +94,12 @@ export function choiceLabel(f: ChoiceFilter): string {
 const isRitual = (s: NamedEntry) => !!(s.meta as { ritual?: boolean } | undefined)?.ritual;
 const arr = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
 
-/** Spell-choice slots from a feature's additionalSpells, level-gated. */
-export function additionalSpellChoices(additionalSpells: unknown, charLevel: number): ChoiceFilter[] {
-  const out: ChoiceFilter[] = [];
+/** Spell choices in a single additionalSpells block (honouring `count`), level-gated. */
+export function blockSpellChoices(
+  block: unknown,
+  charLevel: number
+): { filter: ChoiceFilter; count: number }[] {
+  const out: { filter: ChoiceFilter; count: number }[] = [];
   const walk = (node: unknown) => {
     if (Array.isArray(node)) {
       node.forEach(walk);
@@ -84,7 +108,10 @@ export function additionalSpellChoices(additionalSpells: unknown, charLevel: num
     if (node && typeof node === 'object') {
       const o = node as Record<string, unknown>;
       if (typeof o.choose === 'string') {
-        out.push(parseChoiceFilter(o.choose));
+        out.push({
+          filter: parseChoiceFilter(o.choose),
+          count: typeof o.count === 'number' ? o.count : 1
+        });
         return;
       }
       if (Array.isArray(o.choose)) return; // ability-score choice, not a spell
@@ -94,8 +121,7 @@ export function additionalSpellChoices(additionalSpells: unknown, charLevel: num
       }
     }
   };
-  for (const block of arr(additionalSpells)) {
-    if (!block || typeof block !== 'object') continue;
+  if (block && typeof block === 'object') {
     const b = block as Record<string, unknown>;
     for (const bucket of ['known', 'prepared', 'will', 'innate']) walk(b[bucket]);
   }
@@ -118,21 +144,50 @@ const lc = (s: string) => s.toLowerCase();
 const findRef = (list: NamedEntry[], ref: CatalogRef) =>
   list.find((e) => lc(e.name) === lc(ref.name) && lc(String(e.source)) === lc(ref.source));
 
-/** All spell-choice slots for a character, across feats/race/background/subclass. */
-export function featureSpellChoices(character: Character, catalog: Catalog): ChoiceSlot[] {
-  const slots: ChoiceSlot[] = [];
+/**
+ * All spell choices for a character. When a feature's additionalSpells holds
+ * multiple *named* blocks (e.g. Magic Initiate's per-class options), an option
+ * choice is surfaced and only the selected block's spell fields are emitted —
+ * so the player sees one field per spell, not every class's options at once.
+ */
+export function featureChoices(character: Character, catalog: Catalog): FeatureChoices {
+  const out: FeatureChoices = { options: [], spells: [] };
   const charLevel = totalLevel(character);
 
   const add = (obj: NamedEntry | undefined, level: number) => {
     if (!obj?.additionalSpells) return;
-    additionalSpellChoices(obj.additionalSpells, level).forEach((filter, index) => {
-      slots.push({
-        key: `${obj.name}|${obj.source}|${index}`,
+    const blocks = arr(obj.additionalSpells);
+    const named =
+      blocks.length > 1 &&
+      blocks.every((b) => b && typeof b === 'object' && typeof (b as { name?: unknown }).name === 'string');
+
+    let activeBlocks: number[];
+    if (named) {
+      const optKey = `${obj.name}|${obj.source}|opt`;
+      out.options.push({
+        key: optKey,
         featureName: obj.name,
-        filter,
-        label: choiceLabel(filter)
+        label: `${obj.name}: choose source`,
+        options: blocks.map((b, i) => ({ value: String(i), label: String((b as { name: string }).name) }))
       });
-    });
+      const sel = character.featureOptions?.[optKey];
+      activeBlocks = sel != null && sel !== '' ? [Number(sel)] : [];
+    } else {
+      activeBlocks = blocks.map((_, i) => i);
+    }
+
+    for (const bi of activeBlocks) {
+      blockSpellChoices(blocks[bi], level).forEach((slot, ci) => {
+        for (let pi = 0; pi < slot.count; pi++) {
+          out.spells.push({
+            key: `${obj.name}|${obj.source}|${bi}|${ci}|${pi}`,
+            featureName: obj.name,
+            label: choiceLabel(slot.filter),
+            filter: slot.filter
+          });
+        }
+      });
+    }
   };
 
   add(character.race && findRef(catalog.entries.race, character.race), charLevel);
@@ -147,7 +202,7 @@ export function featureSpellChoices(character: Character, catalog: Catalog): Cho
     );
     add(sc, cls.level);
   }
-  return slots;
+  return out;
 }
 
 /** Picked spells (from spellChoices) as granted spells, by their feature. */
