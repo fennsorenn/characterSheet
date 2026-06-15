@@ -71,6 +71,13 @@ export {
 } from './features.js';
 export { asiModifiers, asiTotal } from './abilityChoices.js';
 export {
+  featAbilityModifiers,
+  featAbilityChoices,
+  featAbilityKey,
+  FEAT_ABILITY_PREFIX,
+  type FeatAbilityChoice
+} from './featAbilities.js';
+export {
   countAtLevel,
   featureOptionalProgressions,
   optionalFeaturesOfType,

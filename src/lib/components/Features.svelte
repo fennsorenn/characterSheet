@@ -23,12 +23,15 @@
     resolveFeatures,
     featureChoices,
     featureOptionalProgressions,
+    featAbilityChoices,
     type Feature,
-    type OptionalProgression
+    type OptionalProgression,
+    type FeatAbilityChoice
   } from '../character/index.js';
   import type { CatalogRef } from '../character/index.js';
   import { parseTaggedString, renderToHtml } from '../render/tags.js';
   import AsiEditor from './AsiEditor.svelte';
+  import FeatAbilityEditor from './FeatAbilityEditor.svelte';
 
   let { variant = 'full' }: { variant?: string } = $props();
 
@@ -45,6 +48,18 @@
   const progressions = $derived<OptionalProgression[]>(
     $catalogState.catalog ? featureOptionalProgressions($character, $catalogState.catalog) : []
   );
+  const getFeat = (n: string, s: string) =>
+    ($catalogState.catalog?.entries.feat ?? []).find(
+      (f) => f.name.toLowerCase() === n.toLowerCase() && String(f.source).toLowerCase() === s.toLowerCase()
+    );
+  const featAbil = $derived<FeatAbilityChoice[]>(
+    $catalogState.catalog ? featAbilityChoices($character, getFeat) : []
+  );
+  const abilityFieldsFor = (f: Feature) =>
+    f.group === 'Feat' ? featAbil.filter((c) => c.featName === f.name) : [];
+  const abilityValue = (c: FeatAbilityChoice) => $character.abilityChoices[c.key] ?? {};
+  const abilityChosenCount = (c: FeatAbilityChoice) =>
+    Object.values(abilityValue(c)).filter((v) => v).length;
 
   // --- optional-feature progressions (maneuvers, invocations, metamagic, …) ---
   const slotKey = (p: OptionalProgression, i: number) => `${p.key}|${i}`;
@@ -86,6 +101,7 @@
     if (isAsi(f) && Object.keys(asiValue(f)).length === 0 && !featValue(f)) n += 1;
     n += optionsFor(f).filter((o) => !$character.featureOptions[o.key]).length;
     n += spellsFor(f).filter((s) => !$character.spellChoices[s.key]).length;
+    n += abilityFieldsFor(f).reduce((m, c) => m + Math.max(0, c.count - abilityChosenCount(c)), 0);
     return n;
   }
   // Surface pending features even if they'd auto-hide; explicit hide still wins.
@@ -158,8 +174,11 @@
       <button class="mini" onclick={() => toggleExpand(f)}>{expanded.has(featKey(f)) ? '▾' : '▸'}</button>
     </div>
 
-    {#if optionsFor(f).length > 0 || spellsFor(f).length > 0 || isAsi(f)}
+    {#if optionsFor(f).length > 0 || spellsFor(f).length > 0 || isAsi(f) || abilityFieldsFor(f).length > 0}
       <div class="choices">
+        {#each abilityFieldsFor(f) as field (field.key)}
+          <FeatAbilityEditor choice={field} value={abilityValue(field)} />
+        {/each}
         {#if isAsi(f)}
           <select class="opt" value={asiMode(f)} title="Ability increase or feat"
             onchange={(e) => setAsiMode(f, (e.target as HTMLSelectElement).value)}>

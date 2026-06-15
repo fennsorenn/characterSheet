@@ -15,6 +15,7 @@ import {
 } from './equipment.js';
 import { effectModifiers } from './effects.js';
 import { asiModifiers } from './abilityChoices.js';
+import { featAbilityModifiers } from './featAbilities.js';
 
 /**
  * Build a fully-wired {@link CalcGraph} from a character document.
@@ -127,7 +128,8 @@ export function buildGraph(character: Character, lookup?: CatalogLookup): CalcGr
     ...equipment.modifiers,
     ...character.modifiers,
     ...effectModifiers(character),
-    ...asiModifiers(character)
+    ...asiModifiers(character),
+    ...(lookup?.getFeat ? featAbilityModifiers(character, lookup.getFeat) : [])
   ]) {
     if (mod.active === false) continue;
     if (!g.has(mod.target)) continue;

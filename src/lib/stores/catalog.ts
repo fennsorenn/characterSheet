@@ -38,10 +38,12 @@ const itemKey = (name: string, source: string) =>
  */
 export const catalogLookup = derived(state, ($s) => {
   const items = new Map<string, NamedEntry>();
+  const feats = new Map<string, NamedEntry>();
   const spells = new Map<string, NamedEntry>();
   const spellsByName = new Map<string, NamedEntry>();
   if ($s.catalog) {
     for (const item of $s.catalog.entries.item) items.set(itemKey(item.name, item.source), item);
+    for (const feat of $s.catalog.entries.feat) feats.set(itemKey(feat.name, feat.source), feat);
     for (const spell of $s.catalog.entries.spell) {
       spells.set(itemKey(spell.name, spell.source), spell);
       const n = spell.name.toLowerCase();
@@ -50,6 +52,7 @@ export const catalogLookup = derived(state, ($s) => {
   }
   return {
     getItem: (name: string, source: string) => items.get(itemKey(name, source)),
+    getFeat: (name: string, source: string) => feats.get(itemKey(name, source)),
     getSpell: (name: string, source: string) => spells.get(itemKey(name, source)),
     getSpellByName: (name: string) => spellsByName.get(name.toLowerCase())
   };

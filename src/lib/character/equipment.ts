@@ -17,6 +17,8 @@ import type { Character, CharacterModifier, InventoryItem } from './schema.js';
 /** Minimal read access into the catalog, so we don't depend on the search index. */
 export interface CatalogLookup {
   getItem(name: string, source: string): NamedEntry | undefined;
+  /** Resolve a feat (for half-feat ability bonuses). */
+  getFeat?(name: string, source: string): NamedEntry | undefined;
 }
 
 export interface EquipmentEffects {
