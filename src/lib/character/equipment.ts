@@ -32,28 +32,28 @@ export interface EquipmentEffects {
 export interface AbilitySet {
   value: number;
   source: string;
-  /** Icon name (see Icon.svelte) hinting at the source: equipment slot / magic. */
+  /** Equipment-slot icon name (see Icon.svelte / SLOT_ICONS). */
   icon: string;
 }
 
-/** Pick an icon name for an item by equipment slot, falling back to magic. */
+/** Map an item to an equipment-slot icon name, falling back to generic magic. */
 export function itemIcon(item: NamedEntry): string {
   const name = item.name.toLowerCase();
   const type = baseType(item.type);
-  if (/belt|girdle|sash/.test(name)) return 'belt';
-  if (/helm|circlet|crown|\bhat\b|\bcap\b|hood|headband|mask|goggles|lenses|eyes/.test(name))
-    return 'crown';
-  if (
-    type === 'RG' ||
-    /\bring\b|amulet|necklace|periapt|medallion|talisman|pendant|brooch|scarab|torc|bracelet/.test(
-      name
-    )
-  )
-    return 'gem';
-  if (/gauntlet|glove|boots|slippers|shoes|cloak|cape|mantle|robe|bracers|vambrace/.test(name))
-    return 'shirt';
-  if (type === 'WD' || type === 'RD' || /\bwand\b|\brod\b|\bstaff\b/.test(name)) return 'wand';
-  return 'sparkles';
+  if (/belt|girdle|sash/.test(name)) return 'waist';
+  if (/boots|slippers|shoes|sandals|footsteps|footwear/.test(name)) return 'feet';
+  if (/gauntlet|glove/.test(name)) return 'hands';
+  if (/bracers|vambrace|armband/.test(name)) return 'arms';
+  if (/cloak|cape|mantle|shawl/.test(name)) return 'shoulders';
+  if (/goggles|lenses|spectacles|glasses|eyes\b|monocle/.test(name)) return 'eyes';
+  if (/helm|circlet|crown|tiara|diadem|\bhat\b|\bcap\b|hood|headband|mask/.test(name))
+    return 'head';
+  if (/amulet|necklace|periapt|medallion|talisman|pendant|brooch|scarab|torc/.test(name))
+    return 'neck';
+  if (type === 'RG' || /\bring\b|bracelet/.test(name)) return 'ring';
+  if (/robe|vestment|armor|mail|plate|breastplate|cuirass/.test(name)) return 'body';
+  if (type === 'WD' || type === 'RD' || /\bwand\b|\brod\b|\bstaff\b/.test(name)) return 'implement';
+  return 'magic';
 }
 
 /** A computed weapon attack for an equipped weapon. */

@@ -166,13 +166,15 @@ describe('ability-setting items', () => {
     ability: { static: { str: 21 } }
   };
 
-  it('picks a slot icon by item kind', () => {
-    expect(itemIcon({ name: 'Belt of Hill Giant Strength', source: 'DMG' })).toBe('belt');
-    expect(itemIcon({ name: 'Headband of Intellect', source: 'DMG' })).toBe('crown');
-    expect(itemIcon({ name: 'Amulet of Health', source: 'DMG' })).toBe('gem');
-    expect(itemIcon({ name: 'Gauntlets of Ogre Power', source: 'DMG' })).toBe('shirt');
-    expect(itemIcon({ name: 'Ring of Protection', source: 'DMG', type: 'RG' })).toBe('gem');
-    expect(itemIcon({ name: 'Mystery Orb', source: 'X' })).toBe('sparkles');
+  it('picks an equipment-slot icon by item kind', () => {
+    expect(itemIcon({ name: 'Belt of Hill Giant Strength', source: 'DMG' })).toBe('waist');
+    expect(itemIcon({ name: 'Headband of Intellect', source: 'DMG' })).toBe('head');
+    expect(itemIcon({ name: 'Amulet of Health', source: 'DMG' })).toBe('neck');
+    expect(itemIcon({ name: 'Gauntlets of Ogre Power', source: 'DMG' })).toBe('hands');
+    expect(itemIcon({ name: 'Winged Boots', source: 'DMG' })).toBe('feet');
+    expect(itemIcon({ name: 'Ring of Protection', source: 'DMG', type: 'RG' })).toBe('ring');
+    expect(itemIcon({ name: 'Cloak of Protection', source: 'DMG' })).toBe('shoulders');
+    expect(itemIcon({ name: 'Mystery Orb', source: 'X' })).toBe('magic');
   });
 
   it('sets the ability score when attuned, only if higher', () => {
