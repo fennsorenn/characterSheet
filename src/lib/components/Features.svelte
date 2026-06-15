@@ -7,6 +7,7 @@
     setSubclass,
     setSpellChoice,
     setFeatureOption,
+    setOptionalChoice,
     setFeatureHidden,
     addFeatureTag,
     removeFeatureTag
@@ -14,7 +15,15 @@
   import { catalogState } from '../stores/catalog.js';
   import { openBrowse } from '../stores/browse.js';
   import { openSpellPicker } from '../stores/spellPicker.js';
-  import { resolveFeatures, featureChoices, type Feature } from '../character/index.js';
+  import { openOptionalPicker } from '../stores/optionalPicker.js';
+  import {
+    resolveFeatures,
+    featureChoices,
+    featureOptionalProgressions,
+    type Feature,
+    type OptionalProgression
+  } from '../character/index.js';
+  import type { CatalogRef } from '../character/index.js';
   import { parseTaggedString, renderToHtml } from '../render/tags.js';
   import AsiEditor from './AsiEditor.svelte';
 
@@ -30,6 +39,21 @@
   const choices = $derived(
     $catalogState.catalog ? featureChoices($character, $catalogState.catalog) : { options: [], spells: [] }
   );
+  const progressions = $derived<OptionalProgression[]>(
+    $catalogState.catalog ? featureOptionalProgressions($character, $catalogState.catalog) : []
+  );
+
+  // --- optional-feature progressions (maneuvers, invocations, metamagic, …) ---
+  const slotKey = (p: OptionalProgression, i: number) => `${p.key}|${i}`;
+  const slotNoun = (p: OptionalProgression) => p.name.replace(/s$/i, '').toLowerCase();
+  const progPending = (p: OptionalProgression) =>
+    Array.from({ length: p.count }, (_, i) => i).filter((i) => !$character.optionalChoices[slotKey(p, i)]).length;
+  const optionalEntry = (ref: CatalogRef) =>
+    ($catalogState.catalog?.entries.optionalfeature ?? []).find(
+      (o) => o.name.toLowerCase() === ref.name.toLowerCase()
+    );
+  const visibleProgs = $derived(progressions.filter((p) => groupShown(p.group)));
+  const totalProgPending = $derived(progressions.reduce((n, p) => n + progPending(p), 0));
 
   // --- per-feature identity / hidden / tags ---
   const metaKey = (f: Feature) => `${f.name}|${f.source}`;
@@ -149,10 +173,46 @@
   </li>
 {/snippet}
 
+{#snippet progressionRow(p: OptionalProgression)}
+  {@const pending = progPending(p)}
+  {@const ekey = `prog:${p.key}`}
+  <li class:pending={pending > 0}>
+    <div class="fhead">
+      <span class="grp">{p.group}</span>
+      <span class="fname">{p.name}</span>
+      <span class="sub">{p.owner} · know {p.count}</span>
+      {#if pending > 0}<span class="pbadge" title="{pending} to choose">{pending}</span>{/if}
+    </div>
+    <div class="choices">
+      {#each Array.from({ length: p.count }, (_, i) => i) as i (i)}
+        {@const picked = $character.optionalChoices[slotKey(p, i)]}
+        {#if picked}
+          <span class="pill picked">
+            <button class="pname" title="Change" onclick={() => openOptionalPicker({ key: slotKey(p, i), types: p.featureType, label: `Choose ${slotNoun(p)}` })}>{picked.name}</button>
+            <button class="x" onclick={() => setOptionalChoice(slotKey(p, i), undefined)}>×</button>
+          </span>
+        {:else}
+          <button class="pill empty" onclick={() => openOptionalPicker({ key: slotKey(p, i), types: p.featureType, label: `Choose ${slotNoun(p)}` })}>+ choose {slotNoun(p)}</button>
+        {/if}
+      {/each}
+    </div>
+    {#each Array.from({ length: p.count }, (_, i) => i) as i (i)}
+      {@const picked = $character.optionalChoices[slotKey(p, i)]}
+      {#if picked && expanded.has(ekey)}
+        {@const ent = optionalEntry(picked)}
+        {#if ent}<div class="fbody"><b>{ent.name}.</b> {@html body((ent.entries as unknown[]) ?? [])}</div>{/if}
+      {/if}
+    {/each}
+    {#if p.count > 0 && Object.keys($character.optionalChoices).some((k) => k.startsWith(`${p.key}|`))}
+      <button class="mini detail" onclick={() => { const next = new Set(expanded); next.has(ekey) ? next.delete(ekey) : next.add(ekey); expanded = next; }}>{expanded.has(ekey) ? '▾ hide' : '▸ details'}</button>
+    {/if}
+  </li>
+{/snippet}
+
 <section class="block" data-variant={variant}>
   <header class="bhead">
     <h3>Features &amp; Traits</h3>
-    {#if totalPending > 0}<span class="hdr-pending">{totalPending} pending choice{totalPending === 1 ? '' : 's'}</span>{/if}
+    {#if totalPending + totalProgPending > 0}<span class="hdr-pending">{totalPending + totalProgPending} pending choice{totalPending + totalProgPending === 1 ? '' : 's'}</span>{/if}
   </header>
 
   <div class="setup">
@@ -202,8 +262,9 @@
     </div>
   {/if}
 
-  {#if visible.length > 0}
+  {#if visible.length > 0 || visibleProgs.length > 0}
     <ul class="features">
+      {#each visibleProgs as p (p.key)}{@render progressionRow(p)}{/each}
       {#each visible as f (featKey(f))}{@render featureRow(f, true)}{/each}
     </ul>
   {/if}

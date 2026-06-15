@@ -177,6 +177,16 @@ export function setFeatureOption(key: string, value: string | undefined) {
   });
 }
 
+/** Set or clear a picked optional feature (maneuver, invocation, …) for a slot. */
+export function setOptionalChoice(key: string, ref: CatalogRef | undefined) {
+  update((c) => {
+    const optionalChoices = { ...c.optionalChoices };
+    if (ref) optionalChoices[key] = ref;
+    else delete optionalChoices[key];
+    return { ...c, optionalChoices };
+  });
+}
+
 // --- Feature meta: hidden / custom tags (keyed by `name|source`) ---
 
 function mergeMeta(c: Character, key: string, patch: Partial<Character['featureMeta'][string]>): Character {

@@ -70,6 +70,12 @@ export {
 } from './features.js';
 export { asiModifiers, asiTotal } from './abilityChoices.js';
 export {
+  countAtLevel,
+  featureOptionalProgressions,
+  optionalFeaturesOfType,
+  type OptionalProgression
+} from './optionalChoices.js';
+export {
   featureChoices,
   blockSpellChoices,
   spellMatchesChoice,
