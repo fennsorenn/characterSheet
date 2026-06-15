@@ -15,3 +15,16 @@ export function openExplain(id: string, label: string) {
 export function closeExplain() {
   explainTarget.set(null);
 }
+
+/**
+ * Buff mode: when on, editing a value applies a temporary modifier on its calc
+ * node (a buff or debuff) instead of changing the underlying base value. Because
+ * the calc graph layers modifiers on every node, this works for computed values
+ * (AC, saves) just as well as for base ones (ability scores).
+ */
+export const buffMode = writable(false);
+
+export function toggleBuffMode() {
+  buffMode.update((v) => !v);
+}
+

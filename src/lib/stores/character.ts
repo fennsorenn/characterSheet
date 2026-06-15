@@ -2,6 +2,8 @@ import { writable, derived, get } from 'svelte/store';
 import {
   ABILITIES,
   applyRest,
+  applyAdjustment,
+  adjustmentValue,
   applyLevelUp,
   spendHitDie as spendHitDiePure,
   ATTUNEMENT_LIMIT,
@@ -356,6 +358,36 @@ export function adjustHitDie(die: number, delta: number) {
 
 export function resetCharacter() {
   store.set(createCharacter());
+}
+
+// --- Manual buffs/debuffs (buff mode) ---
+
+/** Source label marking a modifier created by buff-mode editing. */
+export const MANUAL_SOURCE = 'Manual buff';
+
+/**
+ * Apply a delta to a node's manual adjustment (one merged modifier per node).
+ * This is how buff mode turns an edit into a temporary buff/debuff on the calc
+ * graph instead of changing a base value.
+ */
+export function adjustNode(nodeId: string, delta: number) {
+  update((c) => ({ ...c, modifiers: applyAdjustment(c.modifiers, nodeId, MANUAL_SOURCE, delta) }));
+}
+
+/** Net manual adjustment currently on a node (0 if none). */
+export function manualAdjustment(c: Character, nodeId: string): number {
+  return adjustmentValue(c.modifiers, nodeId, MANUAL_SOURCE);
+}
+
+export function clearManualModifier(nodeId: string) {
+  update((c) => ({
+    ...c,
+    modifiers: c.modifiers.filter((m) => !(m.target === nodeId && m.source === MANUAL_SOURCE))
+  }));
+}
+
+export function clearAllManualModifiers() {
+  update((c) => ({ ...c, modifiers: c.modifiers.filter((m) => m.source !== MANUAL_SOURCE) }));
 }
 
 /** Snapshot the current character (for export). */

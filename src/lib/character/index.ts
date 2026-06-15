@@ -27,6 +27,7 @@ export {
   type HitDicePool
 } from './schema.js';
 export { applyRest } from './rest.js';
+export { applyAdjustment, adjustmentValue } from './adjustments.js';
 export {
   hpGainAverage,
   hpGainRoll,

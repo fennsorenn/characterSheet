@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { character, setName } from '../stores/character.js';
+  import { character, setName, clearAllManualModifiers } from '../stores/character.js';
   import {
     editMode,
     toggleEdit,
@@ -12,10 +12,16 @@
     deleteLayout
   } from '../stores/layout.js';
   import { screenController } from '../stores/layout.js';
+  import { buffMode, toggleBuffMode } from '../stores/ui.js';
+  import { MANUAL_SOURCE } from '../stores/character.js';
   import { setLayoutController } from '../layout/controller.js';
   import { BLOCK_META } from '../layout/blocks.js';
   import LayoutRenderer from './layout/LayoutRenderer.svelte';
   import ExplainPopover from './ExplainPopover.svelte';
+
+  const manualCount = $derived(
+    $character.modifiers.filter((m) => m.source === MANUAL_SOURCE).length
+  );
 
   // The renderer below edits the active screen layout.
   setLayoutController(screenController);
@@ -53,6 +59,9 @@
       oninput={(e) => setName((e.target as HTMLInputElement).value)}
     />
     <div class="tools">
+      <button class="buff" class:on={$buffMode} onclick={toggleBuffMode} title="Apply edits as temporary buffs/debuffs">
+        Buff mode{manualCount > 0 ? ` (${manualCount})` : ''}
+      </button>
       <select
         class="preset"
         value={$layoutList.activeId}
@@ -68,6 +77,18 @@
       </button>
     </div>
   </div>
+
+  {#if $buffMode}
+    <div class="buff-banner">
+      <span>
+        <strong>Buff mode</strong> — edits apply as temporary buffs/debuffs on the value
+        (type <code>+2</code>/<code>-1</code>, scroll, or arrow keys), leaving base values untouched.
+      </span>
+      <button onclick={clearAllManualModifiers} disabled={manualCount === 0}>
+        Clear all ({manualCount})
+      </button>
+    </div>
+  {/if}
 
   {#if $editMode}
     <div class="editbar">
@@ -148,5 +169,30 @@
   .edit.on { border-color: var(--accent); color: var(--accent); }
   .danger { color: var(--accent); border-color: var(--accent); }
   .danger:disabled { opacity: 0.4; cursor: not-allowed; }
+  .buff.on { border-color: var(--accent); background: var(--accent); color: #fff; }
+  .buff-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 0.6rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    background: var(--field-hover);
+    font-size: 0.85rem;
+  }
+  .buff-banner button {
+    flex: none;
+    font: inherit;
+    font-size: 0.8rem;
+    padding: 0.3rem 0.6rem;
+    border: 1px solid var(--accent);
+    background: var(--bg);
+    color: var(--accent);
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .buff-banner button:disabled { opacity: 0.4; cursor: not-allowed; }
   .tip { color: var(--muted); font-size: 0.85rem; margin: 0.5rem 0 1rem; }
 </style>

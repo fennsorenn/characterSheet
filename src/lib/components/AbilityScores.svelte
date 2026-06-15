@@ -1,8 +1,10 @@
 <script lang="ts">
   import { ABILITIES, ABILITY_NAMES } from '../character/index.js';
   import { character, setAbilityScore, abilityOverrides } from '../stores/character.js';
+  import { buffMode } from '../stores/ui.js';
   import NumberField from './NumberField.svelte';
   import StatValue from './StatValue.svelte';
+  import BuffField from './BuffField.svelte';
   import EffectiveScore from './EffectiveScore.svelte';
 
   let { variant = 'full' }: { variant?: string } = $props();
@@ -15,8 +17,10 @@
       {#each ABILITIES as abil}
         <div class="ab" data-volatile="occasional">
           <span class="name">{ABILITY_NAMES[abil].slice(0, 3)}</span>
-          <span class="mod"><StatValue node={`ability.${abil}.mod`} signed /></span>
-          {#if $abilityOverrides[abil]}
+          <span class="mod"><StatValue node={`ability.${abil}.mod`} signed adjustable={false} /></span>
+          {#if $buffMode}
+            <BuffField node={`ability.${abil}.score`} />
+          {:else if $abilityOverrides[abil]}
             <EffectiveScore {abil} override={$abilityOverrides[abil]} />
           {:else}
             <NumberField
@@ -34,9 +38,11 @@
       {#each ABILITIES as abil}
         <div class="ability">
           <div class="name">{ABILITY_NAMES[abil].slice(0, 3)}</div>
-          <div class="modbig" data-volatile="occasional"><StatValue node={`ability.${abil}.mod`} signed /></div>
+          <div class="modbig" data-volatile="occasional"><StatValue node={`ability.${abil}.mod`} signed adjustable={false} /></div>
           <div class="score" data-volatile="occasional">
-            {#if $abilityOverrides[abil]}
+            {#if $buffMode}
+              <BuffField node={`ability.${abil}.score`} />
+            {:else if $abilityOverrides[abil]}
               <EffectiveScore {abil} override={$abilityOverrides[abil]} />
             {:else}
               <NumberField
