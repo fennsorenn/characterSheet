@@ -25,7 +25,13 @@ export interface EquipmentEffects {
   acMaxDex?: number;
   modifiers: CharacterModifier[];
   /** Ability scores set to a fixed value by an item (Belt of Giant Strength). */
-  abilitySets: Partial<Record<Ability, number>>;
+  abilitySets: Partial<Record<Ability, AbilitySet>>;
+}
+
+/** An item setting an ability score to a fixed value, with its source. */
+export interface AbilitySet {
+  value: number;
+  source: string;
 }
 
 /** A computed weapon attack for an equipped weapon. */
@@ -66,7 +72,7 @@ export function computeEquipmentEffects(
   lookup: CatalogLookup
 ): EquipmentEffects {
   const modifiers: CharacterModifier[] = [];
-  const abilitySets: Partial<Record<Ability, number>> = {};
+  const abilitySets: Partial<Record<Ability, AbilitySet>> = {};
   let acArmor: number | undefined;
   let acMaxDex: number | undefined;
 
@@ -105,8 +111,8 @@ export function computeEquipmentEffects(
     const statics = (item.ability as { static?: Record<string, number> } | undefined)?.static;
     if (statics) {
       for (const a of ABILITIES) {
-        if (typeof statics[a] === 'number') {
-          abilitySets[a] = Math.max(abilitySets[a] ?? 0, statics[a]);
+        if (typeof statics[a] === 'number' && statics[a] > (abilitySets[a]?.value ?? 0)) {
+          abilitySets[a] = { value: statics[a], source: item.name };
         }
       }
     }

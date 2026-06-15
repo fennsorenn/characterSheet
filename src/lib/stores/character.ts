@@ -1,10 +1,12 @@
 import { writable, derived, get } from 'svelte/store';
 import {
+  ABILITIES,
   applyRest,
   applyLevelUp,
   spendHitDie as spendHitDiePure,
   ATTUNEMENT_LIMIT,
   buildGraph,
+  computeEquipmentEffects,
   createCharacter,
   type Ability,
   type Buff,
@@ -55,6 +57,31 @@ store.subscribe((c) => {
 export const graph = derived([store, catalogLookup], ([$c, $lookup]) =>
   buildGraph($c, $lookup)
 );
+
+/** Per-ability score overrides from items (effective value differs from base). */
+export interface AbilityOverride {
+  base: number;
+  effective: number;
+  source: string;
+  delta: number;
+}
+
+export const abilityOverrides = derived([store, catalogLookup], ([$c, $lookup]) => {
+  const sets = computeEquipmentEffects($c, $lookup).abilitySets;
+  const out = {} as Partial<Record<Ability, AbilityOverride>>;
+  for (const a of ABILITIES) {
+    const set = sets[a];
+    if (set && set.value !== $c.abilities[a]) {
+      out[a] = {
+        base: $c.abilities[a],
+        effective: Math.max($c.abilities[a], set.value),
+        source: set.source,
+        delta: Math.max($c.abilities[a], set.value) - $c.abilities[a]
+      };
+    }
+  }
+  return out;
+});
 
 export const character = { subscribe: store.subscribe };
 

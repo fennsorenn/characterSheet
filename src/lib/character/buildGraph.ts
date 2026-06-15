@@ -43,7 +43,7 @@ export function buildGraph(character: Character, lookup?: CatalogLookup): CalcGr
   // value (e.g. Belt of Giant Strength) overrides only if it's higher.
   for (const abil of ABILITIES) {
     const set = equipment.abilitySets[abil];
-    const score = set != null ? Math.max(character.abilities[abil], set) : character.abilities[abil];
+    const score = set ? Math.max(character.abilities[abil], set.value) : character.abilities[abil];
     g.set(`ability.${abil}.score`, score);
     g.define(`ability.${abil}.mod`, [`ability.${abil}.score`], (c) =>
       abilityModifier(c.get(`ability.${abil}.score`))

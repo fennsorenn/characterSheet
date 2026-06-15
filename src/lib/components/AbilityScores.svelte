@@ -1,8 +1,9 @@
 <script lang="ts">
   import { ABILITIES, ABILITY_NAMES } from '../character/index.js';
-  import { character, setAbilityScore } from '../stores/character.js';
+  import { character, setAbilityScore, abilityOverrides } from '../stores/character.js';
   import NumberField from './NumberField.svelte';
   import StatValue from './StatValue.svelte';
+  import EffectiveScore from './EffectiveScore.svelte';
 
   let { variant = 'full' }: { variant?: string } = $props();
 </script>
@@ -15,12 +16,16 @@
         <div class="ab" data-volatile="occasional">
           <span class="name">{ABILITY_NAMES[abil].slice(0, 3)}</span>
           <span class="mod"><StatValue node={`ability.${abil}.mod`} signed /></span>
-          <NumberField
-            value={$character.abilities[abil]}
-            min={1}
-            max={30}
-            onchange={(v) => setAbilityScore(abil, v)}
-          />
+          {#if $abilityOverrides[abil]}
+            <EffectiveScore {abil} override={$abilityOverrides[abil]} />
+          {:else}
+            <NumberField
+              value={$character.abilities[abil]}
+              min={1}
+              max={30}
+              onchange={(v) => setAbilityScore(abil, v)}
+            />
+          {/if}
         </div>
       {/each}
     </div>
@@ -31,12 +36,16 @@
           <div class="name">{ABILITY_NAMES[abil].slice(0, 3)}</div>
           <div class="modbig" data-volatile="occasional"><StatValue node={`ability.${abil}.mod`} signed /></div>
           <div class="score" data-volatile="occasional">
-            <NumberField
-              value={$character.abilities[abil]}
-              min={1}
-              max={30}
-              onchange={(v) => setAbilityScore(abil, v)}
-            />
+            {#if $abilityOverrides[abil]}
+              <EffectiveScore {abil} override={$abilityOverrides[abil]} />
+            {:else}
+              <NumberField
+                value={$character.abilities[abil]}
+                min={1}
+                max={30}
+                onchange={(v) => setAbilityScore(abil, v)}
+              />
+            {/if}
           </div>
         </div>
       {/each}
