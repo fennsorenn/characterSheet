@@ -12,7 +12,7 @@
   let { abil, override }: { abil: Ability; override: AbilityOverride } = $props();
 
   const detail = $derived(
-    `${override.source}: set to ${override.effective} (base ${override.base})`
+    `${override.source} → ${override.effective} (base ${override.base})`
   );
 </script>
 

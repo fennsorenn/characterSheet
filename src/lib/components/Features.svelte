@@ -16,6 +16,7 @@
   import { openSpellPicker } from '../stores/spellPicker.js';
   import { resolveFeatures, featureChoices, type Feature } from '../character/index.js';
   import { parseTaggedString, renderToHtml } from '../render/tags.js';
+  import AsiEditor from './AsiEditor.svelte';
 
   let { variant = 'full' }: { variant?: string } = $props();
 
@@ -34,9 +35,28 @@
   const metaKey = (f: Feature) => `${f.name}|${f.source}`;
   const featKey = (f: Feature) => `${f.group}:${f.name}:${f.subtitle ?? ''}`;
   const autoHidden = (f: Feature) => /ability score improvement/i.test(f.name);
-  const isHidden = (f: Feature) =>
-    $character.featureMeta[metaKey(f)]?.hidden ?? autoHidden(f);
   const customTags = (f: Feature) => $character.featureMeta[metaKey(f)]?.tags ?? [];
+
+  // --- ASI + pending-choice tracking ---
+  const isAsi = (f: Feature) => /ability score improvement/i.test(f.name);
+  const asiKey = (f: Feature) => `${f.name}|${f.source}|${f.subtitle ?? ''}`;
+  const asiValue = (f: Feature) => $character.abilityChoices[asiKey(f)] ?? {};
+
+  function pendingCount(f: Feature): number {
+    let n = 0;
+    if (isAsi(f) && Object.keys(asiValue(f)).length === 0) n += 1;
+    n += optionsFor(f).filter((o) => !$character.featureOptions[o.key]).length;
+    n += spellsFor(f).filter((s) => !$character.spellChoices[s.key]).length;
+    return n;
+  }
+  // Surface pending features even if they'd auto-hide; explicit hide still wins.
+  const isHidden = (f: Feature) => {
+    const explicit = $character.featureMeta[metaKey(f)]?.hidden;
+    if (explicit !== undefined) return explicit;
+    if (pendingCount(f) > 0) return false;
+    return autoHidden(f);
+  };
+  const totalPending = $derived(features.reduce((n, f) => n + pendingCount(f), 0));
 
   const sources = $derived([...new Set(features.map((f) => f.group))]);
   const groupShown = (g: string) => !hiddenGroups.has(g);
@@ -83,11 +103,13 @@
 </script>
 
 {#snippet featureRow(f: Feature, hideable: boolean)}
-  <li>
+  {@const pending = pendingCount(f)}
+  <li class:pending={pending > 0}>
     <div class="fhead">
       <span class="grp">{f.group}</span>
       <button class="fname" onclick={() => toggleExpand(f)}>{f.name}</button>
       {#if f.subtitle}<span class="sub">{f.subtitle}</span>{/if}
+      {#if pending > 0}<span class="pbadge" title="{pending} choice{pending === 1 ? '' : 's'} to make">{pending}</span>{/if}
       {#each customTags(f) as t}
         <span class="ctag">{t}<button class="x" onclick={() => removeFeatureTag(metaKey(f), t)}>×</button></span>
       {/each}
@@ -97,8 +119,11 @@
       <button class="mini" onclick={() => toggleExpand(f)}>{expanded.has(featKey(f)) ? '▾' : '▸'}</button>
     </div>
 
-    {#if optionsFor(f).length > 0 || spellsFor(f).length > 0}
+    {#if optionsFor(f).length > 0 || spellsFor(f).length > 0 || isAsi(f)}
       <div class="choices">
+        {#if isAsi(f)}
+          <AsiEditor choiceKey={asiKey(f)} value={asiValue(f)} />
+        {/if}
         {#each optionsFor(f) as opt (opt.key)}
           <select class="opt" value={$character.featureOptions[opt.key] ?? ''} title={opt.label}
             onchange={(e) => setFeatureOption(opt.key, (e.target as HTMLSelectElement).value || undefined)}>
@@ -125,7 +150,10 @@
 {/snippet}
 
 <section class="block" data-variant={variant}>
-  <h3>Features &amp; Traits</h3>
+  <header class="bhead">
+    <h3>Features &amp; Traits</h3>
+    {#if totalPending > 0}<span class="hdr-pending">{totalPending} pending choice{totalPending === 1 ? '' : 's'}</span>{/if}
+  </header>
 
   <div class="setup">
     <div class="line">
@@ -198,7 +226,9 @@
 
 <style>
   .block { border: 1px solid var(--line); border-radius: 8px; padding: 0.75rem 1rem; }
-  h3 { margin: 0 0 0.6rem; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+  .bhead { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.6rem; }
+  h3 { margin: 0; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+  .hdr-pending { font-size: 0.72rem; font-weight: 600; color: #fff; background: var(--accent); border-radius: 999px; padding: 0.05rem 0.5rem; }
   .setup { display: flex; flex-direction: column; gap: 0.3rem; padding-bottom: 0.5rem; margin-bottom: 0.5rem; border-bottom: 1px solid var(--line); }
   .line { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
   .k { font-size: 0.7rem; text-transform: uppercase; color: var(--muted); min-width: 6rem; }
@@ -215,6 +245,8 @@
 
   .features { list-style: none; margin: 0; padding: 0; }
   .features li { border-bottom: 1px solid var(--line); padding: 0.15rem 0; }
+  .features li.pending { box-shadow: inset 3px 0 0 var(--accent); padding-left: 0.4rem; }
+  .pbadge { font-size: 0.6rem; font-weight: 700; color: #fff; background: var(--accent); border-radius: 999px; padding: 0.02rem 0.35rem; }
   .hiddenlist { opacity: 0.7; }
   .fhead { display: flex; align-items: center; gap: 0.4rem; }
   .grp { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.03em; color: #fff; background: var(--muted); border-radius: 3px; padding: 0.05rem 0.3rem; }

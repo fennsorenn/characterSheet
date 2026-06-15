@@ -155,6 +155,8 @@ export interface Character {
   spellChoices: Record<string, CatalogRef>;
   /** Picked option for multi-block features (e.g. Magic Initiate class), by key. */
   featureOptions: Record<string, string>;
+  /** Ability score increases chosen per ASI feature (key -> ability deltas). */
+  abilityChoices: Record<string, Partial<Record<Ability, number>>>;
   /** Per-feature UI overrides (hidden / custom tags), keyed by `name|source`. */
   featureMeta: Record<string, FeatureMeta>;
 }
@@ -200,6 +202,7 @@ export function createCharacter(partial: Partial<Character> = {}): Character {
     hitDice: partial.hitDice ?? [{ die: 10, max: 1, used: 0 }],
     spellChoices: partial.spellChoices ?? {},
     featureOptions: partial.featureOptions ?? {},
+    abilityChoices: partial.abilityChoices ?? {},
     featureMeta: partial.featureMeta ?? {}
   };
 }

@@ -70,21 +70,31 @@ export interface AbilityOverride {
   delta: number;
 }
 
-export const abilityOverrides = derived([store, catalogLookup], ([$c, $lookup]) => {
+/**
+ * An ability shows an override whenever its effective score (from the graph)
+ * differs from the base — whether from an item that sets it, an ASI, or another
+ * score modifier. The badge uses the item's slot icon when set, else a generic
+ * boost icon, and the tooltip lists the contributing sources.
+ */
+export const abilityOverrides = derived([store, catalogLookup, graph], ([$c, $lookup, $g]) => {
   const sets = computeEquipmentEffects($c, $lookup).abilitySets;
   const out = {} as Partial<Record<Ability, AbilityOverride>>;
   for (const a of ABILITIES) {
+    const base = $c.abilities[a];
+    const node = `ability.${a}.score`;
+    const effective = $g.has(node) ? $g.get(node) : base;
+    if (effective === base) continue;
     const set = sets[a];
-    if (set && set.value !== $c.abilities[a]) {
-      const effective = Math.max($c.abilities[a], set.value);
-      out[a] = {
-        base: $c.abilities[a],
-        effective,
-        source: set.source,
-        icon: set.icon,
-        delta: effective - $c.abilities[a]
-      };
-    }
+    const sources = new Set<string>();
+    if (set) sources.add(set.source);
+    for (const m of $g.explain(node).modifiers) if (m.applied) sources.add(m.source);
+    out[a] = {
+      base,
+      effective,
+      delta: effective - base,
+      source: [...sources].join(', ') || 'Effect',
+      icon: set ? set.icon : 'advantage'
+    };
   }
   return out;
 });
@@ -144,6 +154,16 @@ export function setSpellChoice(key: string, spell: CatalogRef | undefined) {
     if (spell) spellChoices[key] = spell;
     else delete spellChoices[key];
     return { ...c, spellChoices };
+  });
+}
+
+/** Set or clear the ability increases for an ASI feature. */
+export function setAbilityChoice(key: string, increases: Partial<Record<Ability, number>> | undefined) {
+  update((c) => {
+    const abilityChoices = { ...c.abilityChoices };
+    if (increases && Object.keys(increases).length > 0) abilityChoices[key] = increases;
+    else delete abilityChoices[key];
+    return { ...c, abilityChoices };
   });
 }
 

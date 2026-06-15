@@ -68,6 +68,7 @@ export {
   type Feature,
   type FeatureGroup
 } from './features.js';
+export { asiModifiers, asiTotal } from './abilityChoices.js';
 export {
   featureChoices,
   blockSpellChoices,
