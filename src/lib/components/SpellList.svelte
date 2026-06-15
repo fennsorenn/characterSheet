@@ -6,6 +6,7 @@
     spellStatus,
     grantedSpellsFromItems,
     featureGrantedSpells,
+    choiceGrantedSpells,
     type SpellTag
   } from '../character/index.js';
   import Icon from './Icon.svelte';
@@ -31,7 +32,8 @@
       ...grantedSpellsFromItems($character, $catalogLookup),
       ...($catalogState.catalog
         ? featureGrantedSpells($character, $catalogState.catalog, $catalogLookup)
-        : [])
+        : []),
+      ...choiceGrantedSpells($character)
     ];
     // Dedupe across items and features by spell name.
     const seen = new Set<string>();

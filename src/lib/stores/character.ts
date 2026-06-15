@@ -137,6 +137,16 @@ export function setSubclass(classIndex: number, subclass: string | undefined) {
   }));
 }
 
+/** Set or clear a "choose a spell" feature pick, keyed by its choice slot. */
+export function setSpellChoice(key: string, spell: CatalogRef | undefined) {
+  update((c) => {
+    const spellChoices = { ...c.spellChoices };
+    if (spell) spellChoices[key] = spell;
+    else delete spellChoices[key];
+    return { ...c, spellChoices };
+  });
+}
+
 export function setAcBase(acBase: number) {
   update((c) => ({ ...c, acBase }));
 }

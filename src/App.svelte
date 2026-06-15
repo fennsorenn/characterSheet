@@ -8,6 +8,7 @@
   import CharacterSheet from './lib/components/CharacterSheet.svelte';
   import PrintView from './lib/components/print/PrintView.svelte';
   import BrowseImport from './lib/components/import/BrowseImport.svelte';
+  import SpellPicker from './lib/components/SpellPicker.svelte';
 
   const version = '0.0.0';
   let showData = $state(false);
@@ -47,6 +48,8 @@
 {#if $browseOpen && $catalogState.catalog}
   <BrowseImport />
 {/if}
+
+<SpellPicker />
 
 <style>
   /* Use the full viewport width; the grid handles internal columns. A generous

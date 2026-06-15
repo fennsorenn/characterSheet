@@ -8,7 +8,9 @@
   } from '../stores/character.js';
   import { catalogState } from '../stores/catalog.js';
   import { openBrowse } from '../stores/browse.js';
-  import { resolveFeatures, type Feature } from '../character/index.js';
+  import { setSpellChoice } from '../stores/character.js';
+  import { openSpellPicker } from '../stores/spellPicker.js';
+  import { resolveFeatures, featureSpellChoices, type Feature, type ChoiceSlot } from '../character/index.js';
   import { parseTaggedString, renderToHtml } from '../render/tags.js';
 
   let { variant = 'full' }: { variant?: string } = $props();
@@ -18,6 +20,11 @@
   const features = $derived<Feature[]>(
     $catalogState.catalog ? resolveFeatures($character, $catalogState.catalog) : []
   );
+  const allChoices = $derived<ChoiceSlot[]>(
+    $catalogState.catalog ? featureSpellChoices($character, $catalogState.catalog) : []
+  );
+  const choicesFor = (f: Feature): ChoiceSlot[] =>
+    allChoices.filter((s) => s.key.startsWith(`${f.name}|${f.source}|`));
 
   function subclassesFor(className: string) {
     const subs = $catalogState.catalog?.classData.subclass ?? [];
@@ -114,6 +121,21 @@
           {#if expanded.has(key(f))}
             <div class="fbody">{@html body(f.entries)}</div>
           {/if}
+          {#if choicesFor(f).length > 0}
+            <div class="choices">
+              {#each choicesFor(f) as slot (slot.key)}
+                {@const picked = $character.spellChoices[slot.key]}
+                {#if picked}
+                  <span class="pill picked">
+                    <button class="pname" title="Change spell" onclick={() => openSpellPicker(slot)}>{picked.name}</button>
+                    <button class="px" title="Clear" onclick={() => setSpellChoice(slot.key, undefined)}>×</button>
+                  </span>
+                {:else}
+                  <button class="pill empty" title={slot.label} onclick={() => openSpellPicker(slot)}>+ choose spell</button>
+                {/if}
+              {/each}
+            </div>
+          {/if}
         </li>
       {/each}
     </ul>
@@ -144,5 +166,12 @@
   .caret { color: var(--muted); }
   .fbody { font-size: 0.85rem; color: var(--fg); padding: 0 0 0.5rem 0.2rem; }
   .fbody :global(p) { margin: 0.25rem 0; }
+  .choices { display: flex; flex-wrap: wrap; gap: 0.3rem; padding: 0 0 0.45rem 0.2rem; }
+  .pill { display: inline-flex; align-items: center; gap: 0.1rem; font: inherit; font-size: 0.78rem; border-radius: 999px; cursor: pointer; }
+  .pill.empty { padding: 0.1rem 0.5rem; border: 1px dashed var(--accent); background: var(--bg); color: var(--accent); }
+  .pill.picked { padding: 0.1rem 0.2rem 0.1rem 0.5rem; border: 1px solid var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+  .pname { background: none; border: none; color: var(--accent); cursor: pointer; font: inherit; font-weight: 600; }
+  .px { background: none; border: none; color: var(--muted); cursor: pointer; line-height: 1; font-size: 0.9rem; }
+  .px:hover { color: var(--accent); }
   .empty { color: var(--muted); font-size: 0.85rem; margin: 0; }
 </style>

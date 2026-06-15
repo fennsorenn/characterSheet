@@ -151,6 +151,8 @@ export interface Character {
   exhaustion: number;
   /** Hit dice pools by die size, for short-rest healing. */
   hitDice: HitDicePool[];
+  /** Player-picked spells for "choose a spell" features, keyed by choice slot. */
+  spellChoices: Record<string, CatalogRef>;
 }
 
 /** Nine empty spell-slot levels. */
@@ -186,7 +188,8 @@ export function createCharacter(partial: Partial<Character> = {}): Character {
     buffs: partial.buffs ?? [],
     conditions: partial.conditions ?? [],
     exhaustion: partial.exhaustion ?? 0,
-    hitDice: partial.hitDice ?? [{ die: 10, max: 1, used: 0 }]
+    hitDice: partial.hitDice ?? [{ die: 10, max: 1, used: 0 }],
+    spellChoices: partial.spellChoices ?? {}
   };
 }
 
