@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildGraph } from './buildGraph.js';
 import { createCharacter } from './schema.js';
-import { weaponAttacks, type CatalogLookup } from './equipment.js';
+import { weaponAttacks, itemIcon, type CatalogLookup } from './equipment.js';
 import type { NamedEntry } from '../data/catalog.js';
 
 /** A lookup backed by a fixed set of catalog items. */
@@ -165,6 +165,15 @@ describe('ability-setting items', () => {
     reqAttune: true,
     ability: { static: { str: 21 } }
   };
+
+  it('picks a slot icon by item kind', () => {
+    expect(itemIcon({ name: 'Belt of Hill Giant Strength', source: 'DMG' })).toBe('🎗️');
+    expect(itemIcon({ name: 'Headband of Intellect', source: 'DMG' })).toBe('🎩');
+    expect(itemIcon({ name: 'Amulet of Health', source: 'DMG' })).toBe('📿');
+    expect(itemIcon({ name: 'Gauntlets of Ogre Power', source: 'DMG' })).toBe('🧤');
+    expect(itemIcon({ name: 'Ring of Protection', source: 'DMG', type: 'RG' })).toBe('💍');
+    expect(itemIcon({ name: 'Mystery Orb', source: 'X' })).toBe('✨');
+  });
 
   it('sets the ability score when attuned, only if higher', () => {
     const c = createCharacter({

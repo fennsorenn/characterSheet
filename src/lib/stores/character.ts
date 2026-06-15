@@ -63,6 +63,7 @@ export interface AbilityOverride {
   base: number;
   effective: number;
   source: string;
+  icon: string;
   delta: number;
 }
 
@@ -72,11 +73,13 @@ export const abilityOverrides = derived([store, catalogLookup], ([$c, $lookup]) 
   for (const a of ABILITIES) {
     const set = sets[a];
     if (set && set.value !== $c.abilities[a]) {
+      const effective = Math.max($c.abilities[a], set.value);
       out[a] = {
         base: $c.abilities[a],
-        effective: Math.max($c.abilities[a], set.value),
+        effective,
         source: set.source,
-        delta: Math.max($c.abilities[a], set.value) - $c.abilities[a]
+        icon: set.icon,
+        delta: effective - $c.abilities[a]
       };
     }
   }

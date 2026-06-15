@@ -32,6 +32,24 @@ export interface EquipmentEffects {
 export interface AbilitySet {
   value: number;
   source: string;
+  /** An emoji hinting at the source (equipment slot, or generic magic). */
+  icon: string;
+}
+
+/** Pick an icon for an item by equipment slot, falling back to generic magic. */
+export function itemIcon(item: NamedEntry): string {
+  const name = item.name.toLowerCase();
+  const type = baseType(item.type);
+  if (type === 'RG' || /\bring\b/.test(name)) return '💍';
+  if (/belt|girdle|sash/.test(name)) return '🎗️';
+  if (/helm|circlet|crown|\bhat\b|\bcap\b|hood|headband|mask|goggles|lenses|eyes/.test(name)) return '🎩';
+  if (/amulet|necklace|periapt|medallion|talisman|pendant|brooch|scarab|torc/.test(name)) return '📿';
+  if (/gauntlet|glove/.test(name)) return '🧤';
+  if (/boots|slippers|shoes|sandals|footsteps/.test(name)) return '👢';
+  if (/cloak|cape|mantle|robe/.test(name)) return '🧥';
+  if (/bracers|bracelet|armband|vambrace/.test(name)) return '💪';
+  if (type === 'WD' || type === 'RD' || /\bwand\b|\brod\b|\bstaff\b/.test(name)) return '🪄';
+  return '✨';
 }
 
 /** A computed weapon attack for an equipped weapon. */
@@ -112,7 +130,7 @@ export function computeEquipmentEffects(
     if (statics) {
       for (const a of ABILITIES) {
         if (typeof statics[a] === 'number' && statics[a] > (abilitySets[a]?.value ?? 0)) {
-          abilitySets[a] = { value: statics[a], source: item.name };
+          abilitySets[a] = { value: statics[a], source: item.name, icon: itemIcon(item) };
         }
       }
     }
