@@ -106,4 +106,9 @@ export {
   type OptionChoice
 } from './spellChoices.js';
 export { ATTUNEMENT_LIMIT } from './schema.js';
+export {
+  spellcastingLimits,
+  evalPreparedFormula,
+  type SpellcastingLimits
+} from './spellcasting.js';
 export { labelForNode } from './labels.js';

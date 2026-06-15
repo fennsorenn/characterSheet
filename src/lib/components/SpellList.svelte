@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { character, setSpellStatus, setSpellGranted, removeSpell } from '../stores/character.js';
+  import { character, graph, setSpellStatus, setSpellGranted, removeSpell } from '../stores/character.js';
   import { catalogLookup, catalogState } from '../stores/catalog.js';
   import {
     spellTags,
@@ -7,6 +7,7 @@
     grantedSpellsFromItems,
     featureGrantedSpells,
     choiceGrantedSpells,
+    spellcastingLimits,
     type SpellTag
   } from '../character/index.js';
   import Icon from './Icon.svelte';
@@ -79,13 +80,29 @@
 
   const counts = $derived.by(() => {
     const nonG = rows.filter((r) => !r.grantedBy);
+    const leveled = nonG.filter((r) => r.levelNum > 0);
     return {
-      prepared: nonG.filter((r) => r.status === 'prepared').length,
-      spellbook: nonG.length,
+      cantrips: nonG.filter((r) => r.levelNum === 0).length,
+      prepared: leveled.filter((r) => r.status === 'prepared').length,
+      spellbook: leveled.length, // leveled spells known (cantrips counted separately)
       favorite: nonG.filter((r) => r.status === 'favorite').length,
       granted: rows.filter((r) => r.grantedBy).length
     };
   });
+
+  // Denominators: how many the class(es) should grant. Ability mods come from
+  // the live graph so ASIs/feats/items are reflected.
+  const limits = $derived(
+    $catalogState.catalog
+      ? spellcastingLimits(
+          $character,
+          $catalogState.catalog,
+          (a) => ($graph.has(`ability.${a}.mod`) ? $graph.get(`ability.${a}.mod`) : 0),
+          $graph.has('prof.bonus') ? $graph.get('prof.bonus') : 2
+        )
+      : { cantrips: null, prepared: null, known: null }
+  );
+  const over = (have: number, limit: number | null) => limit != null && have > limit;
 
   // Tag filter options (unique across rows).
   const allTags = $derived.by((): SpellTag[] => {
@@ -127,8 +144,15 @@
     <h3>Spells</h3>
     {#if $character.spells.length > 0 || granted.length > 0}
       <span class="counts">
-        <span title="Currently prepared">{counts.prepared} prep</span>
-        <span title="In your spellbook (known)">· {counts.spellbook} book</span>
+        {#if limits.cantrips != null}
+          <span class:over={over(counts.cantrips, limits.cantrips)} title="Cantrips known / class limit">{counts.cantrips}/{limits.cantrips} cantrips ·</span>
+        {/if}
+        <span class:over={over(counts.prepared, limits.prepared)} title={limits.prepared != null ? 'Prepared / class limit' : 'Currently prepared'}>
+          {counts.prepared}{limits.prepared != null ? `/${limits.prepared}` : ''} prep
+        </span>
+        <span class:over={over(counts.spellbook, limits.known)} title={limits.known != null ? 'Spells known / class limit' : 'Leveled spells in your spellbook'}>
+          · {counts.spellbook}{limits.known != null ? `/${limits.known}` : ''} {limits.known != null ? 'known' : 'book'}
+        </span>
         <span title="Favorites — kept handy for swapping">· ★{counts.favorite}</span>
         {#if counts.granted}<span title="Granted by items/features — don't count, can't swap">· {counts.granted} granted</span>{/if}
       </span>
@@ -218,6 +242,7 @@
   .head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
   h3 { margin: 0; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
   .counts { font-size: 0.72rem; color: var(--muted); }
+  .counts .over { color: #d2645a; font-weight: 600; }
   .empty { color: var(--muted); font-size: 0.85rem; margin: 0; }
 
   .statusfilter { display: flex; gap: 0.3rem; margin-bottom: 0.4rem; }
