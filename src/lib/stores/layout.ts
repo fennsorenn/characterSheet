@@ -15,7 +15,7 @@ import type { BlockSize, SheetLayout } from '../layout/types.js';
 const STORAGE_KEY = 'charactersheet.layouts';
 const LEGACY_KEY = 'charactersheet.layout';
 /** Bump when built-in presets change so returning users get the new defaults. */
-const LIBRARY_VERSION = 3;
+const LIBRARY_VERSION = 4;
 const BUILTIN_IDS = new Set(['default', 'caster', 'martial', 'compact']);
 
 function fresh(): LayoutLibrary {

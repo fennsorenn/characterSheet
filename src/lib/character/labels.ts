@@ -27,6 +27,8 @@ export function labelForNode(id: string): string {
   const save = id.match(/^save\.(\w+)$/);
   if (save) return `${ABILITY_NAMES[save[1] as Ability]} Save`;
 
+  if (/^attack\.\w+\.hit$/.test(id)) return 'Attack Bonus';
+  if (/^attack\.\w+\.dmg$/.test(id)) return 'Damage Bonus';
   if (id.endsWith('.profMult')) return 'Proficiency Multiplier';
 
   const skill = id.match(/^skill\.(.+)$/);

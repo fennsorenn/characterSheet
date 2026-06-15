@@ -25,6 +25,7 @@ describe('defaultLayout', () => {
       'effects',
       'saves',
       'skills',
+      'attacks',
       'inventory',
       'resources',
       'spells',

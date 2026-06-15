@@ -1,6 +1,7 @@
+import { abilityModifier } from '../calc/index.js';
 import type { NamedEntry } from '../data/catalog.js';
-import { ABILITIES, SKILLS, skillNodeId } from './abilities.js';
-import type { Character, CharacterModifier } from './schema.js';
+import { ABILITIES, SKILLS, skillNodeId, type Ability } from './abilities.js';
+import type { Character, CharacterModifier, InventoryItem } from './schema.js';
 
 /**
  * Maps equipped catalog items to mechanical effects on the calc graph.
@@ -23,6 +24,23 @@ export interface EquipmentEffects {
   /** Dex cap for the AC calc (99 = uncapped, 2 = medium, 0 = heavy/no dex). */
   acMaxDex?: number;
   modifiers: CharacterModifier[];
+  /** Ability scores set to a fixed value by an item (Belt of Giant Strength). */
+  abilitySets: Partial<Record<Ability, number>>;
+}
+
+/** A computed weapon attack for an equipped weapon. */
+export interface WeaponAttack {
+  id: string;
+  name: string;
+  ability: Ability;
+  proficient: boolean;
+  /** Magic bonus to the attack roll (separate from ability/proficiency). */
+  attackBonus: number;
+  damageDice: string;
+  /** Magic bonus added to the damage roll (ability mod comes from the graph). */
+  damageBonus: number;
+  damageType: string;
+  versatileDice?: string;
 }
 
 /** Dexterity contribution cap by armor category. */
@@ -48,6 +66,7 @@ export function computeEquipmentEffects(
   lookup: CatalogLookup
 ): EquipmentEffects {
   const modifiers: CharacterModifier[] = [];
+  const abilitySets: Partial<Record<Ability, number>> = {};
   let acArmor: number | undefined;
   let acMaxDex: number | undefined;
 
@@ -59,12 +78,12 @@ export function computeEquipmentEffects(
     const type = baseType(item.type);
     if (type === 'LA' || type === 'MA' || type === 'HA') {
       // Worn armor sets the AC base and dex cap (last equipped armor wins).
+      // Mundane armor works unattuned; only the magic bonus is gated below.
       if (typeof item.ac === 'number') {
         acArmor = item.ac;
         acMaxDex = DEX_CAP[type];
       }
     } else if (type === 'S') {
-      // Shields add their AC value (typically +2) on top.
       modifiers.push({
         target: 'ac',
         source: item.name,
@@ -72,26 +91,90 @@ export function computeEquipmentEffects(
       });
     }
 
-    // Magic bonuses can coexist with the item's armor role (e.g. +1 Plate).
+    // Magic effects (bonuses, score-setting) require attunement if the item does.
+    if (!isMagicActive(item, inv)) continue;
+
     pushBonus(modifiers, item, 'bonusAc', ['ac']);
-    pushBonus(
-      modifiers,
-      item,
-      'bonusSavingThrow',
-      ABILITIES.map((a) => `save.${a}`)
-    );
+    pushBonus(modifiers, item, 'bonusSavingThrow', ABILITIES.map((a) => `save.${a}`));
     pushBonus(modifiers, item, 'bonusSpellAttack', ['spell.attack']);
     pushBonus(modifiers, item, 'bonusSpellSaveDc', ['spell.dc']);
     pushBonus(modifiers, item, 'bonusProficiencyBonus', ['prof.bonus']);
-    pushBonus(
-      modifiers,
-      item,
-      'bonusAbilityCheck',
-      SKILLS.map((s) => skillNodeId(s))
-    );
+    pushBonus(modifiers, item, 'bonusAbilityCheck', SKILLS.map((s) => skillNodeId(s)));
+
+    // Items that set an ability score to a fixed value (no effect if already higher).
+    const statics = (item.ability as { static?: Record<string, number> } | undefined)?.static;
+    if (statics) {
+      for (const a of ABILITIES) {
+        if (typeof statics[a] === 'number') {
+          abilitySets[a] = Math.max(abilitySets[a] ?? 0, statics[a]);
+        }
+      }
+    }
   }
 
-  return { acArmor, acMaxDex, modifiers };
+  return { acArmor, acMaxDex, modifiers, abilitySets };
+}
+
+/** Magic effects apply when the item needs no attunement, or is attuned. */
+function isMagicActive(item: NamedEntry, inv: InventoryItem): boolean {
+  return !item.reqAttune || inv.attuned === true;
+}
+
+const DMG_TYPES: Record<string, string> = { S: 'slashing', P: 'piercing', B: 'bludgeoning' };
+
+/**
+ * Compute attack entries for every equipped weapon. The attack/damage ability is
+ * chosen by 5e rules (ranged → Dex, finesse → better of Str/Dex, else Str); the
+ * actual to-hit/damage numbers are calc-graph nodes so they stay introspectable.
+ */
+export function weaponAttacks(character: Character, lookup: CatalogLookup): WeaponAttack[] {
+  const out: WeaponAttack[] = [];
+  character.inventory.forEach((inv, index) => {
+    if (!inv.equipped) return;
+    const item = lookup.getItem(inv.name, inv.source);
+    if (!item || !isWeapon(item)) return;
+
+    const ability = chooseAbility(item, character);
+    const magic = isMagicActive(item, inv);
+    const attackBonus = magic
+      ? parseBonus(item.bonusWeapon) + parseBonus(item.bonusWeaponAttack)
+      : 0;
+    const damageBonus = magic
+      ? parseBonus(item.bonusWeapon) + parseBonus(item.bonusWeaponDamage)
+      : 0;
+    const property = Array.isArray(item.property) ? (item.property as string[]) : [];
+
+    out.push({
+      id: `w${index}`,
+      name: item.name,
+      ability,
+      proficient: inv.proficient !== false,
+      attackBonus,
+      damageDice: typeof item.dmg1 === 'string' ? item.dmg1 : '—',
+      damageBonus,
+      damageType: DMG_TYPES[baseType(item.dmgType)] ?? '',
+      versatileDice:
+        property.includes('V') && typeof item.dmg2 === 'string' ? item.dmg2 : undefined
+    });
+  });
+  return out;
+}
+
+function isWeapon(item: NamedEntry): boolean {
+  const type = baseType(item.type);
+  return (type === 'M' || type === 'R') && typeof item.dmg1 === 'string';
+}
+
+function chooseAbility(item: NamedEntry, character: Character): Ability {
+  const type = baseType(item.type);
+  const property = Array.isArray(item.property) ? (item.property as string[]) : [];
+  if (type === 'R') return 'dex';
+  if (property.includes('F')) {
+    return abilityModifier(character.abilities.dex) > abilityModifier(character.abilities.str)
+      ? 'dex'
+      : 'str';
+  }
+  return 'str';
 }
 
 function pushBonus(

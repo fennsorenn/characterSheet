@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildGraph } from './buildGraph.js';
 import { createCharacter } from './schema.js';
-import type { CatalogLookup } from './equipment.js';
+import { weaponAttacks, type CatalogLookup } from './equipment.js';
 import type { NamedEntry } from '../data/catalog.js';
 
 /** A lookup backed by a fixed set of catalog items. */
@@ -87,5 +87,96 @@ describe('buildGraph without a lookup', () => {
     const c = createCharacter({ abilities: { dex: 16 } as never, inventory: [equip(plate)] });
     // No lookup → items contribute nothing; falls back to unarmored base + dex.
     expect(buildGraph(c).get('ac')).toBe(10 + 3);
+  });
+});
+
+const longsword: NamedEntry = {
+  name: 'Longsword',
+  source: 'PHB',
+  type: 'M',
+  dmg1: '1d8',
+  dmg2: '1d10',
+  dmgType: 'S',
+  weaponCategory: 'martial',
+  property: ['V']
+};
+const rapier: NamedEntry = { name: 'Rapier', source: 'PHB', type: 'M', dmg1: '1d8', dmgType: 'P', property: ['F'] };
+const longbow: NamedEntry = { name: 'Longbow', source: 'PHB', type: 'R', dmg1: '1d8', dmgType: 'P', property: ['A'] };
+const sword1: NamedEntry = { name: '+1 Longsword', source: 'DMG', type: 'M', dmg1: '1d8', dmgType: 'S', bonusWeapon: '+1' };
+
+describe('weapon attacks', () => {
+  it('uses Strength for melee and computes to-hit / damage nodes', () => {
+    const c = createCharacter({
+      abilities: { str: 16 } as never,
+      saveProficiencies: [],
+      classes: [{ name: 'Fighter', source: 'PHB', level: 5 }], // prof +3
+      inventory: [equip(longsword)]
+    });
+    const g = buildGraph(c, lookupOf(longsword));
+    expect(g.get('attack.w0.hit')).toBe(3 + 3); // str +3 + prof +3
+    expect(g.get('attack.w0.dmg')).toBe(3); // str mod
+    const atk = weaponAttacks(c, lookupOf(longsword))[0];
+    expect(atk.ability).toBe('str');
+    expect(atk.damageDice).toBe('1d8');
+    expect(atk.versatileDice).toBe('1d10');
+  });
+
+  it('uses Dexterity for ranged and the better mod for finesse', () => {
+    const c = createCharacter({ abilities: { str: 10, dex: 18 } as never });
+    expect(weaponAttacks({ ...c, inventory: [equip(longbow)] }, lookupOf(longbow))[0].ability).toBe('dex');
+    expect(weaponAttacks({ ...c, inventory: [equip(rapier)] }, lookupOf(rapier))[0].ability).toBe('dex');
+  });
+
+  it('adds a magic weapon bonus to both attack and damage', () => {
+    const c = createCharacter({ abilities: { str: 14 } as never, inventory: [equip(sword1)] });
+    const g = buildGraph(c, lookupOf(sword1));
+    expect(g.get('attack.w0.hit')).toBe(2 + 2 + 1); // str + prof(lvl1) + magic
+    expect(g.get('attack.w0.dmg')).toBe(2 + 1);
+  });
+
+  it('drops proficiency when the character is not proficient', () => {
+    const c = createCharacter({
+      abilities: { str: 14 } as never,
+      inventory: [{ ...equip(longsword), proficient: false }]
+    });
+    expect(buildGraph(c, lookupOf(longsword)).get('attack.w0.hit')).toBe(2); // str only
+  });
+});
+
+describe('attunement gating', () => {
+  const ring: NamedEntry = { name: 'Ring of Protection', source: 'DMG', type: 'RG', reqAttune: true, bonusAc: '+1' };
+
+  it('withholds magic bonuses until attuned', () => {
+    const unattuned = createCharacter({ abilities: { dex: 10 } as never, inventory: [equip(ring)] });
+    expect(buildGraph(unattuned, lookupOf(ring)).get('ac')).toBe(10); // no bonus
+
+    const attuned = createCharacter({
+      abilities: { dex: 10 } as never,
+      inventory: [{ ...equip(ring), attuned: true }]
+    });
+    expect(buildGraph(attuned, lookupOf(ring)).get('ac')).toBe(11);
+  });
+});
+
+describe('ability-setting items', () => {
+  const belt: NamedEntry = {
+    name: 'Belt of Hill Giant Strength',
+    source: 'DMG',
+    reqAttune: true,
+    ability: { static: { str: 21 } }
+  };
+
+  it('sets the ability score when attuned, only if higher', () => {
+    const c = createCharacter({
+      abilities: { str: 12 } as never,
+      inventory: [{ ...equip(belt), attuned: true }]
+    });
+    expect(buildGraph(c, lookupOf(belt)).get('ability.str.mod')).toBe(5); // str 21 → +5
+
+    const strong = createCharacter({
+      abilities: { str: 24 } as never,
+      inventory: [{ ...equip(belt), attuned: true }]
+    });
+    expect(buildGraph(strong, lookupOf(belt)).get('ability.str.mod')).toBe(7); // keeps 24
   });
 });

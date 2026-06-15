@@ -38,6 +38,7 @@ export function printDefaultLayout(): SheetLayout {
     ['conditions', 'full', 'narrow'],
     ['resources', 'full', 'narrow'],
     ['effects', 'full', 'narrow'],
+    ['attacks', 'full', 'full'],
     ['inventory', 'full', 'full'],
     ['spells', 'full', 'narrow'],
     ['spellSlots', 'full', 'narrow']
@@ -57,6 +58,7 @@ export function builtinPresets(): SheetLayout[] {
       ['effects', 'full', 'narrow'],
       ['saves', 'full', 'narrow'],
       ['skills', 'full', 'wide'],
+      ['attacks', 'full', 'wide'],
       ['inventory', 'full', 'wide'],
       ['resources', 'full', 'wide'],
       ['spells', 'full', 'narrow'],
@@ -86,6 +88,7 @@ export function builtinPresets(): SheetLayout[] {
       ['conditions', 'full', 'wide'],
       ['effects', 'full', 'narrow'],
       ['saves', 'full', 'narrow'],
+      ['attacks', 'full', 'wide'],
       ['inventory', 'full', 'wide'],
       ['skills', 'full', 'wide'],
       ['spells', 'full', 'narrow'],

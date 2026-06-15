@@ -7,7 +7,12 @@ import {
   skillNodeId
 } from './abilities.js';
 import { totalLevel, type Character } from './schema.js';
-import { computeEquipmentEffects, type CatalogLookup } from './equipment.js';
+import {
+  computeEquipmentEffects,
+  weaponAttacks,
+  type CatalogLookup,
+  type EquipmentEffects
+} from './equipment.js';
 import { effectModifiers } from './effects.js';
 
 /**
@@ -30,13 +35,16 @@ import { effectModifiers } from './effects.js';
  */
 export function buildGraph(character: Character, lookup?: CatalogLookup): CalcGraph {
   const g = new CalcGraph();
-  const equipment = lookup
+  const equipment: EquipmentEffects = lookup
     ? computeEquipmentEffects(character, lookup)
-    : { modifiers: [] };
+    : { modifiers: [], abilitySets: {} };
 
-  // Ability scores and their modifiers.
+  // Ability scores and their modifiers. An item that sets a score to a fixed
+  // value (e.g. Belt of Giant Strength) overrides only if it's higher.
   for (const abil of ABILITIES) {
-    g.set(`ability.${abil}.score`, character.abilities[abil]);
+    const set = equipment.abilitySets[abil];
+    const score = set != null ? Math.max(character.abilities[abil], set) : character.abilities[abil];
+    g.set(`ability.${abil}.score`, score);
     g.define(`ability.${abil}.mod`, [`ability.${abil}.score`], (c) =>
       abilityModifier(c.get(`ability.${abil}.score`))
     );
@@ -98,6 +106,18 @@ export function buildGraph(character: Character, lookup?: CatalogLookup): CalcGr
     g.define('spell.attack', ['prof.bonus', `ability.${abil}.mod`], (c) =>
       c.get('prof.bonus') + c.get(`ability.${abil}.mod`)
     );
+  }
+
+  // Weapon attacks: a to-hit node (ability + proficiency + magic) and a numeric
+  // damage-bonus node per equipped weapon, both introspectable in the popover.
+  if (lookup) {
+    for (const atk of weaponAttacks(character, lookup)) {
+      const abilMod = `ability.${atk.ability}.mod`;
+      g.define(`attack.${atk.id}.hit`, [abilMod, 'prof.bonus'], (c) =>
+        c.get(abilMod) + (atk.proficient ? c.get('prof.bonus') : 0) + atk.attackBonus
+      );
+      g.define(`attack.${atk.id}.dmg`, [abilMod], (c) => c.get(abilMod) + atk.damageBonus);
+    }
   }
 
   // Layer modifiers: equipped items, manual modifiers, then temporary effects

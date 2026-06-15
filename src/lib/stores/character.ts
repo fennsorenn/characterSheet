@@ -3,6 +3,7 @@ import {
   applyRest,
   applyLevelUp,
   spendHitDie as spendHitDiePure,
+  ATTUNEMENT_LIMIT,
   buildGraph,
   createCharacter,
   type Ability,
@@ -146,6 +147,28 @@ export function setItemQuantity(index: number, quantity: number) {
 
 export function removeInventoryItem(index: number) {
   update((c) => ({ ...c, inventory: c.inventory.filter((_, n) => n !== index) }));
+}
+
+/** Toggle attunement, refusing to exceed the attunement limit. */
+export function toggleAttuned(index: number) {
+  update((c) => {
+    const item = c.inventory[index];
+    if (!item) return c;
+    const attuning = !item.attuned;
+    const count = c.inventory.filter((i) => i.attuned).length;
+    if (attuning && count >= ATTUNEMENT_LIMIT) return c; // at the limit
+    return {
+      ...c,
+      inventory: c.inventory.map((i, n) => (n === index ? { ...i, attuned: attuning } : i))
+    };
+  });
+}
+
+export function setItemProficient(index: number, proficient: boolean) {
+  update((c) => ({
+    ...c,
+    inventory: c.inventory.map((i, n) => (n === index ? { ...i, proficient } : i))
+  }));
 }
 
 /** Add a spell to the known/prepared list, ignoring duplicates. */

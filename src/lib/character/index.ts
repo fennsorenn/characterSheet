@@ -46,7 +46,10 @@ export {
 export { buildGraph, skillNodeId } from './buildGraph.js';
 export {
   computeEquipmentEffects,
+  weaponAttacks,
   type CatalogLookup,
-  type EquipmentEffects
+  type EquipmentEffects,
+  type WeaponAttack
 } from './equipment.js';
+export { ATTUNEMENT_LIMIT } from './schema.js';
 export { labelForNode } from './labels.js';

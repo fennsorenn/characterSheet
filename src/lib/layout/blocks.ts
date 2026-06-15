@@ -76,6 +76,12 @@ export const BLOCK_META: Record<string, BlockMeta> = {
     defaultVariant: 'full',
     defaultSize: 'wide'
   },
+  attacks: {
+    label: 'Attacks',
+    variants: [{ key: 'full', label: 'Full', verbosity: 'full' }],
+    defaultVariant: 'full',
+    defaultSize: 'wide'
+  },
   inventory: {
     label: 'Inventory',
     variants: [{ key: 'full', label: 'Full', verbosity: 'full' }],

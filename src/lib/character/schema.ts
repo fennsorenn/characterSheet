@@ -37,7 +37,14 @@ export interface HitDicePool {
 export interface InventoryItem extends CatalogRef {
   quantity: number;
   equipped: boolean;
+  /** Attuned to (gates magic bonuses on items that require attunement). */
+  attuned?: boolean;
+  /** Whether the character is proficient with this weapon (defaults true). */
+  proficient?: boolean;
 }
+
+/** Max items a character can be attuned to at once (5e). */
+export const ATTUNEMENT_LIMIT = 3;
 
 export interface SpellRef extends CatalogRef {
   prepared?: boolean;
