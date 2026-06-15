@@ -1,5 +1,6 @@
 <script lang="ts">
   import { character, levelUp } from '../stores/character.js';
+  import { catalogState } from '../stores/catalog.js';
   import {
     conModifier,
     hpGainAverage,
@@ -13,15 +14,22 @@
 
   // Target: advance an existing class, or multiclass into a new one.
   let target = $state<string>('0'); // class index, or 'new'
-  let newName = $state('');
-  let newSource = $state('PHB');
-  let newDie = $state(8);
+  let newClassKey = $state(''); // `name|source` of a catalog class
   let method = $state<'average' | 'roll'>('average');
   let rolled = $state<number | null>(null);
 
+  // Classes from the catalog you aren't already in (for the multiclass picker).
+  const catalogClasses = $derived(
+    ($catalogState.catalog?.entries.class ?? [])
+      .filter((c) => !$character.classes.some((cl) => cl.name === c.name && String(c.source) === cl.source))
+      .map((c) => ({ name: c.name, source: String(c.source), die: (c.hd as { faces?: number } | undefined)?.faces ?? 8 }))
+      .sort((a, b) => a.name.localeCompare(b.name))
+  );
+  const picked = $derived(catalogClasses.find((c) => `${c.name}|${c.source}` === newClassKey));
+
   const isNew = $derived(target === 'new');
   const die = $derived(
-    isNew ? newDie : ($character.classes[Number(target)]?.hitDie ?? 8)
+    isNew ? (picked?.die ?? 8) : ($character.classes[Number(target)]?.hitDie ?? 8)
   );
   const conMod = $derived(conModifier($character));
   const base = $derived(method === 'roll' ? (rolled ?? hpGainAverage(die)) : hpGainAverage(die));
@@ -37,9 +45,12 @@
     method = 'roll';
   }
 
+  const canConfirm = $derived(!isNew || !!picked);
+
   function confirm() {
+    if (!canConfirm) return;
     const plan: LevelUpPlan = isNew
-      ? { newClass: { name: newName.trim() || 'Class', source: newSource.trim() }, die, hpGain }
+      ? { newClass: { name: picked!.name, source: picked!.source }, die, hpGain }
       : { classIndex: Number(target), die, hpGain };
     levelUp(plan);
     onClose();
@@ -64,11 +75,13 @@
 
     {#if isNew}
       <div class="newclass">
-        <input placeholder="Class name" bind:value={newName} />
-        <input class="src" placeholder="Source" bind:value={newSource} />
-        <label class="die">Hit die d<select bind:value={newDie}>
-          {#each [6, 8, 10, 12] as d}<option value={d}>{d}</option>{/each}
-        </select></label>
+        <select bind:value={newClassKey}>
+          <option value="">Choose a class…</option>
+          {#each catalogClasses as c}
+            <option value={`${c.name}|${c.source}`}>{c.name} ({c.source}) · d{c.die}</option>
+          {/each}
+        </select>
+        {#if catalogClasses.length === 0}<span class="muted">Load game data to multiclass.</span>{/if}
       </div>
     {/if}
 
@@ -93,7 +106,7 @@
 
     <div class="actions">
       <button class="cancel" onclick={onClose}>Cancel</button>
-      <button class="confirm" onclick={confirm}>Level up (+{hpGain} HP)</button>
+      <button class="confirm" onclick={confirm} disabled={!canConfirm}>Level up (+{hpGain} HP)</button>
     </div>
   </div>
 </div>
@@ -107,9 +120,9 @@
   .row { display: flex; align-items: center; gap: 0.6rem; margin: 0.75rem 0; }
   .row span { font-size: 0.8rem; color: var(--muted); min-width: 3rem; }
   .newclass { display: flex; gap: 0.4rem; margin-bottom: 0.5rem; flex-wrap: wrap; align-items: center; }
-  .newclass .src { width: 5rem; }
-  .newclass input { flex: 1; }
-  .die { font-size: 0.8rem; color: var(--muted); display: inline-flex; align-items: center; gap: 0.2rem; }
+  .newclass select { flex: 1; }
+  .newclass .muted { color: var(--muted); font-size: 0.8rem; }
+  .confirm:disabled { opacity: 0.5; cursor: not-allowed; }
   .hp { display: flex; align-items: center; gap: 0.75rem; margin: 0.5rem 0; flex-wrap: wrap; font-size: 0.9rem; }
   .hp .lbl { font-size: 0.7rem; text-transform: uppercase; color: var(--muted); }
   .rollbtn { font: inherit; font-size: 0.8rem; padding: 0.2rem 0.6rem; border: 1px solid var(--line); background: var(--bg); color: var(--fg); border-radius: 5px; cursor: pointer; }

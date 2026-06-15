@@ -128,13 +128,26 @@ export async function browseAdd(page, kind, name) {
   await page.waitForTimeout(150);
 }
 
-/** Multiclass into a (typed) class via the Level Up modal. */
+/** Add a class from the catalog via the Features block's "+ Class" browse. */
+export async function addClassFromCatalog(page, name) {
+  const line = cell(page, 'Features & Traits').locator('.line.classes');
+  await line.locator('.choose', { hasText: 'Class' }).click();
+  await page.waitForSelector('.overlay', { timeout: 5000 });
+  await page.fill('.overlay input.search', name);
+  await page.waitForTimeout(300);
+  await page.locator('.overlay .results li', { hasText: name }).first().locator('.add').click({ force: true });
+  await page.waitForTimeout(150);
+  await page.locator('.overlay .close').click();
+  await page.waitForSelector('.overlay', { state: 'detached', timeout: 5000 });
+  await page.waitForTimeout(150);
+}
+
+/** Multiclass into a catalog class via the Level Up modal's class picker. */
 export async function multiclass(page, name, source = 'PHB') {
   await cell(page, 'Rest & Level Up').locator('button.levelup').click();
   await page.waitForSelector('.modal', { timeout: 5000 });
-  await page.locator('.modal select').first().selectOption('new');
-  await page.locator('.modal .newclass input').first().fill(name);
-  await page.locator('.modal .newclass input.src').fill(source);
+  await page.locator('.modal .row select').first().selectOption('new');
+  await page.locator('.modal .newclass select').selectOption(`${name}|${source}`);
   await page.locator('.modal .confirm').click();
   await page.waitForTimeout(300);
 }

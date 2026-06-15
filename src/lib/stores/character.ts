@@ -127,6 +127,23 @@ export function setClassLevel(index: number, level: number) {
   });
 }
 
+/** Add a class from the catalog (multiclass), with its hit die. Deduped by name+source. */
+export function addClass(entry: { name: string; source: string; hitDie?: number }) {
+  update((c) =>
+    c.classes.some((cl) => cl.name === entry.name && cl.source === entry.source)
+      ? c
+      : {
+          ...c,
+          classes: [...c.classes, { name: entry.name, source: entry.source, level: 1, hitDie: entry.hitDie }]
+        }
+  );
+}
+
+/** Remove a class entry (and its subclass) by index. */
+export function removeClass(index: number) {
+  update((c) => ({ ...c, classes: c.classes.filter((_, i) => i !== index) }));
+}
+
 export function setName(name: string) {
   update((c) => ({ ...c, name }));
 }

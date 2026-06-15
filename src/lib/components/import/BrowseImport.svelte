@@ -2,7 +2,7 @@
   import { get } from 'svelte/store';
   import { catalogState } from '../../stores/catalog.js';
   import { browseCategory, closeBrowse } from '../../stores/browse.js';
-  import { addInventoryItem, addSpell, addFeat, setRace, setBackground } from '../../stores/character.js';
+  import { addInventoryItem, addSpell, addFeat, addClass, setRace, setBackground } from '../../stores/character.js';
   import {
     CATEGORIES,
     facetsFor,
@@ -17,7 +17,7 @@
   import Icon from '../Icon.svelte';
 
   const RESULT_LIMIT = 250;
-  const ADDABLE = new Set<Category>(['item', 'spell', 'feat', 'race', 'background']);
+  const ADDABLE = new Set<Category>(['item', 'spell', 'feat', 'race', 'background', 'class']);
   const ADD_VERB: Partial<Record<Category, string>> = { race: '✓ Set', background: '✓ Set' };
 
   let category = $state<Category>(get(browseCategory));
@@ -66,6 +66,7 @@
     else if (category === 'feat') addFeat(ref);
     else if (category === 'race') setRace(ref);
     else if (category === 'background') setBackground(ref);
+    else if (category === 'class') addClass({ ...ref, hitDie: (e.hd as { faces?: number } | undefined)?.faces });
     added = new Set(added).add(key(e));
   }
 

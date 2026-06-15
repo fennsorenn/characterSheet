@@ -192,7 +192,9 @@ export function createCharacter(partial: Partial<Character> = {}): Character {
     race: partial.race,
     background: partial.background,
     feats: partial.feats ?? [],
-    saveProficiencies: partial.saveProficiencies ?? ['str', 'con'],
+    // Save proficiencies come from the class grant pool; the manual set only
+    // layers extras on top, so a fresh character seeds none.
+    saveProficiencies: partial.saveProficiencies ?? [],
     skillProficiencies: partial.skillProficiencies ?? {},
     spellcasting: partial.spellcasting,
     hp: partial.hp ?? { max: 10, current: 10, temp: 0 },
