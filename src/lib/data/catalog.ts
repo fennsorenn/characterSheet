@@ -39,12 +39,21 @@ export interface NamedEntry {
   [key: string]: unknown;
 }
 
+/** Class feature data, referenced by level for resolving a character's features. */
+export interface ClassData {
+  classFeature: NamedEntry[];
+  subclassFeature: NamedEntry[];
+  subclass: NamedEntry[];
+}
+
 export interface Catalog {
   /** Identifier for the dataset this catalog was built from (for cache keying). */
   version: string;
   entries: Record<Category, NamedEntry[]>;
   /** Per-category counts, handy for the import summary UI. */
   counts: Record<Category, number>;
+  /** Class/subclass feature data (not a browse category). */
+  classData: ClassData;
 }
 
 /** Read access to the unpacked data tree, paths relative to `data/`. */
@@ -61,5 +70,10 @@ export function emptyCatalog(version: string): Catalog {
     entries[c] = [];
     counts[c] = 0;
   }
-  return { version, entries, counts };
+  return {
+    version,
+    entries,
+    counts,
+    classData: { classFeature: [], subclassFeature: [], subclass: [] }
+  };
 }

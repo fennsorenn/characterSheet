@@ -37,6 +37,12 @@ export const BLOCK_META: Record<string, BlockMeta> = {
     defaultVariant: 'full',
     defaultSize: 'narrow'
   },
+  features: {
+    label: 'Features & Traits',
+    variants: [{ key: 'full', label: 'Full', verbosity: 'full' }],
+    defaultVariant: 'full',
+    defaultSize: 'wide'
+  },
   spellSlots: {
     label: 'Spell Slots',
     variants: [{ key: 'full', label: 'Full', verbosity: 'full' }],

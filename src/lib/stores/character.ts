@@ -112,6 +112,31 @@ export function setName(name: string) {
   update((c) => ({ ...c, name }));
 }
 
+// --- Race / background / feats / subclass ---
+
+export function setRace(race: CatalogRef | undefined) {
+  update((c) => ({ ...c, race }));
+}
+export function setBackground(background: CatalogRef | undefined) {
+  update((c) => ({ ...c, background }));
+}
+export function addFeat(feat: CatalogRef) {
+  update((c) =>
+    c.feats.some((f) => f.name === feat.name && f.source === feat.source)
+      ? c
+      : { ...c, feats: [...c.feats, feat] }
+  );
+}
+export function removeFeat(index: number) {
+  update((c) => ({ ...c, feats: c.feats.filter((_, n) => n !== index) }));
+}
+export function setSubclass(classIndex: number, subclass: string | undefined) {
+  update((c) => ({
+    ...c,
+    classes: c.classes.map((cl, i) => (i === classIndex ? { ...cl, subclass } : cl))
+  }));
+}
+
 export function setAcBase(acBase: number) {
   update((c) => ({ ...c, acBase }));
 }

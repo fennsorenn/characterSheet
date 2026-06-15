@@ -2,7 +2,7 @@
   import { get } from 'svelte/store';
   import { catalogState } from '../../stores/catalog.js';
   import { browseCategory, closeBrowse } from '../../stores/browse.js';
-  import { addInventoryItem, addSpell } from '../../stores/character.js';
+  import { addInventoryItem, addSpell, addFeat, setRace, setBackground } from '../../stores/character.js';
   import {
     CATEGORIES,
     facetsFor,
@@ -17,7 +17,8 @@
   import Icon from '../Icon.svelte';
 
   const RESULT_LIMIT = 250;
-  const ADDABLE = new Set<Category>(['item', 'spell']);
+  const ADDABLE = new Set<Category>(['item', 'spell', 'feat', 'race', 'background']);
+  const ADD_VERB: Partial<Record<Category, string>> = { race: '✓ Set', background: '✓ Set' };
 
   let category = $state<Category>(get(browseCategory));
   let name = $state('');
@@ -62,6 +63,9 @@
     const ref = { name: e.name, source: e.source };
     if (category === 'item') addInventoryItem(ref);
     else if (category === 'spell') addSpell(ref);
+    else if (category === 'feat') addFeat(ref);
+    else if (category === 'race') setRace(ref);
+    else if (category === 'background') setBackground(ref);
     added = new Set(added).add(key(e));
   }
 
@@ -115,7 +119,7 @@
         {#if filtered.length > RESULT_LIMIT}<span class="muted"> · showing first {RESULT_LIMIT}</span>{/if}
       </div>
       <ul>
-        {#each results as e (e.name + e.source)}
+        {#each results as e, i (e.name + '|' + e.source + '|' + i)}
           <li>
             {#if category === 'item'}
               <span class="ic" title={itemTypeLabel(e)}><Icon name={iconForItem(e)} /></span>
@@ -143,7 +147,7 @@
             </div>
             {#if ADDABLE.has(category)}
               <button class="add" class:done={added.has(key(e))} onclick={() => add(e)}>
-                {added.has(key(e)) ? '✓ Added' : '+ Add'}
+                {added.has(key(e)) ? (ADD_VERB[category] ?? '✓ Added') : '+ Add'}
               </button>
             {/if}
           </li>

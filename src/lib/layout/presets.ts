@@ -59,6 +59,7 @@ export function builtinPresets(): SheetLayout[] {
       ['saves', 'full', 'narrow'],
       ['skills', 'full', 'wide'],
       ['attacks', 'full', 'wide'],
+      ['features', 'full', 'wide'],
       ['inventory', 'full', 'wide'],
       ['resources', 'full', 'wide'],
       ['spells', 'full', 'narrow'],

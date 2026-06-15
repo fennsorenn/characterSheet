@@ -127,6 +127,9 @@ export interface Character {
   name: string;
   abilities: Record<Ability, number>;
   classes: ClassEntry[];
+  race?: CatalogRef;
+  background?: CatalogRef;
+  feats: CatalogRef[];
   saveProficiencies: Ability[];
   skillProficiencies: Partial<Record<Skill, ProficiencyLevel>>;
   spellcasting?: { ability: Ability };
@@ -167,6 +170,9 @@ export function createCharacter(partial: Partial<Character> = {}): Character {
     name: partial.name ?? 'New Character',
     abilities,
     classes: partial.classes ?? [{ name: 'Fighter', source: 'PHB', level: 1, hitDie: 10 }],
+    race: partial.race,
+    background: partial.background,
+    feats: partial.feats ?? [],
     saveProficiencies: partial.saveProficiencies ?? ['str', 'con'],
     skillProficiencies: partial.skillProficiencies ?? {},
     spellcasting: partial.spellcasting,

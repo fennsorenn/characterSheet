@@ -61,5 +61,12 @@ export {
   grantedSpellsFromItems,
   type GrantedSpell
 } from './grantedSpells.js';
+export {
+  resolveFeatures,
+  featureGrantedSpells,
+  additionalSpellNames,
+  type Feature,
+  type FeatureGroup
+} from './features.js';
 export { ATTUNEMENT_LIMIT } from './schema.js';
 export { labelForNode } from './labels.js';

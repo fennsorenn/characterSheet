@@ -1,7 +1,13 @@
 <script lang="ts">
   import { character, setSpellStatus, setSpellGranted, removeSpell } from '../stores/character.js';
-  import { catalogLookup } from '../stores/catalog.js';
-  import { spellTags, spellStatus, grantedSpellsFromItems, type SpellTag } from '../character/index.js';
+  import { catalogLookup, catalogState } from '../stores/catalog.js';
+  import {
+    spellTags,
+    spellStatus,
+    grantedSpellsFromItems,
+    featureGrantedSpells,
+    type SpellTag
+  } from '../character/index.js';
   import Icon from './Icon.svelte';
 
   let { variant = 'full' }: { variant?: string } = $props();
@@ -20,7 +26,17 @@
     tags: SpellTag[];
   }
 
-  const granted = $derived(grantedSpellsFromItems($character, $catalogLookup));
+  const granted = $derived.by(() => {
+    const all = [
+      ...grantedSpellsFromItems($character, $catalogLookup),
+      ...($catalogState.catalog
+        ? featureGrantedSpells($character, $catalogState.catalog, $catalogLookup)
+        : [])
+    ];
+    // Dedupe across items and features by spell name.
+    const seen = new Set<string>();
+    return all.filter((g) => (seen.has(g.name.toLowerCase()) ? false : seen.add(g.name.toLowerCase())));
+  });
 
   const rows = $derived.by((): Row[] => {
     const manualKeys = new Set(
