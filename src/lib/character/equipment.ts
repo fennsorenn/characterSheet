@@ -32,24 +32,28 @@ export interface EquipmentEffects {
 export interface AbilitySet {
   value: number;
   source: string;
-  /** An emoji hinting at the source (equipment slot, or generic magic). */
+  /** Icon name (see Icon.svelte) hinting at the source: equipment slot / magic. */
   icon: string;
 }
 
-/** Pick an icon for an item by equipment slot, falling back to generic magic. */
+/** Pick an icon name for an item by equipment slot, falling back to magic. */
 export function itemIcon(item: NamedEntry): string {
   const name = item.name.toLowerCase();
   const type = baseType(item.type);
-  if (type === 'RG' || /\bring\b/.test(name)) return '💍';
-  if (/belt|girdle|sash/.test(name)) return '🎗️';
-  if (/helm|circlet|crown|\bhat\b|\bcap\b|hood|headband|mask|goggles|lenses|eyes/.test(name)) return '🎩';
-  if (/amulet|necklace|periapt|medallion|talisman|pendant|brooch|scarab|torc/.test(name)) return '📿';
-  if (/gauntlet|glove/.test(name)) return '🧤';
-  if (/boots|slippers|shoes|sandals|footsteps/.test(name)) return '👢';
-  if (/cloak|cape|mantle|robe/.test(name)) return '🧥';
-  if (/bracers|bracelet|armband|vambrace/.test(name)) return '💪';
-  if (type === 'WD' || type === 'RD' || /\bwand\b|\brod\b|\bstaff\b/.test(name)) return '🪄';
-  return '✨';
+  if (/belt|girdle|sash/.test(name)) return 'belt';
+  if (/helm|circlet|crown|\bhat\b|\bcap\b|hood|headband|mask|goggles|lenses|eyes/.test(name))
+    return 'crown';
+  if (
+    type === 'RG' ||
+    /\bring\b|amulet|necklace|periapt|medallion|talisman|pendant|brooch|scarab|torc|bracelet/.test(
+      name
+    )
+  )
+    return 'gem';
+  if (/gauntlet|glove|boots|slippers|shoes|cloak|cape|mantle|robe|bracers|vambrace/.test(name))
+    return 'shirt';
+  if (type === 'WD' || type === 'RD' || /\bwand\b|\brod\b|\bstaff\b/.test(name)) return 'wand';
+  return 'sparkles';
 }
 
 /** A computed weapon attack for an equipped weapon. */

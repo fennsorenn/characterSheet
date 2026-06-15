@@ -167,12 +167,12 @@ describe('ability-setting items', () => {
   };
 
   it('picks a slot icon by item kind', () => {
-    expect(itemIcon({ name: 'Belt of Hill Giant Strength', source: 'DMG' })).toBe('🎗️');
-    expect(itemIcon({ name: 'Headband of Intellect', source: 'DMG' })).toBe('🎩');
-    expect(itemIcon({ name: 'Amulet of Health', source: 'DMG' })).toBe('📿');
-    expect(itemIcon({ name: 'Gauntlets of Ogre Power', source: 'DMG' })).toBe('🧤');
-    expect(itemIcon({ name: 'Ring of Protection', source: 'DMG', type: 'RG' })).toBe('💍');
-    expect(itemIcon({ name: 'Mystery Orb', source: 'X' })).toBe('✨');
+    expect(itemIcon({ name: 'Belt of Hill Giant Strength', source: 'DMG' })).toBe('belt');
+    expect(itemIcon({ name: 'Headband of Intellect', source: 'DMG' })).toBe('crown');
+    expect(itemIcon({ name: 'Amulet of Health', source: 'DMG' })).toBe('gem');
+    expect(itemIcon({ name: 'Gauntlets of Ogre Power', source: 'DMG' })).toBe('shirt');
+    expect(itemIcon({ name: 'Ring of Protection', source: 'DMG', type: 'RG' })).toBe('gem');
+    expect(itemIcon({ name: 'Mystery Orb', source: 'X' })).toBe('sparkles');
   });
 
   it('sets the ability score when attuned, only if higher', () => {

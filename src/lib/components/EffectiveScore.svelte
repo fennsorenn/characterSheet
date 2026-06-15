@@ -3,6 +3,7 @@
   import type { AbilityOverride } from '../stores/character.js';
   import type { Ability } from '../character/index.js';
   import NumberField from './NumberField.svelte';
+  import Icon from './Icon.svelte';
 
   // Shows an item-overridden ability score: the effective value takes the place
   // of the raw one (green for a buff, red for a malus), with a small icon hinting
@@ -16,7 +17,10 @@
 </script>
 
 <div class="eff" class:buff={override.delta > 0} class:malus={override.delta < 0} title={detail}>
-  <span class="value">{override.effective}<span class="icon" aria-label={override.source}>{override.icon}</span></span>
+  <span class="value">
+    {override.effective}
+    <span class="badge" aria-label={override.source}><Icon name={override.icon} /></span>
+  </span>
   <span class="base">base <NumberField value={override.base} min={1} max={30} onchange={(v) => setAbilityScore(abil, v)} width="3ch" /></span>
 </div>
 
@@ -30,9 +34,20 @@
     color: var(--hl);
     line-height: 1.1;
     display: inline-flex;
-    align-items: baseline;
-    gap: 0.1rem;
+    align-items: center;
+    gap: 0.15rem;
   }
-  .icon { font-size: 0.7rem; cursor: help; }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 0.95rem;
+    height: 0.95rem;
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--hl) 18%, transparent);
+    color: var(--hl);
+    cursor: help;
+  }
+  .badge :global(.icon) { width: 0.7rem; height: 0.7rem; }
   .base { font-size: 0.6rem; color: var(--muted); display: inline-flex; align-items: center; gap: 0.15rem; }
 </style>
