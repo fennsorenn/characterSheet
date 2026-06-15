@@ -107,8 +107,11 @@ export {
 } from './spellChoices.js';
 export { ATTUNEMENT_LIMIT } from './schema.js';
 export {
-  spellcastingLimits,
+  casterClasses,
+  assignSpellCounts,
   evalPreparedFormula,
-  type SpellcastingLimits
+  type CasterClass,
+  type CasterKind,
+  type ClassSpellCount
 } from './spellcasting.js';
 export { labelForNode } from './labels.js';
