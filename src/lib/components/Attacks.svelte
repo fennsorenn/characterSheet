@@ -1,7 +1,7 @@
 <script lang="ts">
   import { character, graph, setItemProficient } from '../stores/character.js';
   import { catalogLookup } from '../stores/catalog.js';
-  import { weaponAttacks, iconForItem, ABILITY_NAMES } from '../character/index.js';
+  import { weaponAttacks, iconForItem, iconForDamageType, ABILITY_NAMES } from '../character/index.js';
   import StatValue from './StatValue.svelte';
   import Icon from './Icon.svelte';
 
@@ -32,7 +32,10 @@
             <StatValue node={`attack.${a.id}.hit`} signed />
           </span>
           <span class="dmg">
-            {damage(a.id, a.damageDice, a.damageType)}
+            {damage(a.id, a.damageDice, '')}
+            {#if iconForDamageType(a.damageType)}
+              <span class="dicon" title={a.damageType}><Icon name={iconForDamageType(a.damageType)!} /></span>
+            {/if}
             {#if a.versatileDice}<span class="vers">({damage(a.id, a.versatileDice, '')} 2-h)</span>{/if}
           </span>
           <button
@@ -64,7 +67,9 @@
   .wicon :global(.icon) { width: 1.05rem; height: 1.05rem; }
   .name { font-weight: 600; }
   .hit { font-weight: 700; }
-  .dmg { font-size: 0.85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .dmg { font-size: 0.85rem; color: var(--muted); font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; gap: 0.25rem; }
+  .dicon { display: inline-flex; }
+  .dicon :global(.icon) { width: 0.9rem; height: 0.9rem; }
   .vers { font-size: 0.75rem; }
   .prof {
     font: inherit; font-size: 0.65rem; text-transform: uppercase;

@@ -37,14 +37,15 @@ const itemKey = (name: string, source: string) =>
  * effects (armor AC, magic bonuses) through this. Rebuilt with the catalog.
  */
 export const catalogLookup = derived(state, ($s) => {
-  const map = new Map<string, NamedEntry>();
+  const items = new Map<string, NamedEntry>();
+  const spells = new Map<string, NamedEntry>();
   if ($s.catalog) {
-    for (const item of $s.catalog.entries.item) {
-      map.set(itemKey(item.name, item.source), item);
-    }
+    for (const item of $s.catalog.entries.item) items.set(itemKey(item.name, item.source), item);
+    for (const spell of $s.catalog.entries.spell) spells.set(itemKey(spell.name, spell.source), spell);
   }
   return {
-    getItem: (name: string, source: string) => map.get(itemKey(name, source))
+    getItem: (name: string, source: string) => items.get(itemKey(name, source)),
+    getSpell: (name: string, source: string) => spells.get(itemKey(name, source))
   };
 });
 

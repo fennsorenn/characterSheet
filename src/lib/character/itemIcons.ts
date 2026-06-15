@@ -82,3 +82,44 @@ export function slotIcon(name: string): string | null {
   if (/robe|vestment|garb/.test(name)) return 'body';
   return null;
 }
+
+/** Spell-school letter (5etools: A/C/D/E/V/I/N/T) → icon name. */
+const SCHOOL_ICONS: Record<string, string> = {
+  A: 'abjuration',
+  C: 'conjuration',
+  D: 'divination',
+  E: 'enchantment',
+  V: 'evocation',
+  I: 'illusion',
+  N: 'necromancy',
+  T: 'transmutation'
+};
+
+export function iconForSchool(school: unknown): string {
+  return SCHOOL_ICONS[bare(school).toUpperCase()] ?? 'magic';
+}
+
+/** Damage type → icon name. Accepts full words (spells) or weapon codes S/P/B. */
+const DAMAGE_WORDS = new Set([
+  'acid',
+  'bludgeoning',
+  'cold',
+  'fire',
+  'force',
+  'lightning',
+  'necrotic',
+  'piercing',
+  'poison',
+  'psychic',
+  'radiant',
+  'slashing',
+  'thunder'
+]);
+const DAMAGE_CODES: Record<string, string> = { S: 'slashing', P: 'piercing', B: 'bludgeoning' };
+
+export function iconForDamageType(damage: unknown): string | null {
+  if (typeof damage !== 'string' || !damage) return null;
+  const lower = damage.toLowerCase();
+  if (DAMAGE_WORDS.has(lower)) return lower;
+  return DAMAGE_CODES[damage.toUpperCase()] ?? null;
+}

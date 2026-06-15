@@ -15,4 +15,11 @@ wizard-staff, crystal-ball, potion-ball, scroll-unfurled, poison-bottle, lyre,
 hammer-nails, swap-bag.
 
 **Delapouite** — cape, gloves, bracer, belt-armor, ring, sparkles,
-flanged-mace, sickle, flail, wood-club, sling, steak, coins-pile.
+flanged-mace, sickle, flail, wood-club, sling, steak, coins-pile,
+star-formation.
+
+Spell schools & damage types (**Lorc**, except star-formation above) —
+magic-shield, magic-gate, third-eye, charm, fireball, domino-mask, grim-reaper,
+cycle, chemical-drop, hammer-drop, snowflake-2, small-fire, lightning-arc,
+skull-crack, arrowhead, brain, sunbeams, claw-slashes, sonic-boom.
+(Poison damage reuses the poison-bottle item icon.)

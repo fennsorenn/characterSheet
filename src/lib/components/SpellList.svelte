@@ -1,15 +1,24 @@
 <script lang="ts">
   import { character, togglePrepared, removeSpell } from '../stores/character.js';
   import { catalogLookup } from '../stores/catalog.js';
+  import { iconForSchool } from '../character/index.js';
+  import Icon from './Icon.svelte';
 
   let { variant = 'full' }: { variant?: string } = $props();
 
+  const SCHOOL_NAMES: Record<string, string> = {
+    A: 'Abjuration', C: 'Conjuration', D: 'Divination', E: 'Enchantment',
+    V: 'Evocation', I: 'Illusion', N: 'Necromancy', T: 'Transmutation'
+  };
+
   // Spell level read live from the catalog (cantrip = 0).
   function level(name: string, source: string): string {
-    const sp = $catalogLookup.getItem(name, source);
+    const sp = $catalogLookup.getSpell(name, source);
     if (!sp || typeof sp.level !== 'number') return '';
     return sp.level === 0 ? 'cantrip' : `lvl ${sp.level}`;
   }
+  const school = (name: string, source: string) =>
+    String($catalogLookup.getSpell(name, source)?.school ?? '');
 </script>
 
 <section class="block" data-variant={variant}>
@@ -23,6 +32,12 @@
           <label class="prep" title="Prepared">
             <input type="checkbox" checked={spell.prepared} onchange={() => togglePrepared(i)} />
           </label>
+          {#if school(spell.name, spell.source)}
+            {@const s = school(spell.name, spell.source)}
+            <span class="school" title={SCHOOL_NAMES[s.toUpperCase()] ?? 'Spell'}>
+              <Icon name={iconForSchool(s)} />
+            </span>
+          {/if}
           <span class="name">{spell.name}</span>
           <span class="lvl">{level(spell.name, spell.source)}</span>
           <span class="src">{spell.source}</span>
@@ -39,6 +54,8 @@
   .empty { color: var(--muted); font-size: 0.85rem; margin: 0; }
   ul { list-style: none; margin: 0; padding: 0; }
   li { display: flex; align-items: center; gap: 0.5rem; padding: 0.22rem 0; border-bottom: 1px solid var(--line); }
+  .school { color: var(--muted); display: inline-flex; }
+  .school :global(.icon) { width: 1rem; height: 1rem; }
   .name { flex: 1; }
   .lvl { font-size: 0.72rem; color: var(--accent); }
   .src { font-size: 0.7rem; text-transform: uppercase; color: var(--muted); }

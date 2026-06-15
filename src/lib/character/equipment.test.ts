@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { buildGraph } from './buildGraph.js';
 import { createCharacter } from './schema.js';
 import { weaponAttacks, iconForItem, type CatalogLookup } from './equipment.js';
+import { iconForSchool, iconForDamageType } from './itemIcons.js';
 import type { NamedEntry } from '../data/catalog.js';
 
 /** A lookup backed by a fixed set of catalog items. */
@@ -197,6 +198,20 @@ describe('ability-setting items', () => {
     expect(iconForItem({ name: 'Heavy Crossbow', type: 'R' })).toBe('bow');
     expect(iconForItem({ name: 'Sling', type: 'R' })).toBe('sling');
     expect(iconForItem({ name: 'Arrows (20)', type: 'A' })).toBe('arrow');
+  });
+
+  it('maps spell schools and damage types to icons', () => {
+    expect(iconForSchool('V')).toBe('evocation');
+    expect(iconForSchool('N')).toBe('necromancy');
+    expect(iconForSchool('A|XPHB')).toBe('abjuration');
+    expect(iconForSchool('P')).toBe('magic'); // psionics → generic
+    // damage: full words (spells) and weapon codes
+    expect(iconForDamageType('fire')).toBe('fire');
+    expect(iconForDamageType('Cold')).toBe('cold');
+    expect(iconForDamageType('S')).toBe('slashing');
+    expect(iconForDamageType('B')).toBe('bludgeoning');
+    expect(iconForDamageType('')).toBeNull();
+    expect(iconForDamageType('weird')).toBeNull();
   });
 
   it('icons common item types', () => {
