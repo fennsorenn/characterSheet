@@ -8,6 +8,8 @@
     setSpellChoice,
     setFeatureOption,
     setOptionalChoice,
+    setAbilityChoice,
+    setFeatChoice,
     setFeatureHidden,
     addFeatureTag,
     removeFeatureTag
@@ -16,6 +18,7 @@
   import { openBrowse } from '../stores/browse.js';
   import { openSpellPicker } from '../stores/spellPicker.js';
   import { openOptionalPicker } from '../stores/optionalPicker.js';
+  import { openFeatPicker } from '../stores/featPicker.js';
   import {
     resolveFeatures,
     featureChoices,
@@ -65,10 +68,22 @@
   const isAsi = (f: Feature) => /ability score improvement/i.test(f.name);
   const asiKey = (f: Feature) => `${f.name}|${f.source}|${f.subtitle ?? ''}`;
   const asiValue = (f: Feature) => $character.abilityChoices[asiKey(f)] ?? {};
+  const featValue = (f: Feature) => $character.featChoices[asiKey(f)];
+  const asiMode = (f: Feature): 'ability' | 'feat' => (featValue(f) ? 'feat' : 'ability');
+
+  function setAsiMode(f: Feature, mode: string) {
+    const key = asiKey(f);
+    if (mode === 'feat') {
+      setAbilityChoice(key, undefined);
+      openFeatPicker({ key, label: `${f.name}: choose a feat` });
+    } else {
+      setFeatChoice(key, undefined);
+    }
+  }
 
   function pendingCount(f: Feature): number {
     let n = 0;
-    if (isAsi(f) && Object.keys(asiValue(f)).length === 0) n += 1;
+    if (isAsi(f) && Object.keys(asiValue(f)).length === 0 && !featValue(f)) n += 1;
     n += optionsFor(f).filter((o) => !$character.featureOptions[o.key]).length;
     n += spellsFor(f).filter((s) => !$character.spellChoices[s.key]).length;
     return n;
@@ -146,7 +161,24 @@
     {#if optionsFor(f).length > 0 || spellsFor(f).length > 0 || isAsi(f)}
       <div class="choices">
         {#if isAsi(f)}
-          <AsiEditor choiceKey={asiKey(f)} value={asiValue(f)} />
+          <select class="opt" value={asiMode(f)} title="Ability increase or feat"
+            onchange={(e) => setAsiMode(f, (e.target as HTMLSelectElement).value)}>
+            <option value="ability">Ability increase</option>
+            <option value="feat">Feat</option>
+          </select>
+          {#if asiMode(f) === 'ability'}
+            <AsiEditor choiceKey={asiKey(f)} value={asiValue(f)} />
+          {:else}
+            {@const feat = featValue(f)}
+            {#if feat}
+              <span class="pill picked">
+                <button class="pname" title="Change" onclick={() => openFeatPicker({ key: asiKey(f), label: `${f.name}: choose a feat` })}>{feat.name}</button>
+                <button class="x" onclick={() => setFeatChoice(asiKey(f), undefined)}>×</button>
+              </span>
+            {:else}
+              <button class="pill empty" onclick={() => openFeatPicker({ key: asiKey(f), label: `${f.name}: choose a feat` })}>+ choose feat</button>
+            {/if}
+          {/if}
         {/if}
         {#each optionsFor(f) as opt (opt.key)}
           <select class="opt" value={$character.featureOptions[opt.key] ?? ''} title={opt.label}

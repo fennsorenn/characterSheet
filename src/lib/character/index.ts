@@ -12,6 +12,7 @@ export {
   CHARACTER_SCHEMA_VERSION,
   createCharacter,
   totalLevel,
+  allFeatRefs,
   emptySpellSlots,
   type Character,
   type ClassEntry,

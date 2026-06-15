@@ -177,6 +177,16 @@ export function setFeatureOption(key: string, value: string | undefined) {
   });
 }
 
+/** Set or clear the feat taken in an ASI-or-feat slot. */
+export function setFeatChoice(key: string, ref: CatalogRef | undefined) {
+  update((c) => {
+    const featChoices = { ...c.featChoices };
+    if (ref) featChoices[key] = ref;
+    else delete featChoices[key];
+    return { ...c, featChoices };
+  });
+}
+
 /** Set or clear a picked optional feature (maneuver, invocation, …) for a slot. */
 export function setOptionalChoice(key: string, ref: CatalogRef | undefined) {
   update((c) => {

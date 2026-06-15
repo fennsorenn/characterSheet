@@ -68,6 +68,31 @@ describe('resolveFeatures', () => {
   });
 });
 
+describe('ASI-or-feat slot cascade', () => {
+  it('resolves a feat taken in an ASI slot as a Feat feature and grants its spells', () => {
+    const c = createCharacter({
+      classes: [{ name: 'Fighter', source: 'PHB', level: 4 }],
+      featChoices: { 'Ability Score Improvement|PHB|Fighter 4': { name: 'Magic Initiate', source: 'PHB' } }
+    });
+    const fireBolt = { name: 'Fire Bolt', source: 'PHB' };
+    const lookup = { getSpellByName: (n: string) => (n.toLowerCase() === 'fire bolt' ? fireBolt : undefined) };
+
+    const features = resolveFeatures(c, fixtureCatalog());
+    expect(features.filter((f) => f.group === 'Feat').map((f) => f.name)).toEqual(['Magic Initiate']);
+    expect(featureGrantedSpells(c, fixtureCatalog(), lookup).map((g) => g.name)).toEqual(['Fire Bolt']);
+  });
+
+  it('does not double-list a feat held both explicitly and in a slot', () => {
+    const c = createCharacter({
+      classes: [{ name: 'Fighter', source: 'PHB', level: 4 }],
+      feats: [{ name: 'Magic Initiate', source: 'PHB' }],
+      featChoices: { 'Ability Score Improvement|PHB|Fighter 4': { name: 'Magic Initiate', source: 'PHB' } }
+    });
+    const features = resolveFeatures(c, fixtureCatalog());
+    expect(features.filter((f) => f.group === 'Feat')).toHaveLength(1);
+  });
+});
+
 describe('additionalSpellNames', () => {
   it('collects innate/known, gated by character level, skipping choose and expanded', () => {
     const block = [

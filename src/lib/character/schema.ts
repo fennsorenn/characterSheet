@@ -159,6 +159,8 @@ export interface Character {
   abilityChoices: Record<string, Partial<Record<Ability, number>>>;
   /** Picked optional features (maneuvers, invocations, metamagic, …) by slot key. */
   optionalChoices: Record<string, CatalogRef>;
+  /** Feats taken in an ASI-or-feat slot, keyed by that slot (cascade into feats). */
+  featChoices: Record<string, CatalogRef>;
   /** Per-feature UI overrides (hidden / custom tags), keyed by `name|source`. */
   featureMeta: Record<string, FeatureMeta>;
 }
@@ -206,6 +208,7 @@ export function createCharacter(partial: Partial<Character> = {}): Character {
     featureOptions: partial.featureOptions ?? {},
     abilityChoices: partial.abilityChoices ?? {},
     optionalChoices: partial.optionalChoices ?? {},
+    featChoices: partial.featChoices ?? {},
     featureMeta: partial.featureMeta ?? {}
   };
 }
@@ -213,4 +216,23 @@ export function createCharacter(partial: Partial<Character> = {}): Character {
 /** Total character level across all classes. */
 export function totalLevel(character: Character): number {
   return character.classes.reduce((sum, c) => sum + c.level, 0) || 1;
+}
+
+/**
+ * Every feat the character has, from the explicit feat list (race/background/
+ * manual) and from ASI-or-feat slots, deduped by name+source. This is the union
+ * feature resolution and spell-granting iterate, so a feat taken in an ASI slot
+ * cascades into its own feature row and sub-choices like any other feat.
+ */
+export function allFeatRefs(character: Character): CatalogRef[] {
+  const out: CatalogRef[] = [];
+  const seen = new Set<string>();
+  for (const ref of [...character.feats, ...Object.values(character.featChoices ?? {})]) {
+    if (!ref) continue;
+    const k = `${ref.name}|${ref.source}`.toLowerCase();
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(ref);
+  }
+  return out;
 }

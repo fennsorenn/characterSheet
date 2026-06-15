@@ -10,6 +10,7 @@
   import BrowseImport from './lib/components/import/BrowseImport.svelte';
   import SpellPicker from './lib/components/SpellPicker.svelte';
   import OptionalFeaturePicker from './lib/components/OptionalFeaturePicker.svelte';
+  import FeatPicker from './lib/components/FeatPicker.svelte';
 
   const version = '0.0.0';
   let showData = $state(false);
@@ -52,6 +53,7 @@
 
 <SpellPicker />
 <OptionalFeaturePicker />
+<FeatPicker />
 
 <style>
   /* Use the full viewport width; the grid handles internal columns. A generous

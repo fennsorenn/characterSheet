@@ -1,6 +1,6 @@
 import type { Catalog, NamedEntry } from '../data/catalog.js';
 import type { Character } from './schema.js';
-import { totalLevel } from './schema.js';
+import { totalLevel, allFeatRefs } from './schema.js';
 import type { GrantedSpell, SpellByName } from './grantedSpells.js';
 
 /**
@@ -57,7 +57,7 @@ export function resolveFeatures(character: Character, catalog: Catalog): Feature
     const bg = findRef(catalog.entries.background, character.background);
     if (bg) out.push({ group: 'Background', name: bg.name, source: String(bg.source), entries: arrEntries(bg) });
   }
-  for (const featRef of character.feats) {
+  for (const featRef of allFeatRefs(character)) {
     const f = findRef(catalog.entries.feat, featRef);
     if (f) out.push({ group: 'Feat', name: f.name, source: String(f.source), entries: arrEntries(f) });
   }
@@ -180,7 +180,7 @@ export function featureGrantedSpells(
 
   add(character.race && findRef(catalog.entries.race, character.race), charLevel);
   add(character.background && findRef(catalog.entries.background, character.background), charLevel);
-  for (const featRef of character.feats) add(findRef(catalog.entries.feat, featRef), charLevel);
+  for (const featRef of allFeatRefs(character)) add(findRef(catalog.entries.feat, featRef), charLevel);
   for (const cls of character.classes) {
     if (!cls.subclass) continue;
     const sc = catalog.classData.subclass.find(
