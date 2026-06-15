@@ -15,8 +15,18 @@ import type { BlockSize, SheetLayout } from '../layout/types.js';
 const STORAGE_KEY = 'charactersheet.layouts';
 const LEGACY_KEY = 'charactersheet.layout';
 /** Bump when built-in presets change so returning users get the new defaults. */
-const LIBRARY_VERSION = 6;
+const LIBRARY_VERSION = 7;
 const BUILTIN_IDS = new Set(['default', 'caster', 'martial', 'compact']);
+
+/**
+ * Block types introduced in each library version. On upgrade these are appended
+ * (non-destructively) to *every* existing layout that lacks them — so a new
+ * block reaches returning users even on their own custom layouts, not just the
+ * refreshed built-in presets. Add an entry whenever a new block ships.
+ */
+const BLOCKS_INTRODUCED: Record<number, string[]> = {
+  7: ['traits']
+};
 
 function fresh(): LayoutLibrary {
   return { activeId: 'default', layouts: builtinPresets() };
@@ -30,6 +40,22 @@ function refreshBuiltins(library: LayoutLibrary): LayoutLibrary {
   return { activeId, layouts };
 }
 
+/** Append blocks introduced after `fromVersion` to any layout missing them. */
+export function appendNewBlocks(library: LayoutLibrary, fromVersion: number): LayoutLibrary {
+  const introduced = Object.entries(BLOCKS_INTRODUCED)
+    .filter(([v]) => Number(v) > fromVersion)
+    .flatMap(([, types]) => types);
+  if (!introduced.length) return library;
+  const layouts = library.layouts.map((l) => {
+    let layout = l;
+    for (const type of introduced) {
+      if (!layout.blocks.some((b) => b.type === type)) layout = ops.addBlock(layout, type);
+    }
+    return layout;
+  });
+  return { ...library, layouts };
+}
+
 function load(): LayoutLibrary {
   if (typeof localStorage === 'undefined') return fresh();
   try {
@@ -38,8 +64,10 @@ function load(): LayoutLibrary {
       const parsed = JSON.parse(raw) as LayoutLibrary & { version?: number };
       if (parsed?.layouts?.length) {
         const library = { activeId: parsed.activeId, layouts: parsed.layouts };
-        // Upgrade stale built-in presets while preserving user-created layouts.
-        return parsed.version === LIBRARY_VERSION ? library : refreshBuiltins(library);
+        if (parsed.version === LIBRARY_VERSION) return library;
+        // Upgrade: refresh built-in presets, then surface newly-shipped blocks on
+        // every layout (including the user's own) so nothing stays hidden.
+        return appendNewBlocks(refreshBuiltins(library), parsed.version ?? 0);
       }
     }
     // Migrate a single legacy layout into the new library.
