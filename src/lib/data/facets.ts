@@ -123,6 +123,8 @@ const SPELL_FACETS: Facet[] = [
     values: (e) => [String(e.level ?? 0)],
     optionLabel: (v) => (v === '0' ? 'Cantrip' : ordinal(+v))
   },
+  { key: 'class', label: 'Class', values: (e) => arr(e._classes) },
+  { key: 'subclass', label: 'Subclass', values: (e) => arr(e._subclasses) },
   {
     key: 'school',
     label: 'School',
