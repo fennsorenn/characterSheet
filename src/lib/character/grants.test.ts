@@ -36,6 +36,18 @@ function catalog(): Catalog {
   c.entries.background = [
     { name: 'Soldier', source: 'PHB', skillProficiencies: [{ athletics: true, intimidation: true }] }
   ] as never;
+  c.entries.class = [
+    {
+      name: 'Fighter',
+      source: 'PHB',
+      proficiency: ['str', 'con'],
+      startingProficiencies: {
+        armor: ['light', 'medium', 'heavy', 'shield'],
+        weapons: ['simple', 'martial'],
+        skills: [{ choose: { from: ['athletics', 'perception', 'survival'], count: 2 } }]
+      }
+    }
+  ] as never;
   return c;
 }
 
@@ -60,6 +72,7 @@ describe('gatherGrants', () => {
 
     // Make the picks.
     const picked = createCharacter({
+      classes: [], // isolate from the default class's starting save proficiencies
       feats: [{ name: 'Resilient', source: 'PHB' }],
       abilityChoices: { [abilityChoice!.key]: { con: 1 } },
       grantChoices: { [saveChoice!.key]: ['con'] }
@@ -71,6 +84,17 @@ describe('gatherGrants', () => {
 
   it('keys choices stably to source/field/index', () => {
     expect(grantKey('Resilient', 'ability', 0)).toBe('grant:Resilient|ability|0');
+  });
+
+  it('gathers the first class’s saves, armor/weapon profs, and skill choice', () => {
+    const c = createCharacter({ classes: [{ name: 'Fighter', source: 'PHB', level: 1 }] });
+    const pool = gatherGrants(c, catalog());
+    expect(setMembers(pool, 'saveProf').map((m) => m.member)).toEqual(['str', 'con']);
+    expect(setMembers(pool, 'armorProf').map((m) => m.member)).toContain('heavy');
+    expect(setMembers(pool, 'weaponProf').map((m) => m.member)).toEqual(['simple', 'martial']);
+    const skillChoice = pool.choices.find((ch) => ch.source === 'Fighter' && ch.category === 'skillProf');
+    expect(skillChoice?.count).toBe(2);
+    expect(skillChoice?.from).toEqual(['athletics', 'perception', 'survival']);
   });
 });
 

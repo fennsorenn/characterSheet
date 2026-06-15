@@ -180,6 +180,53 @@ function universeNoun(u: Universe, count: number): string {
   return count > 1 ? `${n[u]}s` : `a ${n[u]}`;
 }
 
+/** Class `startingProficiencies` subfields use different names than the top-level ones. */
+const CLASS_SUBFIELDS: Record<string, { category: SetCategory; universe: Universe }> = {
+  armor: { category: 'armorProf', universe: 'armor' },
+  weapons: { category: 'weaponProf', universe: 'weapon' },
+  skills: { category: 'skillProf', universe: 'skill' },
+  tools: { category: 'toolProf', universe: 'tool' },
+  languages: { category: 'language', universe: 'language' }
+};
+
+/** Parse a set-field's entries (strings, `{x:true}`, `choose`, `any`) into the pool. */
+function parseSetEntries(
+  rows: unknown[],
+  opts: { category: SetCategory; universe: Universe; field: string; source: string },
+  character: Character,
+  pool: GrantPool
+): void {
+  rows.forEach((row, i) => {
+    if (typeof row === 'string') {
+      pool.sets.push({ category: opts.category, member: row, source: opts.source });
+      return;
+    }
+    if (!row || typeof row !== 'object') return;
+    for (const [k, v] of Object.entries(row as Record<string, unknown>)) {
+      const choice = parseChoose(v, k, { ...opts, index: i, amount: 1 });
+      if (choice) {
+        pool.choices.push(choice);
+        for (const m of character.grantChoices[choice.key] ?? []) pool.sets.push({ category: opts.category, member: m, source: opts.source });
+      } else if (v === true) {
+        pool.sets.push({ category: opts.category, member: k, source: opts.source });
+      }
+    }
+  });
+}
+
+/** Walk a class's starting proficiencies + saving throws (first class only). */
+function gatherClass(entry: NamedEntry, character: Character, pool: GrantPool): void {
+  const source = entry.name;
+  // `proficiency: ["wis","cha"]` are the class's saving-throw proficiencies.
+  for (const a of arr(entry.proficiency)) if (typeof a === 'string') pool.sets.push({ category: 'saveProf', member: a, source });
+  const sp = entry.startingProficiencies;
+  if (sp && typeof sp === 'object') {
+    for (const [field, { category, universe }] of Object.entries(CLASS_SUBFIELDS)) {
+      parseSetEntries(arr((sp as Record<string, unknown>)[field]), { category, universe, field: `sp.${field}`, source }, character, pool);
+    }
+  }
+}
+
 /** Walk one feature source's grant fields into the pool. */
 function gatherFrom(entry: NamedEntry, character: Character, pool: GrantPool): void {
   const source = entry.name;
@@ -210,22 +257,7 @@ function gatherFrom(entry: NamedEntry, character: Character, pool: GrantPool): v
 
   // Set-valued fields (proficiencies, resistances, languages, …).
   for (const [field, { category, universe }] of Object.entries(SET_FIELDS)) {
-    arr(entry[field]).forEach((row, i) => {
-      if (typeof row === 'string') {
-        pool.sets.push({ category, member: row, source });
-        return;
-      }
-      if (!row || typeof row !== 'object') return;
-      for (const [k, v] of Object.entries(row as Record<string, unknown>)) {
-        const choice = parseChoose(v, k, { source, field, index: i, category, universe, amount: 1 });
-        if (choice) {
-          pool.choices.push(choice);
-          for (const m of character.grantChoices[choice.key] ?? []) pool.sets.push({ category, member: m, source });
-        } else if (v === true) {
-          pool.sets.push({ category, member: k, source });
-        }
-      }
-    });
+    parseSetEntries(arr(entry[field]), { category, universe, field, source }, character, pool);
   }
 
   // Senses (max per type) — array form `senses: [{darkvision:60}]` and the
@@ -262,6 +294,9 @@ export function gatherGrants(character: Character, catalog: Catalog): GrantPool 
     ...allFeatRefs(character).map((ref) => findRef(catalog.entries.feat, ref))
   ];
   for (const entry of sources) if (entry) gatherFrom(entry, character, pool);
+  // Starting proficiencies/saves come from the first ("starting") class.
+  const firstClass = character.classes[0] && findRef(catalog.entries.class, character.classes[0]);
+  if (firstClass) gatherClass(firstClass, character, pool);
   return pool;
 }
 
