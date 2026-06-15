@@ -12,3 +12,12 @@ export {
   type LoadOptions,
   type LoadStage
 } from './loader.js';
+export {
+  facetsFor,
+  filterEntries,
+  facetOptions,
+  itemTypeLabel,
+  type Facet,
+  type Selection,
+  type FacetOption
+} from './facets.js';

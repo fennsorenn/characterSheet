@@ -1,6 +1,7 @@
 <script lang="ts">
   import { searchIndex } from '../stores/catalog.js';
   import { addInventoryItem, addSpell } from '../stores/character.js';
+  import { openBrowse } from '../stores/browse.js';
   import { parseTaggedString, renderToText } from '../render/tags.js';
   import type { Category, SearchHit } from '../data/index.js';
 
@@ -48,6 +49,9 @@
         <option value="race">Races</option>
         <option value="background">Backgrounds</option>
       </select>
+      <button class="browse" onclick={() => openBrowse(category === 'all' ? 'item' : category)}>
+        Browse &amp; filter…
+      </button>
     </div>
 
     {#if query}
@@ -82,6 +86,16 @@
     border-radius: 6px;
     background: var(--bg);
     color: var(--fg);
+  }
+  .browse {
+    flex: none;
+    font: inherit;
+    padding: 0.45rem 0.7rem;
+    border: 1px solid var(--accent);
+    background: var(--bg);
+    color: var(--accent);
+    border-radius: 6px;
+    cursor: pointer;
   }
   .results { list-style: none; padding: 0; margin: 0.5rem 0 0; }
   .results li {

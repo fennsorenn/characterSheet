@@ -2,10 +2,12 @@
   import { onMount } from 'svelte';
   import { restoreCached, catalogState } from './lib/stores/catalog.js';
   import { printOpen, openPrint } from './lib/stores/print.js';
+  import { browseOpen } from './lib/stores/browse.js';
   import DataImport from './lib/components/DataImport.svelte';
   import QuickSearch from './lib/components/QuickSearch.svelte';
   import CharacterSheet from './lib/components/CharacterSheet.svelte';
   import PrintView from './lib/components/print/PrintView.svelte';
+  import BrowseImport from './lib/components/import/BrowseImport.svelte';
 
   const version = '0.0.0';
   let showData = $state(false);
@@ -40,6 +42,10 @@
 
 {#if $printOpen}
   <PrintView />
+{/if}
+
+{#if $browseOpen && $catalogState.catalog}
+  <BrowseImport />
 {/if}
 
 <style>
