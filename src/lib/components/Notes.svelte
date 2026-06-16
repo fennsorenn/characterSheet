@@ -411,9 +411,12 @@
   .md-preview :global(h1) { font-size: 1.25rem; margin: 0.5rem 0; }
   .md-preview :global(h2) { font-size: 1.1rem; margin: 0.5rem 0; }
   .md-preview :global(h3) { font-size: 1rem; margin: 0.4rem 0; }
-  .md-preview :global(h4, h5, h6) { font-size: 0.9rem; margin: 0.3rem 0; }
+  .md-preview :global(h4) { font-size: 0.9rem; margin: 0.3rem 0; }
+  .md-preview :global(h5) { font-size: 0.9rem; margin: 0.3rem 0; }
+  .md-preview :global(h6) { font-size: 0.9rem; margin: 0.3rem 0; }
   .md-preview :global(p) { margin: 0.3rem 0; }
-  .md-preview :global(ul, ol) { padding-left: 1.4rem; margin: 0.3rem 0; }
+  .md-preview :global(ul) { padding-left: 1.4rem; margin: 0.3rem 0; }
+  .md-preview :global(ol) { padding-left: 1.4rem; margin: 0.3rem 0; }
   .md-preview :global(li) { margin: 0.15rem 0; }
   .md-preview :global(code) { background: var(--field-hover); padding: 0.1em 0.3em; border-radius: 3px; font-family: monospace; font-size: 0.85em; }
   .md-preview :global(pre) { background: var(--field-hover); padding: 0.6rem; border-radius: 4px; overflow-x: auto; }
