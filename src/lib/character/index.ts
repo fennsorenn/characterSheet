@@ -27,7 +27,11 @@ export {
   spellStatus,
   type Buff,
   type BuffModifier,
-  type HitDicePool
+  type HitDicePool,
+  type NoteDoc,
+  type NoteFolder,
+  type NoteNode,
+  isNoteFolder
 } from './schema.js';
 export { applyRest } from './rest.js';
 export { applyAdjustment, adjustmentValue } from './adjustments.js';

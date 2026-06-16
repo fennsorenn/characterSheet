@@ -25,6 +25,10 @@ import {
   type Character,
   type GrantPool,
   type LevelUpPlan,
+  type NoteDoc,
+  type NoteFolder,
+  type NoteNode,
+  isNoteFolder,
   type ProficiencyLevel,
   type Resource,
   type RestType,
@@ -737,4 +741,104 @@ export function clearAllManualModifiers() {
 /** Snapshot the current character (for export). */
 export function snapshot(): Character {
   return get(store);
+}
+
+// --- Notes ---
+
+function noteId(): string {
+  return crypto.randomUUID();
+}
+
+/** Walk a tree, calling `fn` on each node. Returns true to stop. */
+function walkNodes(nodes: NoteNode[], fn: (n: NoteNode, siblings: NoteNode[], idx: number) => boolean): boolean {
+  for (let i = 0; i < nodes.length; i++) {
+    if (fn(nodes[i], nodes, i)) return true;
+    if (isNoteFolder(nodes[i]) && walkNodes((nodes[i] as NoteFolder).children, fn)) return true;
+  }
+  return false;
+}
+
+/** Replace the entire notes tree. */
+export function setNotes(notes: NoteNode[]) {
+  update((c) => ({ ...c, notes }));
+}
+
+/** Create a new document (at root or inside a folder). */
+export function addNoteDoc(parentId: string | null, name: string): string {
+  const id = noteId();
+  update((c) => {
+    const tree = [...(c.notes ?? [])];
+    const doc: NoteDoc = { id, name, content: '' };
+    if (!parentId) {
+      tree.push(doc);
+    } else {
+      walkNodes(tree, (n) => {
+        if (isNoteFolder(n) && n.id === parentId) {
+          n.children = [...n.children, doc];
+          return true;
+        }
+        return false;
+      });
+    }
+    return { ...c, notes: tree };
+  });
+  return id;
+}
+
+/** Create a new folder (at root or inside a folder). */
+export function addNoteFolder(parentId: string | null, name: string): string {
+  const id = noteId();
+  update((c) => {
+    const tree = [...(c.notes ?? [])];
+    const folder: NoteFolder = { id, name, children: [] };
+    if (!parentId) {
+      tree.push(folder);
+    } else {
+      walkNodes(tree, (n) => {
+        if (isNoteFolder(n) && n.id === parentId) {
+          n.children = [...n.children, folder];
+          return true;
+        }
+        return false;
+      });
+    }
+    return { ...c, notes: tree };
+  });
+  return id;
+}
+
+/** Rename a note or folder by id. */
+export function renameNote(id: string, name: string) {
+  update((c) => {
+    const tree = [...(c.notes ?? [])];
+    walkNodes(tree, (n) => {
+      if (n.id === id) { n.name = name; return true; }
+      return false;
+    });
+    return { ...c, notes: tree };
+  });
+}
+
+/** Save the markdown content of a doc by id. */
+export function saveNoteContent(id: string, content: string) {
+  update((c) => {
+    const tree = [...(c.notes ?? [])];
+    walkNodes(tree, (n) => {
+      if (!isNoteFolder(n) && n.id === id) { (n as NoteDoc).content = content; return true; }
+      return false;
+    });
+    return { ...c, notes: tree };
+  });
+}
+
+/** Delete a note or folder by id (removes from wherever it lives in the tree). */
+export function deleteNote(id: string) {
+  update((c) => {
+    const tree = [...(c.notes ?? [])];
+    walkNodes(tree, (_, siblings, idx) => {
+      if (siblings[idx].id === id) { siblings.splice(idx, 1); return true; }
+      return false;
+    });
+    return { ...c, notes: tree };
+  });
 }

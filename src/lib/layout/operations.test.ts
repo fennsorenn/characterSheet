@@ -31,7 +31,8 @@ describe('defaultLayout', () => {
       'inventory',
       'resources',
       'spells',
-      'spellSlots'
+      'spellSlots',
+      'notes'
     ]);
   });
 

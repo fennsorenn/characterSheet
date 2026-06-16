@@ -22,7 +22,8 @@ export function defaultLayout(): SheetLayout {
     'inventory',
     'resources',
     'spells',
-    'spellSlots'
+    'spellSlots',
+    'notes'
   ];
   const blocks = order
     .map((type) => makeBlock(type))

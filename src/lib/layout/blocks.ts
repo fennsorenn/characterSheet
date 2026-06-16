@@ -105,6 +105,12 @@ export const BLOCK_META: Record<string, BlockMeta> = {
     variants: [{ key: 'full', label: 'Full', verbosity: 'full' }],
     defaultVariant: 'full',
     defaultSize: 'wide'
+  },
+  notes: {
+    label: 'Notes',
+    variants: [{ key: 'full', label: 'Full', verbosity: 'full' }],
+    defaultVariant: 'full',
+    defaultSize: 'full'
   }
 };
 

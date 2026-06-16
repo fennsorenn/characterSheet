@@ -171,11 +171,34 @@ export interface Character {
   featChoices: Record<string, CatalogRef>;
   /** Per-feature UI overrides (hidden / custom tags), keyed by `name|source`. */
   featureMeta: Record<string, FeatureMeta>;
+  /** Notes: a tree of folders and markdown documents. */
+  notes?: NoteNode[];
 }
 
 export interface FeatureMeta {
   hidden?: boolean;
   tags?: string[];
+}
+
+/** A single notes document (markdown content). */
+export interface NoteDoc {
+  id: string;
+  name: string;
+  content: string;
+}
+
+/** A folder in the notes tree, which may contain docs or sub-folders. */
+export interface NoteFolder {
+  id: string;
+  name: string;
+  /** Mix of NoteDoc and NoteFolder entries. */
+  children: NoteNode[];
+}
+
+export type NoteNode = NoteDoc | NoteFolder;
+
+export function isNoteFolder(n: NoteNode): n is NoteFolder {
+  return 'children' in n;
 }
 
 /** Nine empty spell-slot levels. */
