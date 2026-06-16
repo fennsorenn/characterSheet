@@ -390,11 +390,20 @@
   .new-btn:hover { color: var(--fg); background: var(--field-hover); }
 
   /* Live editor (Milkdown). Map Crepe's theme variables onto the app tokens so
-     it follows light/dark automatically, and let the editor surface scroll. */
+     it follows light/dark automatically, and let the editor surface scroll.
+     The variable overrides MUST sit on `.milkdown` (not the parent): Crepe's
+     frame theme defines them on `.milkdown` with hardcoded light values, so a
+     parent declaration would lose the cascade and text would stay black in
+     dark mode. `.editor-host .milkdown` outranks the theme's bare `.milkdown`. */
   .editor-host {
     flex: 1;
     overflow-y: auto;
     min-height: 0;
+  }
+
+  .editor-host :global(.milkdown) {
+    background: var(--bg);
+    height: 100%;
 
     --crepe-color-background: var(--bg);
     --crepe-color-on-background: var(--fg);
@@ -417,14 +426,10 @@
     --crepe-font-title: var(--font-body);
     --crepe-font-code: 'Menlo', 'Monaco', 'Consolas', monospace;
   }
-
-  .editor-host :global(.milkdown) {
-    background: var(--bg);
-    height: 100%;
-  }
   .editor-host :global(.milkdown .ProseMirror) {
     padding: 0.75rem 1rem;
     outline: none;
+    color: var(--fg);
   }
   /* Keep prior markdown-block visuals from leaking; nothing else references
      .md-preview now, but guard the fenced-code styling Crepe reuses. */
