@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { character, setAcBase, setClassLevel } from '../stores/character.js';
+  import { character, setAcBase, setClassLevel, acOverride } from '../stores/character.js';
   import { totalLevel } from '../character/index.js';
   import NumberField from './NumberField.svelte';
   import StatValue from './StatValue.svelte';
+  import Icon from './Icon.svelte';
 
   let { variant = 'full' }: { variant?: string } = $props();
   const full = $derived(variant !== 'compact');
@@ -14,7 +15,17 @@
   <div class="row">
     <div class="stat big">
       <span class="k">AC</span>
-      <span class="v" data-volatile="occasional"><StatValue node="ac" /></span>
+      <span class="v" data-volatile="occasional">
+        <StatValue node="ac" />
+        {#if $acOverride}
+          <span
+            class="ac-badge"
+            class:buff={$acOverride.kind === 'buff'}
+            aria-label={$acOverride.source}
+            title={`${$acOverride.source} (${$acOverride.delta >= 0 ? '+' : ''}${$acOverride.delta})`}
+          ><Icon name={$acOverride.icon} /></span>
+        {/if}
+      </span>
       {#if full}
         <span class="sub">base <NumberField value={$character.acBase} min={0} max={30} onchange={setAcBase} /></span>
       {/if}
@@ -65,7 +76,21 @@
     align-items: center;
     min-width: 4.5rem;
   }
-  .stat.big .v { font-size: 1.8rem; }
+  .stat.big .v { font-size: 1.8rem; display: inline-flex; align-items: center; gap: 0.25rem; }
+  /* Grey badge for shield/equipment AC; green tint for a temporary buff. */
+  .ac-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.1rem;
+    height: 1.1rem;
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--muted) 18%, transparent);
+    color: var(--muted);
+    cursor: help;
+  }
+  .ac-badge.buff { background: color-mix(in srgb, #3fa45b 18%, transparent); color: #3fa45b; }
+  .ac-badge :global(.icon) { width: 0.8rem; height: 0.8rem; }
   .k { font-size: 0.65rem; text-transform: uppercase; color: var(--muted); }
   .v { font-size: 1.3rem; font-weight: 700; }
   .sub { font-size: 0.7rem; color: var(--muted); }

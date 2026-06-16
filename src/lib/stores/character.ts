@@ -5,6 +5,10 @@ import {
   applyAdjustment,
   adjustmentValue,
   applyLevelUp,
+  asiModifiers,
+  buffModifiers,
+  exhaustionModifiers,
+  grantNumericModifiers,
   spendHitDie as spendHitDiePure,
   ATTUNEMENT_LIMIT,
   buildGraph,
@@ -24,6 +28,13 @@ import {
   type Skill,
   type SpellStatus
 } from '../character/index.js';
+import {
+  classifyAbility,
+  classifyAc,
+  type FleetingContribution,
+  type AcContribution,
+  type OverrideKind
+} from '../character/overrides.js';
 import { catalogLookup, catalogState } from './catalog.js';
 
 const EMPTY_POOL: GrantPool = { numeric: [], sets: [], choices: [] };
@@ -76,43 +87,132 @@ export const computedSlots = derived([store, catalogState], ([$c, $cat]) =>
   $cat.catalog ? spellSlotInfo($c, $cat.catalog) : { slots: [0, 0, 0, 0, 0, 0, 0, 0, 0], pact: null }
 );
 
-/** Per-ability score overrides from items (effective value differs from base). */
+/**
+ * Per-ability score override, shown ONLY when a FLEETING effect (equipment or a
+ * buff) contributes. Persistent build changes (ASIs, feat/racial ability grants)
+ * do NOT produce an override — they read as the character's own score, surfaced
+ * via `persistentEffective` on {@link abilityScores} instead.
+ *
+ * `kind` picks the badge flavour: 'buff' → coloured (green up / red down),
+ * 'equipment' → neutral grey badge with normal-colour text.
+ */
 export interface AbilityOverride {
+  /** The raw editable base score (the field shown underneath). */
   base: number;
+  /** The full effective score (base + persistent + fleeting) — what we display. */
   effective: number;
   source: string;
   icon: string;
+  /** Signed delta of the FLEETING part (drives green/red for buffs). */
   delta: number;
+  kind: 'buff' | 'equipment';
+}
+
+/** The persistent ("character build") effective score per ability — base + ASI/grants. */
+export const abilityScores = derived([store, catalogLookup, grantPool], ([$c, $lookup, $grants]) => {
+  void $lookup; // keep deps aligned with the override store below
+  const out = {} as Record<Ability, number>;
+  const persistent = persistentAbilityDeltas($c, $grants);
+  for (const a of ABILITIES) out[a] = $c.abilities[a] + persistent[a];
+  return out;
+});
+
+/** Summed PERSISTENT ability deltas (ASIs + ability-targeting grant numerics). */
+function persistentAbilityDeltas($c: Character, $grants: GrantPool): Record<Ability, number> {
+  const out = {} as Record<Ability, number>;
+  for (const a of ABILITIES) out[a] = 0;
+  const add = (target: string, value: number) => {
+    for (const a of ABILITIES) if (target === `ability.${a}.score`) out[a] += value;
+  };
+  for (const m of asiModifiers($c)) add(m.target, m.value);
+  for (const m of grantNumericModifiers($grants)) add(m.target, m.value);
+  return out;
 }
 
 /**
- * An ability shows an override whenever its effective score (from the graph)
- * differs from the base — whether from an item that sets it, an ASI, or another
- * score modifier. The badge uses the item's slot icon when set, else a generic
- * boost icon, and the tooltip lists the contributing sources.
+ * An ability emits an override ONLY when a fleeting effect contributes — i.e. the
+ * full effective score differs from the persistent (build) score. The badge icon
+ * is the item's slot icon for an equipment set, else a generic boost icon, and
+ * the tooltip lists the contributing fleeting sources.
  */
-export const abilityOverrides = derived([store, catalogLookup, graph], ([$c, $lookup, $g]) => {
-  const sets = computeEquipmentEffects($c, $lookup).abilitySets;
+export const abilityOverrides = derived([store, catalogLookup, grantPool], ([$c, $lookup, $grants]) => {
+  const equip = computeEquipmentEffects($c, $lookup);
+  const persistent = persistentAbilityDeltas($c, $grants);
+  // Fleeting modifiers: equipment item bonuses + active buffs + exhaustion.
+  const fleetingMods = [...buffModifiers($c), ...exhaustionModifiers($c)].map((m) => ({
+    ...m,
+    kind: 'buff' as const
+  }));
+  const equipMods = equip.modifiers.map((m) => ({ ...m, kind: 'equipment' as const }));
   const out = {} as Partial<Record<Ability, AbilityOverride>>;
+
   for (const a of ABILITIES) {
     const base = $c.abilities[a];
     const node = `ability.${a}.score`;
-    const effective = $g.has(node) ? $g.get(node) : base;
-    if (effective === base) continue;
-    const set = sets[a];
+    const fleeting: FleetingContribution[] = [];
+    for (const m of [...equipMods, ...fleetingMods]) {
+      if (m.target === node) fleeting.push({ value: m.value, kind: m.kind });
+    }
+    const set = equip.abilitySets[a];
+    const c = classifyAbility(base, persistent[a], fleeting, set?.value);
+    if (c.kind === 'none') continue;
+
     const sources = new Set<string>();
-    if (set) sources.add(set.source);
-    for (const m of $g.explain(node).modifiers) if (m.applied) sources.add(m.source);
+    if (set && c.fleetingEffective === set.value) sources.add(set.source);
+    for (const m of [...equipMods, ...fleetingMods]) if (m.target === node) sources.add(m.source);
     out[a] = {
       base,
-      effective,
-      delta: effective - base,
+      effective: c.fleetingEffective,
+      delta: c.fleetingEffective - c.persistentEffective,
       source: [...sources].join(', ') || 'Effect',
-      icon: set ? set.icon : 'advantage'
+      icon: c.kind === 'equipment' && set ? set.icon : c.kind === 'equipment' ? 'shield' : 'advantage',
+      kind: c.kind
     };
   }
   return out;
 });
+
+/** Armor-Class override: a badge for shield/equipment (grey) or a buff (green). */
+export interface AcOverride {
+  /** Full effective AC, shown in place of the plain value when badged. */
+  effective: number;
+  source: string;
+  icon: string;
+  delta: number;
+  kind: 'buff' | 'equipment';
+}
+
+export const acOverride = derived([store, catalogLookup, grantPool, graph], ([$c, $lookup, $grants, $g]) => {
+  void $grants;
+  if (!$g.has('ac')) return undefined;
+  const equip = computeEquipmentEffects($c, $lookup);
+  const equipAcSources = new Set(equip.modifiers.filter((m) => m.target === 'ac').map((m) => m.source));
+  // baseEffective = AC from armor + dex, before any layered modifier.
+  const explain = $g.explain('ac');
+  const applied = explain.modifiers.filter((m) => m.applied);
+  const baseEffective = explain.value - applied.reduce((s, m) => s + m.value, 0);
+
+  const contributions: AcContribution[] = [];
+  const sources = new Set<string>();
+  let icon = 'shield';
+  for (const m of applied) {
+    const isEquipment = equipAcSources.has(m.source);
+    contributions.push({ value: m.value, kind: isEquipment ? 'equipment' : 'buff' });
+    sources.add(m.source);
+  }
+  const c = classifyAc(baseEffective, contributions);
+  if (c.kind === 'none') return undefined;
+  if (c.kind === 'buff') icon = 'advantage';
+  return {
+    effective: c.effective,
+    delta: c.effective - c.baseEffective,
+    source: [...sources].join(', ') || 'Effect',
+    icon,
+    kind: c.kind
+  } satisfies AcOverride;
+});
+
+export type { OverrideKind };
 
 export const character = { subscribe: store.subscribe };
 

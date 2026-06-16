@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { ABILITIES, ABILITY_NAMES } from '../character/index.js';
-  import { character, setAbilityScore, abilityOverrides } from '../stores/character.js';
+  import { ABILITIES, ABILITY_NAMES, type Ability } from '../character/index.js';
+  import { character, setAbilityScore, abilityOverrides, abilityScores } from '../stores/character.js';
   import { buffMode } from '../stores/ui.js';
   import NumberField from './NumberField.svelte';
   import StatValue from './StatValue.svelte';
@@ -8,6 +8,12 @@
   import EffectiveScore from './EffectiveScore.svelte';
 
   let { variant = 'full' }: { variant?: string } = $props();
+
+  // A purely-persistent boost (ASI / feat / racial grant) shows as a plain number
+  // — the character's own score — with no badge. True when there's no fleeting
+  // override yet the persistent effective differs from the editable base.
+  const persistentOnly = (abil: Ability): boolean =>
+    !$abilityOverrides[abil] && $abilityScores[abil] !== $character.abilities[abil];
 </script>
 
 <section class="block" data-variant={variant}>
@@ -22,6 +28,8 @@
             <BuffField node={`ability.${abil}.score`} />
           {:else if $abilityOverrides[abil]}
             <EffectiveScore {abil} override={$abilityOverrides[abil]} />
+          {:else if persistentOnly(abil)}
+            <span class="persistent" title={`Effective ${$abilityScores[abil]} (base ${$character.abilities[abil]})`}>{$abilityScores[abil]}</span>
           {:else}
             <NumberField
               value={$character.abilities[abil]}
@@ -44,6 +52,11 @@
               <BuffField node={`ability.${abil}.score`} />
             {:else if $abilityOverrides[abil]}
               <EffectiveScore {abil} override={$abilityOverrides[abil]} />
+            {:else if persistentOnly(abil)}
+              <div class="persistent-full" title={`Effective ${$abilityScores[abil]} (base ${$character.abilities[abil]})`}>
+                <span class="persistent">{$abilityScores[abil]}</span>
+                <span class="base">base <NumberField value={$character.abilities[abil]} min={1} max={30} onchange={(v) => setAbilityScore(abil, v)} width="3ch" /></span>
+              </div>
             {:else}
               <NumberField
                 value={$character.abilities[abil]}
@@ -68,6 +81,12 @@
   .name { font-size: 0.7rem; text-transform: uppercase; color: var(--muted); }
   .modbig { font-size: 1.4rem; font-weight: 700; margin: 0.1rem 0; }
   .score { border-top: 1px solid var(--line); padding-top: 0.2rem; }
+
+  /* Persistent (ASI/feat) score: a plain number, the character's own value. */
+  .persistent { font-weight: 700; color: var(--fg); }
+  .persistent-full { display: flex; flex-direction: column; align-items: center; gap: 0.05rem; }
+  .persistent-full .persistent { font-size: 1.1rem; line-height: 1.1; }
+  .persistent-full .base { font-size: 0.6rem; color: var(--muted); display: inline-flex; align-items: center; gap: 0.15rem; }
 
   .row { display: flex; flex-wrap: wrap; gap: 0.75rem; }
   .ab { display: flex; align-items: center; gap: 0.3rem; }
