@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { character, graph, setItemProficient } from '../stores/character.js';
+  import { character, graph, grantPool, setItemProficient } from '../stores/character.js';
   import { catalogLookup } from '../stores/catalog.js';
   import {
     weaponAttacks,
+    weaponProficiencySet,
     iconForItem,
     iconForDamageType,
     iconLabel,
@@ -13,7 +14,11 @@
 
   let { variant = 'full' }: { variant?: string } = $props();
 
-  const attacks = $derived(weaponAttacks($character, $catalogLookup));
+  // Default each weapon's proficiency from the character's actual proficiencies.
+  const weaponProfs = $derived(
+    weaponProficiencySet($grantPool.sets.filter((s) => s.category === 'weaponProf').map((s) => s.member))
+  );
+  const attacks = $derived(weaponAttacks($character, $catalogLookup, weaponProfs));
 
   // Damage string: dice + the graph-computed bonus (ability mod + magic) + type.
   function damage(id: string, dice: string, type: string): string {

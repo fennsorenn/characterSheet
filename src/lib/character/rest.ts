@@ -17,13 +17,15 @@ export function applyRest(character: Character, type: RestType): Character {
   );
 
   if (!isLong) {
-    return { ...character, resources };
+    // Warlock Pact Magic slots recover on a short rest.
+    return { ...character, resources, pactSlotsExpended: 0 };
   }
 
   return {
     ...character,
     resources,
     spellSlots: character.spellSlots.map((s) => ({ ...s, expended: 0 })),
+    pactSlotsExpended: 0,
     hp: { ...character.hp, current: character.hp.max },
     hitDice: recoverHitDice(character.hitDice)
   };

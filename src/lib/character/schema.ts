@@ -143,6 +143,10 @@ export interface Character {
   resources: Resource[];
   /** Spell slots for levels 1-9 (index 0 = level 1). */
   spellSlots: SpellSlotLevel[];
+  /** When true, slot maxes are computed from class levels (the default). */
+  spellSlotsAuto: boolean;
+  /** Expended Warlock Pact Magic slots (count, recovers on a short rest). */
+  pactSlotsExpended: number;
   /** Toggleable temporary effects feeding the modifier stack. */
   buffs: Buff[];
   /** Active 5e condition names (display/status tracking). */
@@ -204,6 +208,8 @@ export function createCharacter(partial: Partial<Character> = {}): Character {
     modifiers: partial.modifiers ?? [],
     resources: partial.resources ?? [],
     spellSlots: partial.spellSlots ?? emptySpellSlots(),
+    spellSlotsAuto: partial.spellSlotsAuto ?? true,
+    pactSlotsExpended: partial.pactSlotsExpended ?? 0,
     buffs: partial.buffs ?? [],
     conditions: partial.conditions ?? [],
     exhaustion: partial.exhaustion ?? 0,

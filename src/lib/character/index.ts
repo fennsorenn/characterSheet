@@ -51,6 +51,7 @@ export { buildGraph, skillNodeId } from './buildGraph.js';
 export {
   computeEquipmentEffects,
   weaponAttacks,
+  weaponProficiencySet,
   type CatalogLookup,
   type EquipmentEffects,
   type WeaponAttack
@@ -114,4 +115,5 @@ export {
   type CasterKind,
   type ClassSpellCount
 } from './spellcasting.js';
+export { spellSlotInfo, type SpellSlotInfo } from './spellSlots.js';
 export { labelForNode } from './labels.js';

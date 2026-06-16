@@ -11,6 +11,7 @@ import {
   computeEquipmentEffects,
   createCharacter,
   gatherGrants,
+  spellSlotInfo,
   type Ability,
   type Buff,
   type CatalogRef,
@@ -68,6 +69,11 @@ export const grantPool = derived([store, catalogState], ([$c, $cat]) =>
 
 export const graph = derived([store, catalogLookup, grantPool], ([$c, $lookup, $grants]) =>
   buildGraph($c, $lookup, $grants)
+);
+
+/** Spell slots computed from class levels (multiclass table + Warlock pact). */
+export const computedSlots = derived([store, catalogState], ([$c, $cat]) =>
+  $cat.catalog ? spellSlotInfo($c, $cat.catalog) : { slots: [0, 0, 0, 0, 0, 0, 0, 0, 0], pact: null }
 );
 
 /** Per-ability score overrides from items (effective value differs from base). */
@@ -427,6 +433,24 @@ export function setSlotMax(level: number, max: number) {
         : s
     )
   }));
+}
+
+/** Set expended slots at a level directly (clamped ≥ 0; component caps to max). */
+export function setSlotExpended(level: number, used: number) {
+  update((c) => ({
+    ...c,
+    spellSlots: c.spellSlots.map((s, i) => (i === level - 1 ? { ...s, expended: Math.max(0, used) } : s))
+  }));
+}
+
+/** Set expended Warlock Pact Magic slots. */
+export function setPactExpended(used: number) {
+  update((c) => ({ ...c, pactSlotsExpended: Math.max(0, used) }));
+}
+
+/** Toggle auto-computed slot maxes vs manual entry. */
+export function setSpellSlotsAuto(auto: boolean) {
+  update((c) => ({ ...c, spellSlotsAuto: auto }));
 }
 
 /** Expend (+1) or recover (-1) a slot at a level, clamped to [0, max]. */

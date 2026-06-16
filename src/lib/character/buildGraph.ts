@@ -10,6 +10,7 @@ import { totalLevel, type Character } from './schema.js';
 import {
   computeEquipmentEffects,
   weaponAttacks,
+  weaponProficiencySet,
   type CatalogLookup,
   type EquipmentEffects
 } from './equipment.js';
@@ -124,7 +125,10 @@ export function buildGraph(character: Character, lookup?: CatalogLookup, grants:
   // Weapon attacks: a to-hit node (ability + proficiency + magic) and a numeric
   // damage-bonus node per equipped weapon, both introspectable in the popover.
   if (lookup) {
-    for (const atk of weaponAttacks(character, lookup)) {
+    const weaponProfs = weaponProficiencySet(
+      grants.sets.filter((s) => s.category === 'weaponProf').map((s) => s.member)
+    );
+    for (const atk of weaponAttacks(character, lookup, weaponProfs)) {
       const abilMod = `ability.${atk.ability}.mod`;
       g.define(`attack.${atk.id}.hit`, [abilMod, 'prof.bonus'], (c) =>
         c.get(abilMod) + (atk.proficient ? c.get('prof.bonus') : 0) + atk.attackBonus

@@ -140,7 +140,11 @@ const DMG_TYPES: Record<string, string> = { S: 'slashing', P: 'piercing', B: 'bl
  * chosen by 5e rules (ranged → Dex, finesse → better of Str/Dex, else Str); the
  * actual to-hit/damage numbers are calc-graph nodes so they stay introspectable.
  */
-export function weaponAttacks(character: Character, lookup: CatalogLookup): WeaponAttack[] {
+export function weaponAttacks(
+  character: Character,
+  lookup: CatalogLookup,
+  weaponProfs?: Set<string>
+): WeaponAttack[] {
   const out: WeaponAttack[] = [];
   character.inventory.forEach((inv, index) => {
     if (!inv.equipped) return;
@@ -161,7 +165,7 @@ export function weaponAttacks(character: Character, lookup: CatalogLookup): Weap
       id: `w${index}`,
       name: item.name,
       ability,
-      proficient: inv.proficient !== false,
+      proficient: inv.proficient ?? isWeaponProficient(item, weaponProfs),
       attackBonus,
       damageDice: typeof item.dmg1 === 'string' ? item.dmg1 : '—',
       damageBonus,
@@ -176,6 +180,23 @@ export function weaponAttacks(character: Character, lookup: CatalogLookup): Weap
 function isWeapon(item: NamedEntry): boolean {
   const type = baseType(item.type);
   return (type === 'M' || type === 'R') && typeof item.dmg1 === 'string';
+}
+
+/**
+ * Whether the character is proficient with a weapon, from their proficiency set
+ * (categories like "simple"/"martial" or specific weapon names). With no
+ * proficiency data we assume proficient (don't penalise an un-set-up sheet).
+ */
+function isWeaponProficient(item: NamedEntry, profs?: Set<string>): boolean {
+  if (!profs || profs.size === 0) return true;
+  const cat = typeof item.weaponCategory === 'string' ? item.weaponCategory.toLowerCase() : '';
+  if (cat && profs.has(cat)) return true;
+  return profs.has(item.name.toLowerCase());
+}
+
+/** Normalize a weapon-proficiency set: lowercase, strip 5etools `|source` tags. */
+export function weaponProficiencySet(members: string[]): Set<string> {
+  return new Set(members.map((m) => m.split('|')[0].toLowerCase()));
 }
 
 function chooseAbility(item: NamedEntry, character: Character): Ability {
