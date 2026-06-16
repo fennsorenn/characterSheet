@@ -29,6 +29,24 @@ export default async function ({ page, baseUrl }) {
   assert((await strCell().locator('.eff.buff').count()) === 0, 'equipment badge is NOT the green buff style');
   assert((await strCell().locator('.badge').count()) > 0, 'equipment shows a badge');
 
+  // 2b) Flat-bonus item (Belt of Dwarvenkind +2 Con): the badge uses the item's
+  // slot icon (waist), matching the inventory icon — not a generic shield.
+  await setC({
+    abilities: { con: 10 },
+    inventory: [
+      { name: 'Belt of Dwarvenkind', source: 'DMG', quantity: 1, equipped: true, attuned: true },
+      { name: 'Shield', source: 'PHB', quantity: 1, equipped: true }
+    ]
+  });
+  const conCell = page.locator('.ability', { hasText: 'Con' }).first();
+  assert((await conCell.locator('.eff .value').first().innerText()).trim().startsWith('12'), 'flat-bonus belt applies +2 Con');
+  const badgeSvg = await conCell.locator('.badge svg').first().innerHTML();
+  const inv = cell(page, 'Inventory');
+  const beltSvg = await inv.locator('li', { hasText: 'Belt of Dwarvenkind' }).locator('.itemicon svg').innerHTML();
+  const shieldSvg = await inv.locator('li', { hasText: 'Shield' }).locator('.itemicon svg').innerHTML();
+  assert(badgeSvg === beltSvg, 'Con badge icon matches the belt (waist) inventory icon');
+  assert(badgeSvg !== shieldSvg, 'Con badge icon is NOT the generic shield icon');
+
   // 3) Shield → AC grey badge; buff → AC green badge.
   await setC({ inventory: [{ name: 'Shield', source: 'PHB', quantity: 1, equipped: true }], buffs: [] });
   const ac = cell(page, 'Defenses');

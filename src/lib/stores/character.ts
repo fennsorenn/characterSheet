@@ -13,6 +13,7 @@ import {
   ATTUNEMENT_LIMIT,
   buildGraph,
   computeEquipmentEffects,
+  iconForItem,
   createCharacter,
   gatherGrants,
   spellSlotInfo,
@@ -187,12 +188,23 @@ export const abilityOverrides = derived([store, catalogLookup, grantPool], ([$c,
     const sources = new Set<string>();
     if (set && c.fleetingEffective === set.value) sources.add(set.source);
     for (const m of [...equipMods, ...fleetingMods]) if (m.target === node) sources.add(m.source);
+    // Icon: a set item's slot icon, else the slot icon of the contributing
+    // equipment item (e.g. Belt of Dwarvenkind → waist), else a generic boost.
+    const equipSource = equipMods.find((m) => m.target === node)?.source;
+    const icon =
+      c.kind !== 'equipment'
+        ? 'advantage'
+        : set
+          ? set.icon
+          : equipSource
+            ? iconForItem({ name: equipSource })
+            : 'shield';
     out[a] = {
       base,
       effective: c.fleetingEffective,
       delta: c.fleetingEffective - c.persistentEffective,
       source: [...sources].join(', ') || 'Effect',
-      icon: c.kind === 'equipment' && set ? set.icon : c.kind === 'equipment' ? 'shield' : 'advantage',
+      icon,
       kind: c.kind
     };
   }
