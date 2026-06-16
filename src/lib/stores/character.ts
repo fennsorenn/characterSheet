@@ -16,6 +16,8 @@ import {
   createCharacter,
   gatherGrants,
   spellSlotInfo,
+  featureResources,
+  type FeatureResource,
   type Ability,
   type Buff,
   type CatalogRef,
@@ -86,6 +88,24 @@ export const graph = derived([store, catalogLookup, grantPool], ([$c, $lookup, $
 export const computedSlots = derived([store, catalogState], ([$c, $cat]) =>
   $cat.catalog ? spellSlotInfo($c, $cat.catalog) : { slots: [0, 0, 0, 0, 0, 0, 0, 0, 0], pact: null }
 );
+
+/** Implicit class/subclass resource pools (Channel Divinity, Rage, …) with uses. */
+export const featureResourceList = derived([store, catalogState], ([$c, $cat]) =>
+  ($cat.catalog ? featureResources($c, $cat.catalog) : []).map(
+    (r): FeatureResource & { used: number } => ({ ...r, used: Math.min($c.featureResourceUsed[r.key] ?? 0, r.max) })
+  )
+);
+
+/** Set spent uses of an implicit feature resource (clamped to [0, max]). */
+export function setFeatureResourceUsed(key: string, used: number, max: number) {
+  update((c) => {
+    const featureResourceUsed = { ...c.featureResourceUsed };
+    const v = Math.min(Math.max(0, used), max);
+    if (v === 0) delete featureResourceUsed[key];
+    else featureResourceUsed[key] = v;
+    return { ...c, featureResourceUsed };
+  });
+}
 
 /**
  * Per-ability score override, shown ONLY when a FLEETING effect (equipment or a

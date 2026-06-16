@@ -116,4 +116,9 @@ export {
   type ClassSpellCount
 } from './spellcasting.js';
 export { spellSlotInfo, type SpellSlotInfo } from './spellSlots.js';
+export {
+  featureResources,
+  resetFeatureResources,
+  type FeatureResource
+} from './featureResources.js';
 export { labelForNode } from './labels.js';

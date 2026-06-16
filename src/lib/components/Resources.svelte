@@ -1,6 +1,8 @@
 <script lang="ts">
   import {
     character,
+    featureResourceList,
+    setFeatureResourceUsed,
     addResource,
     removeResource,
     adjustResource,
@@ -29,10 +31,20 @@
 <section class="block" data-variant={variant}>
   <h3>Resources</h3>
 
-  {#if $character.resources.length === 0}
+  {#if $character.resources.length === 0 && $featureResourceList.length === 0}
     <p class="empty">Track limited-use features — Action Surge, Channel Divinity, Rage, Ki…</p>
   {:else}
     <ul>
+      {#each $featureResourceList as r (r.key)}
+        <li class="auto">
+          <span class="name">{r.name} <span class="owner">{r.owner}</span></span>
+          <span data-volatile="frequent">
+            <PipTracker max={r.max} used={r.used} onSet={(u) => setFeatureResourceUsed(r.key, u, r.max)} />
+          </span>
+          <span class="max">{r.max}</span>
+          <span class="tag">{r.recharge}</span>
+        </li>
+      {/each}
       {#each $character.resources as r (r.id)}
         <li>
           <span class="name">{r.name}</span>
@@ -65,6 +77,8 @@
   ul { list-style: none; margin: 0; padding: 0; }
   li { display: flex; align-items: center; gap: 0.6rem; padding: 0.3rem 0; border-bottom: 1px solid var(--line); }
   .name { flex: 1; font-weight: 600; }
+  .owner { font-weight: 400; font-size: 0.68rem; color: var(--muted); text-transform: none; }
+  li.auto .max { min-width: 1.5ch; text-align: right; }
   .max { font-size: 0.7rem; color: var(--muted); }
   .tag { font-size: 0.65rem; text-transform: uppercase; color: var(--muted); }
   .rm { background: none; border: none; color: var(--muted); font-size: 1.1rem; cursor: pointer; line-height: 1; }

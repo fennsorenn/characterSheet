@@ -1,5 +1,6 @@
 import type { Character, RestType } from './schema.js';
 import { recoverHitDice } from './levelup.js';
+import { resetFeatureResources } from './featureResources.js';
 
 /**
  * Rest utilities — pure functions returning a new character.
@@ -15,15 +16,17 @@ export function applyRest(character: Character, type: RestType): Character {
   const resources = character.resources.map((r) =>
     isLong || r.recharge === 'short' ? { ...r, used: 0 } : r
   );
+  const featureResourceUsed = resetFeatureResources(character.featureResourceUsed, type);
 
   if (!isLong) {
     // Warlock Pact Magic slots recover on a short rest.
-    return { ...character, resources, pactSlotsExpended: 0 };
+    return { ...character, resources, featureResourceUsed, pactSlotsExpended: 0 };
   }
 
   return {
     ...character,
     resources,
+    featureResourceUsed,
     spellSlots: character.spellSlots.map((s) => ({ ...s, expended: 0 })),
     pactSlotsExpended: 0,
     hp: { ...character.hp, current: character.hp.max },

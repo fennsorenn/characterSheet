@@ -141,6 +141,8 @@ export interface Character {
   modifiers: CharacterModifier[];
   /** Limited-use features (uses tracked as a spent pool). */
   resources: Resource[];
+  /** Spent uses of implicit class/subclass resources, keyed by their stable key. */
+  featureResourceUsed: Record<string, number>;
   /** Spell slots for levels 1-9 (index 0 = level 1). */
   spellSlots: SpellSlotLevel[];
   /** When true, slot maxes are computed from class levels (the default). */
@@ -207,6 +209,7 @@ export function createCharacter(partial: Partial<Character> = {}): Character {
     spells: partial.spells ?? [],
     modifiers: partial.modifiers ?? [],
     resources: partial.resources ?? [],
+    featureResourceUsed: partial.featureResourceUsed ?? {},
     spellSlots: partial.spellSlots ?? emptySpellSlots(),
     spellSlotsAuto: partial.spellSlotsAuto ?? true,
     pactSlotsExpended: partial.pactSlotsExpended ?? 0,
