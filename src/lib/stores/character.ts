@@ -39,6 +39,8 @@ import {
   type OverrideKind
 } from '../character/overrides.js';
 import { catalogLookup, catalogState } from './catalog.js';
+import { loadLocal, saveLocal } from './characters.js';
+import { apiGetCharacter, apiPutCharacter } from '../api/client.js';
 
 const EMPTY_POOL: GrantPool = { numeric: [], sets: [], choices: [] };
 
@@ -51,26 +53,49 @@ const EMPTY_POOL: GrantPool = { numeric: [], sets: [], choices: [] };
  * The document is mirrored to localStorage so a refresh keeps your character.
  */
 
-const STORAGE_KEY = 'charactersheet.character';
+const store = writable<Character>(createCharacter());
 
-function load(): Character {
-  if (typeof localStorage === 'undefined') return createCharacter();
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return createCharacter(JSON.parse(raw));
-  } catch {
-    // Corrupt or absent — fall back to a fresh character.
-  }
-  return createCharacter();
-}
-
-const store = writable<Character>(load());
+/**
+ * Where the active character is persisted: a local (localStorage) library entry
+ * or a logged-in user's server record. Set via openLocalCharacter /
+ * openUserCharacter; edits then autosave to that source.
+ */
+export type CharacterRef = { scope: 'local' | 'user'; slug: string } | null;
+let activeRef: CharacterRef = null;
+let saveTimer: ReturnType<typeof setTimeout> | undefined;
 
 store.subscribe((c) => {
-  if (typeof localStorage !== 'undefined') {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(c));
+  if (!activeRef) return;
+  if (activeRef.scope === 'local') {
+    saveLocal(activeRef.slug, c.name, c);
+  } else {
+    const slug = activeRef.slug;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => apiPutCharacter(slug, c.name, c).catch(() => {}), 500);
   }
 });
+
+/** Load a character into the editor and bind autosave to a source. */
+function setActive(ref: CharacterRef, doc: Character | null) {
+  activeRef = null; // suppress the save triggered by loading
+  store.set(createCharacter(doc ?? {}));
+  activeRef = ref;
+}
+
+export function openLocalCharacter(slug: string): boolean {
+  const doc = loadLocal(slug);
+  setActive({ scope: 'local', slug }, doc);
+  return !!doc;
+}
+export async function openUserCharacter(slug: string): Promise<boolean> {
+  const res = await apiGetCharacter(slug).catch(() => ({ doc: undefined }));
+  setActive({ scope: 'user', slug }, res.doc ?? null);
+  return !!res.doc;
+}
+/** Stop autosaving (e.g. when leaving a sheet for an overview). */
+export function detachCharacter() {
+  activeRef = null;
+}
 
 /**
  * The live calc graph; recomputed when the character *or* the catalog changes,

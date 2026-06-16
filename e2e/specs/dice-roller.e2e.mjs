@@ -4,15 +4,15 @@ import { cell, assert } from '../harness.mjs';
 // detailed/concise toggle, and the log.
 export default async function ({ page, baseUrl }) {
   await page.evaluate(() => {
-    const c = JSON.parse(localStorage.getItem('charactersheet.character'));
+    const c = JSON.parse(localStorage.getItem('cs.char.test') || '{}');
     c.classes = [{ name: 'Fighter', source: 'PHB', level: 5, hitDie: 10 }];
-    c.abilities.str = 16;
+    c.abilities = { ...(c.abilities || {}), str: 16 };
     c.spellcasting = { ability: 'int' };
     c.spells = [{ name: 'Fireball', source: 'PHB', status: 'prepared' }];
     c.inventory = [{ name: 'Longsword', source: 'PHB', quantity: 1, equipped: true, proficient: true }];
-    localStorage.setItem('charactersheet.character', JSON.stringify(c));
+    localStorage.setItem('cs.char.test', JSON.stringify(c));
   });
-  await page.goto(baseUrl, { waitUntil: 'networkidle' });
+  await page.goto(baseUrl + '/local/test', { waitUntil: 'networkidle' });
   await page.waitForSelector('.data-toggle:has-text("Data ✓")', { timeout: 60000 });
 
   // Open the roller and set advantage.
@@ -56,13 +56,13 @@ export default async function ({ page, baseUrl }) {
 
   // Hit-dice roll lands in the roller/log too (with the die + CON).
   await page.evaluate(() => {
-    const c = JSON.parse(localStorage.getItem('charactersheet.character'));
-    c.abilities.con = 14;
+    const c = JSON.parse(localStorage.getItem('cs.char.test') || '{}');
+    c.abilities = { ...(c.abilities || {}), con: 14 };
     c.hp = { max: 44, current: 20, temp: 0 };
     c.hitDice = [{ die: 10, max: 5, used: 0 }];
-    localStorage.setItem('charactersheet.character', JSON.stringify(c));
+    localStorage.setItem('cs.char.test', JSON.stringify(c));
   });
-  await page.goto(baseUrl, { waitUntil: 'networkidle' });
+  await page.goto(baseUrl + '/local/test', { waitUntil: 'networkidle' });
   await page.waitForSelector('.data-toggle:has-text("Data ✓")', { timeout: 60000 });
   await page.locator('header.top button', { hasText: 'Dice' }).click();
   await cell(page, 'Rest & Level Up').locator('button.roll', { hasText: 'Roll' }).first().click();

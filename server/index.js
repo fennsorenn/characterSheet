@@ -2,14 +2,17 @@ import express from 'express';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { existsSync } from 'node:fs';
+import { apiMiddleware } from './api.mjs';
 
-// Minimal static server for the built SPA. The app is frontend-only today;
-// this is where an optional cloud-sync API would later attach.
+// Static server for the built SPA + the auth/character-sync API.
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const dist = join(__dirname, '..', 'dist');
 const port = process.env.PORT || 3000;
 
 const app = express();
+
+// Auth + character sync (shared with the Vite dev server).
+app.use(apiMiddleware);
 
 if (!existsSync(dist)) {
   console.warn('dist/ not found — run `npm run build` first.');

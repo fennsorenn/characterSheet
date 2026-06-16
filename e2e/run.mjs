@@ -44,7 +44,11 @@ for (const file of specs) {
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e)));
-  page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+  page.on('console', (m) => {
+    // Ignore failed network responses (e.g. expected 401s in the auth flow);
+    // they're HTTP statuses, not JavaScript errors.
+    if (m.type() === 'error' && !/Failed to load resource/i.test(m.text())) errors.push(m.text());
+  });
   const t0 = Date.now();
   try {
     await seed(page, server.url, zip);

@@ -72,7 +72,9 @@ export async function ensureServer() {
   const url = `http://localhost:${port}`;
   const proc = spawn('npx', ['vite', '--port', String(port), '--strictPort'], {
     stdio: 'ignore',
-    detached: false
+    detached: false,
+    // Isolate the auth/character store for the test run.
+    env: { ...process.env, CS_DATA_FILE: process.env.CS_DATA_FILE || '/tmp/cs-e2e-data.json' }
   });
   await waitForServer(url);
   return {
@@ -87,14 +89,42 @@ export async function ensureServer() {
   };
 }
 
-/** Load the dataset into a fresh page, then reset character + layout to defaults. */
+const TEST_SLUG = 'test';
+const sheetUrl = (baseUrl) => `${baseUrl.replace(/\/$/, '')}/local/${TEST_SLUG}`;
+
+/** Open a fresh local character sheet at /local/test and load the dataset into it. */
 export async function seed(page, baseUrl, zipPath) {
-  await page.goto(baseUrl, { waitUntil: 'networkidle' });
+  await page.goto(sheetUrl(baseUrl), { waitUntil: 'networkidle' });
   await page.setInputFiles('input[type=file]', zipPath);
   await page.waitForSelector('.data-toggle:has-text("Data ✓")', { timeout: 60000 });
-  // Clear stored character + layout (cached data stays in IndexedDB) for a clean slate.
-  await page.evaluate(() => localStorage.clear());
-  await page.reload({ waitUntil: 'networkidle' });
+  await page.waitForSelector('.cell', { timeout: 10000 });
+}
+
+/** Replace the test character document and reopen its sheet (data stays cached). */
+export async function seedCharacter(page, baseUrl, doc) {
+  await page.evaluate(
+    ({ slug, d }) => {
+      localStorage.setItem(`cs.char.${slug}`, JSON.stringify(d));
+      localStorage.setItem('cs.local.index', JSON.stringify([{ slug, name: d.name || 'Test', updatedAt: Date.now() }]));
+    },
+    { slug: TEST_SLUG, d: doc }
+  );
+  await page.goto(sheetUrl(baseUrl), { waitUntil: 'networkidle' });
+  await page.waitForSelector('.data-toggle:has-text("Data ✓")', { timeout: 60000 });
+}
+
+/** Merge a patch into the test character (abilities merged) and reopen its sheet. */
+export async function patchCharacter(page, baseUrl, patch) {
+  await page.evaluate(
+    ({ slug, pt }) => {
+      const cur = JSON.parse(localStorage.getItem(`cs.char.${slug}`) || '{}');
+      Object.assign(cur, pt, { abilities: { ...(cur.abilities || {}), ...(pt.abilities || {}) } });
+      localStorage.setItem(`cs.char.${slug}`, JSON.stringify(cur));
+      localStorage.setItem('cs.local.index', JSON.stringify([{ slug, name: cur.name || 'Test', updatedAt: Date.now() }]));
+    },
+    { slug: TEST_SLUG, pt: patch }
+  );
+  await page.goto(sheetUrl(baseUrl), { waitUntil: 'networkidle' });
   await page.waitForSelector('.data-toggle:has-text("Data ✓")', { timeout: 60000 });
 }
 

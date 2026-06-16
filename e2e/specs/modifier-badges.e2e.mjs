@@ -5,11 +5,11 @@ import { cell, assert } from '../harness.mjs';
 export default async function ({ page, baseUrl }) {
   async function setC(patch) {
     await page.evaluate((pt) => {
-      const c = JSON.parse(localStorage.getItem('charactersheet.character'));
+      const c = JSON.parse(localStorage.getItem('cs.char.test') || '{}');
       Object.assign(c, pt, { abilities: { ...c.abilities, ...(pt.abilities ?? {}) } });
-      localStorage.setItem('charactersheet.character', JSON.stringify(c));
+      localStorage.setItem('cs.char.test', JSON.stringify(c));
     }, patch);
-    await page.goto(baseUrl, { waitUntil: 'networkidle' });
+    await page.goto(baseUrl + '/local/test', { waitUntil: 'networkidle' });
     await page.waitForSelector('.data-toggle:has-text("Data ✓")', { timeout: 60000 });
   }
   const strCell = () => page.locator('.ability', { hasText: 'Str' }).first();

@@ -4,13 +4,13 @@ import { cell, assert } from '../harness.mjs';
 // (not over it), draggable, with a pop-out button.
 export default async function ({ page, baseUrl }) {
   await page.evaluate(() => {
-    const c = JSON.parse(localStorage.getItem('charactersheet.character'));
+    const c = JSON.parse(localStorage.getItem('cs.char.test') || '{}');
     c.classes = [{ name: 'Wizard', source: 'PHB', level: 5, hitDie: 6 }];
     c.spells = [{ name: 'Fireball', source: 'PHB', status: 'prepared' }];
     c.inventory = [{ name: 'Longsword', source: 'PHB', quantity: 1, equipped: true }];
-    localStorage.setItem('charactersheet.character', JSON.stringify(c));
+    localStorage.setItem('cs.char.test', JSON.stringify(c));
   });
-  await page.goto(baseUrl, { waitUntil: 'networkidle' });
+  await page.goto(baseUrl + '/local/test', { waitUntil: 'networkidle' });
   await page.waitForSelector('.data-toggle:has-text("Data ✓")', { timeout: 60000 });
 
   const spells = cell(page, 'Spells').filter({ has: page.locator('button.name') }).first();

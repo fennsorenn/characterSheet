@@ -4,7 +4,7 @@ import { cell, assert } from '../harness.mjs';
 // weapon-proficiency presets derived from the character's proficiencies.
 export default async function ({ page, baseUrl }) {
   await page.evaluate(() => {
-    const c = JSON.parse(localStorage.getItem('charactersheet.character'));
+    const c = JSON.parse(localStorage.getItem('cs.char.test') || '{}');
     c.classes = [
       { name: 'Cleric', source: 'PHB', level: 5, hitDie: 8 },
       { name: 'Warlock', source: 'PHB', level: 3, hitDie: 8 }
@@ -13,9 +13,9 @@ export default async function ({ page, baseUrl }) {
       { name: 'Longsword', source: 'PHB', quantity: 1, equipped: true }, // martial
       { name: 'Mace', source: 'PHB', quantity: 1, equipped: true } // simple
     ];
-    localStorage.setItem('charactersheet.character', JSON.stringify(c));
+    localStorage.setItem('cs.char.test', JSON.stringify(c));
   });
-  await page.goto(baseUrl, { waitUntil: 'networkidle' });
+  await page.goto(baseUrl + '/local/test', { waitUntil: 'networkidle' });
   await page.waitForSelector('.data-toggle:has-text("Data ✓")', { timeout: 60000 });
 
   // Spell slots: Cleric 5 → levels 1-3, plus a separate Warlock pact row.

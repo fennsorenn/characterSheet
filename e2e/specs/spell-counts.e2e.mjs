@@ -2,11 +2,11 @@ import { cell, assert } from '../harness.mjs';
 
 async function setCharacter(page, baseUrl, patch) {
   await page.evaluate((p) => {
-    const c = JSON.parse(localStorage.getItem('charactersheet.character'));
+    const c = JSON.parse(localStorage.getItem('cs.char.test') || '{}');
     Object.assign(c, p, { abilities: { ...c.abilities, ...(p.abilities ?? {}) } });
-    localStorage.setItem('charactersheet.character', JSON.stringify(c));
+    localStorage.setItem('cs.char.test', JSON.stringify(c));
   }, patch);
-  await page.goto(baseUrl, { waitUntil: 'networkidle' });
+  await page.goto(baseUrl + '/local/test', { waitUntil: 'networkidle' });
   await page.waitForSelector('.data-toggle:has-text("Data ✓")', { timeout: 60000 });
 }
 const counts = (page) => cell(page, 'Spells').locator('.counts').innerText();
