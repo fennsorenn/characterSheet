@@ -2,6 +2,9 @@
   import { character, graph, setSpellStatus, setSpellGranted, removeSpell } from '../stores/character.js';
   import { catalogLookup, catalogState } from '../stores/catalog.js';
   import { openDetail } from '../stores/detail.js';
+  import { get } from 'svelte/store';
+  import { rollParts, diceMode } from '../stores/dice.js';
+  import { rollD20, rollTerms, parseDice } from '../dice/dice.js';
   import {
     spellTags,
     spellStatus,
@@ -29,6 +32,18 @@
     levelNum: number;
     tags: SpellTag[];
     classes_: string[]; // base classes whose list includes this spell
+    dmg: { dice: string; isAttack: boolean; type: string } | null;
+  }
+
+  // Pull the base damage dice + whether it's a spell attack from the spell text.
+  function spellDamageInfo(entry: Record<string, unknown> | undefined) {
+    if (!entry) return null;
+    const text = JSON.stringify(entry.entries ?? '');
+    const dice = text.match(/\{@(?:damage|scaledamage)\s+([0-9]+d[0-9]+(?:\s*[+-]\s*[0-9]+)?)/i)?.[1];
+    if (!dice) return null;
+    const isAttack = /\{@atkr?\b/i.test(text) || /spell attack/i.test(text);
+    const type = Array.isArray(entry.damageInflict) ? String(entry.damageInflict[0] ?? '') : '';
+    return { dice, isAttack, type };
   }
 
   const granted = $derived.by(() => {
@@ -72,7 +87,7 @@
         const levelNum = entry && typeof entry.level === 'number' ? entry.level : 99;
         const level = levelNum === 99 ? '' : levelNum === 0 ? 'cantrip' : `lvl ${levelNum}`;
         const classes_ = (entry?._classes as string[] | undefined) ?? [];
-        return { ...r, level, levelNum, tags: entry ? spellTags(entry) : [], classes_ };
+        return { ...r, level, levelNum, tags: entry ? spellTags(entry) : [], classes_, dmg: spellDamageInfo(entry) };
       })
       .sort(
         (a, b) =>
@@ -137,6 +152,18 @@
       return true;
     })
   );
+
+  /** Roll a spell: a spell-attack d20 (if it's an attack) + its damage dice. */
+  function rollSpell(r: Row) {
+    if (!r.dmg) return;
+    const parts = [];
+    if (r.dmg.isAttack && $graph.has('spell.attack')) {
+      parts.push(rollD20(get(diceMode), $graph.get('spell.attack'), 'Spell Attack', { modifierLabel: 'spell attack bonus' }));
+    }
+    const { terms, modifier } = parseDice(r.dmg.dice);
+    parts.push(rollTerms(terms, modifier, `Damage${r.dmg.type ? ` ${r.dmg.type}` : ''}`));
+    rollParts(r.name, parts);
+  }
 
   function openSpellDetail(r: Row, el: Element) {
     const entry = $catalogLookup.getSpell(r.name, r.source);
@@ -239,6 +266,9 @@
             {:else}
               <span class="src">{r.source}</span>
             {/if}
+            {#if r.dmg}
+              <button class="roll" title="Roll {r.dmg.isAttack ? 'attack + ' : ''}damage ({r.dmg.dice})" aria-label="Roll {r.name}" onclick={() => rollSpell(r)}>⚄</button>
+            {/if}
             {#if r.index !== null}
               <button
                 class="grant"
@@ -303,6 +333,8 @@
   .status.gicon { border: none; background: none; color: var(--accent); cursor: default; }
   .name { flex: 1; font-weight: 500; text-align: left; background: none; border: none; padding: 0; color: var(--fg); font: inherit; cursor: pointer; }
   .name:hover { color: var(--accent); }
+  .roll { font: inherit; font-size: 0.9rem; line-height: 1; padding: 0.05rem 0.3rem; border: 1px solid var(--accent); border-radius: 4px; background: var(--bg); color: var(--accent); cursor: pointer; }
+  .roll:hover { background: var(--accent); color: #fff; }
   .lvl { font-size: 0.72rem; color: var(--accent); }
   .src { font-size: 0.68rem; text-transform: uppercase; color: var(--muted); }
   .src.gby { text-transform: none; font-style: italic; color: var(--accent); }

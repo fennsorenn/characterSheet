@@ -12,6 +12,8 @@
   import OptionalFeaturePicker from './lib/components/OptionalFeaturePicker.svelte';
   import FeatPicker from './lib/components/FeatPicker.svelte';
   import DetailWindow from './lib/components/DetailWindow.svelte';
+  import DiceRoller from './lib/components/DiceRoller.svelte';
+  import { diceOpen } from './lib/stores/dice.js';
 
   const version = '0.0.0';
   let showData = $state(false);
@@ -24,6 +26,7 @@
   <header class="top">
     <h1>Character Sheet <small>v{version}</small></h1>
     <div class="actions">
+      <button class="data-toggle" title="Dice roller" onclick={() => diceOpen.update((o) => !o)}>🎲 Dice</button>
       <button class="data-toggle" onclick={openPrint}>Print / PDF</button>
       <button class="data-toggle" onclick={() => (showData = !showData)}>
         {$catalogState.catalog ? 'Data ✓' : 'Load data'}
@@ -56,6 +59,7 @@
 <OptionalFeaturePicker />
 <FeatPicker />
 <DetailWindow />
+<DiceRoller />
 
 <style>
   /* Use the full viewport width; the grid handles internal columns. A generous

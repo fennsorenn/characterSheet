@@ -11,8 +11,39 @@
   } from '../character/index.js';
   import StatValue from './StatValue.svelte';
   import Icon from './Icon.svelte';
+  import { get } from 'svelte/store';
+  import { rollParts, diceMode } from '../stores/dice.js';
+  import { rollD20, rollTerms, parseDice } from '../dice/dice.js';
+  import type { WeaponAttack } from '../character/index.js';
 
   let { variant = 'full' }: { variant?: string } = $props();
+
+  const sign = (n: number) => `${n >= 0 ? '+' : '−'}${Math.abs(n)}`;
+
+  function toHitLabel(a: WeaponAttack): string {
+    const abil = $graph.has(`ability.${a.ability}.mod`) ? $graph.get(`ability.${a.ability}.mod`) : 0;
+    const parts = [`${ABILITY_NAMES[a.ability].slice(0, 3)} ${sign(abil)}`];
+    if (a.proficient && $graph.has('prof.bonus')) parts.push(`prof ${sign($graph.get('prof.bonus'))}`);
+    if (a.attackBonus) parts.push(`magic ${sign(a.attackBonus)}`);
+    for (const m of $graph.explain(`attack.${a.id}.hit`).modifiers) if (m.applied) parts.push(`${m.source} ${sign(m.value)}`);
+    return parts.join(', ');
+  }
+  function dmgLabel(a: WeaponAttack): string {
+    const abil = $graph.has(`ability.${a.ability}.mod`) ? $graph.get(`ability.${a.ability}.mod`) : 0;
+    return `${ABILITY_NAMES[a.ability].slice(0, 3)} ${sign(abil)}${a.damageBonus ? `, magic ${sign(a.damageBonus)}` : ''}`;
+  }
+
+  /** Roll the attack d20 (adv/disadv per the roller's mode) and its damage together. */
+  function rollAttack(a: WeaponAttack) {
+    const toHit = $graph.has(`attack.${a.id}.hit`) ? $graph.get(`attack.${a.id}.hit`) : 0;
+    const dmgMod = $graph.has(`attack.${a.id}.dmg`) ? $graph.get(`attack.${a.id}.dmg`) : 0;
+    const parts = [rollD20(get(diceMode), toHit, 'Attack', { modifierLabel: toHitLabel(a) })];
+    const { terms } = parseDice(a.damageDice || '');
+    if (terms.length) {
+      parts.push(rollTerms(terms, dmgMod, `Damage${a.damageType ? ` ${a.damageType}` : ''}`, { modifierLabel: dmgLabel(a) }));
+    }
+    rollParts(a.name, parts);
+  }
 
   // Default each weapon's proficiency from the character's actual proficiencies.
   const weaponProfs = $derived(
@@ -56,6 +87,7 @@
             title={a.proficient ? 'Proficient' : 'Not proficient'}
             onclick={() => setItemProficient(idx, !a.proficient)}
           >prof</button>
+          <button class="roll" title="Roll attack + damage" aria-label="Roll {a.name}" onclick={() => rollAttack(a)}>⚄</button>
         </li>
       {/each}
     </ul>
@@ -69,7 +101,7 @@
   ul { list-style: none; margin: 0; padding: 0; }
   li {
     display: grid;
-    grid-template-columns: auto 1fr auto auto auto;
+    grid-template-columns: auto 1fr auto auto auto auto;
     align-items: center;
     gap: 0.6rem;
     padding: 0.3rem 0;
@@ -90,4 +122,6 @@
     background: var(--bg); color: var(--muted); cursor: pointer;
   }
   .prof.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .roll { font: inherit; font-size: 1rem; line-height: 1; padding: 0.1rem 0.35rem; border: 1px solid var(--accent); border-radius: 5px; background: var(--bg); color: var(--accent); cursor: pointer; }
+  .roll:hover { background: var(--accent); color: #fff; }
 </style>
