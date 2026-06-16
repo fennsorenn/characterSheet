@@ -1,6 +1,6 @@
 <script lang="ts">
   import { character, rest, spendHitDie, adjustHitDie } from '../stores/character.js';
-  import { conModifier, hpGainAverage, totalHpGain } from '../character/index.js';
+  import { conModifier, hpGainAverage, hpGainRoll, totalHpGain } from '../character/index.js';
   import PipTracker from './PipTracker.svelte';
   import LevelUpModal from './LevelUpModal.svelte';
 
@@ -8,9 +8,25 @@
 
   let leveling = $state(false);
 
+  // Transient "what you just rolled" label, keyed by die size (e.g. +7).
+  let rolled = $state<Record<number, number>>({});
+  let rollTimers: Record<number, ReturnType<typeof setTimeout>> = {};
+
   // Average heal for spending one die of this size (+ CON, min 1).
   function healFor(die: number): number {
     return totalHpGain(hpGainAverage(die), conModifier($character));
+  }
+
+  // Roll one die of this size, heal (roll + CON, min 1), and flash the result.
+  function rollFor(die: number): void {
+    const heal = totalHpGain(hpGainRoll(die), conModifier($character));
+    spendHitDie(die, heal);
+    rolled[die] = heal;
+    clearTimeout(rollTimers[die]);
+    rollTimers[die] = setTimeout(() => {
+      delete rolled[die];
+      rolled = { ...rolled };
+    }, 2500);
   }
 </script>
 
@@ -41,6 +57,17 @@
         >
           Spend → +{healFor(pool.die)}
         </button>
+        <button
+          class="spend roll"
+          disabled={pool.used >= pool.max || $character.hp.current >= $character.hp.max}
+          title="Roll the die to heal (roll + CON)"
+          onclick={() => rollFor(pool.die)}
+        >
+          Roll ⚄
+        </button>
+        {#if rolled[pool.die] != null}
+          <span class="rolled" aria-live="polite">+{rolled[pool.die]}</span>
+        {/if}
       </div>
     {/each}
   </div>
@@ -71,6 +98,8 @@
     border-radius: 5px; cursor: pointer;
   }
   .spend:disabled { opacity: 0.4; cursor: not-allowed; }
+  .spend.roll { border-color: var(--accent); color: var(--accent); }
+  .rolled { font-size: 0.8rem; font-weight: 700; color: var(--accent); }
   .levelup {
     margin-top: 0.75rem;
     width: 100%;

@@ -24,6 +24,19 @@ describe('hp gain helpers', () => {
     expect(totalHpGain(4, -3)).toBe(1); // 4 + (-3) = 1
     expect(totalHpGain(1, -5)).toBe(1); // clamped up to 1
   });
+
+  it('rolled hit-die heal = roll + CON mod, min 1, within die bounds', () => {
+    const con = 3;
+    // Across the full range of rolls, the heal stays roll+con and never below 1.
+    for (let r = 0; r < 1; r += 0.05) {
+      const roll = hpGainRoll(10, () => r);
+      expect(roll).toBeGreaterThanOrEqual(1);
+      expect(roll).toBeLessThanOrEqual(10);
+      expect(totalHpGain(roll, con)).toBe(roll + con);
+    }
+    // A low roll with a big negative CON still heals at least 1.
+    expect(totalHpGain(hpGainRoll(6, () => 0), -5)).toBe(1);
+  });
 });
 
 describe('applyLevelUp', () => {
