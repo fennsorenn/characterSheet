@@ -37,7 +37,7 @@
     <ul>
       {#each $featureResourceList as r (r.key)}
         <li class="auto">
-          <span class="name">{r.name} <span class="owner">{r.owner}</span></span>
+          <span class="name">{r.name} <span class="owner">{r.owner}{r.scaledBy ? ` · ${r.scaledBy === 'prof' ? 'PB' : r.scaledBy.toUpperCase()}` : ''}</span></span>
           <span data-volatile="frequent">
             <PipTracker max={r.max} used={r.used} onSet={(u) => setFeatureResourceUsed(r.key, u, r.max)} />
           </span>

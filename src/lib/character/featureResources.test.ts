@@ -20,7 +20,21 @@ function catalog(): Catalog {
         { colLabels: ['Rages', 'Rage Damage'], rows: Array.from({ length: 20 }, (_, i) => [i + 1 >= 6 ? 4 : 2, { type: 'bonus', value: 2 }]) }
       ]
     },
+    {
+      name: 'Bard',
+      source: 'PHB',
+      classFeatures: ['Bardic Inspiration|Bard||1']
+    },
     { name: 'Fighter', source: 'PHB' }
+  ] as never;
+  c.classData.classFeature = [
+    {
+      name: 'Bardic Inspiration',
+      source: 'PHB',
+      className: 'Bard',
+      level: 1,
+      entries: ['You can use it a number of times equal to your Charisma modifier (a minimum of once). You regain any expended uses when you finish a long rest.']
+    }
   ] as never;
   c.classData.subclass = [
     {
@@ -67,6 +81,25 @@ describe('featureResources', () => {
       'Cleric:Channel Divinity:3',
       'Barbarian:Rages:4'
     ]);
+  });
+});
+
+describe('stat-scaled feature resources', () => {
+  const mod = (a: string) => ({ cha: 3 } as Record<string, number>)[a] ?? 0;
+
+  it('derives a CHA-modifier pool from the feature text (Bardic Inspiration)', () => {
+    const c = createCharacter({ classes: [{ name: 'Bard', source: 'PHB', level: 1 }] });
+    const res = featureResources(c, catalog(), mod as never, 2);
+    const bi = res.find((r) => r.name === 'Bardic Inspiration');
+    expect(bi).toMatchObject({ name: 'Bardic Inspiration', max: 3, recharge: 'long', scaledBy: 'cha' });
+  });
+
+  it('is at least 1 and omitted without an ability-mod resolver', () => {
+    const c = createCharacter({ classes: [{ name: 'Bard', source: 'PHB', level: 1 }] });
+    const lowCha = (a: string) => (a === 'cha' ? -1 : 0);
+    expect(featureResources(c, catalog(), lowCha as never, 2).find((r) => r.name === 'Bardic Inspiration')?.max).toBe(1);
+    // No resolver → only table pools, no stat pools.
+    expect(featureResources(c, catalog()).some((r) => r.name === 'Bardic Inspiration')).toBe(false);
   });
 });
 

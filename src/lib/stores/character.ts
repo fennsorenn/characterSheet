@@ -90,10 +90,17 @@ export const computedSlots = derived([store, catalogState], ([$c, $cat]) =>
 );
 
 /** Implicit class/subclass resource pools (Channel Divinity, Rage, …) with uses. */
-export const featureResourceList = derived([store, catalogState], ([$c, $cat]) =>
-  ($cat.catalog ? featureResources($c, $cat.catalog) : []).map(
-    (r): FeatureResource & { used: number } => ({ ...r, used: Math.min($c.featureResourceUsed[r.key] ?? 0, r.max) })
-  )
+export const featureResourceList = derived([store, catalogState, graph], ([$c, $cat, $g]) =>
+  (
+    $cat.catalog
+      ? featureResources(
+          $c,
+          $cat.catalog,
+          (a) => ($g.has(`ability.${a}.mod`) ? $g.get(`ability.${a}.mod`) : 0),
+          $g.has('prof.bonus') ? $g.get('prof.bonus') : 2
+        )
+      : []
+  ).map((r): FeatureResource & { used: number } => ({ ...r, used: Math.min($c.featureResourceUsed[r.key] ?? 0, r.max) }))
 );
 
 /** Set spent uses of an implicit feature resource (clamped to [0, max]). */
