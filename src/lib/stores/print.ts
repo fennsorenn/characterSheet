@@ -9,8 +9,8 @@ import {
 export type PageSize = 'letter' | 'a4';
 
 export const printOpen = writable(false);
-export const pageSize = writable<PageSize>('letter');
-export const prefill = writable<PrefillLevel>('all');
+export const pageSize = writable<PageSize>('a4');
+export const prefill = writable<PrefillLevel>('omit-frequent');
 export const customRedaction = writable<CustomRedaction>({
   frequent: false,
   occasional: false

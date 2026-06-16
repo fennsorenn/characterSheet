@@ -50,7 +50,7 @@
         {@const expended = Math.min($character.spellSlots[l - 1].expended, max)}
         <li>
           <span class="lvl">Level {l}</span>
-          <span data-volatile="frequent">
+          <span data-volatile="frequent" data-print-pips>
             <PipTracker {max} used={expended} onSet={(u) => setSlotExpended(l, u)} />
           </span>
         </li>
@@ -59,7 +59,7 @@
         {@const used = Math.min($character.pactSlotsExpended, pact.count)}
         <li class="pact">
           <span class="lvl">Pact <small>(lvl {pact.level})</small></span>
-          <span data-volatile="frequent">
+          <span data-volatile="frequent" data-print-pips>
             <PipTracker max={pact.count} {used} onSet={(u) => setPactExpended(u)} />
           </span>
         </li>

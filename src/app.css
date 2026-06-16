@@ -59,13 +59,23 @@ body {
 .print-pages .block { break-inside: avoid; }
 
 /* Value redaction by prefill level. visibility keeps the labelled box so the
-   field can be filled in by hand. */
-.print-pages.hide-frequent [data-volatile='frequent'] { visibility: hidden; }
-.print-pages.hide-occasional [data-volatile='occasional'] { visibility: hidden; }
-.print-pages.hide-all [data-volatile],
+   field can be filled in by hand. Spell-slot pips (data-print-pips) are an
+   exception: instead of being hidden, they stay on the page as empty circles
+   so the slots can be ticked off by hand. */
+.print-pages.hide-frequent [data-volatile='frequent']:not([data-print-pips]) { visibility: hidden; }
+.print-pages.hide-occasional [data-volatile='occasional']:not([data-print-pips]) { visibility: hidden; }
+.print-pages.hide-all [data-volatile]:not([data-print-pips]),
 .print-pages.hide-all .stat-value,
 .print-pages.hide-all .number-field,
 .print-pages.hide-all .pip.on { visibility: hidden; }
+
+/* Keep spell-slot pips visible but drained (empty circles) under any redaction. */
+.print-pages.hide-frequent [data-print-pips] .pip,
+.print-pages.hide-all [data-print-pips] .pip {
+  visibility: visible;
+  background: transparent;
+  border-color: var(--muted);
+}
 
 @media print {
   body { background: #fff; }
