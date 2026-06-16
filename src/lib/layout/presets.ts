@@ -64,7 +64,8 @@ export function builtinPresets(): SheetLayout[] {
       ['inventory', 'full', 'wide'],
       ['resources', 'full', 'wide'],
       ['spells', 'full', 'narrow'],
-      ['spellSlots', 'full', 'narrow']
+      ['spellSlots', 'full', 'narrow'],
+      ['notes', 'full', 'full']
     ]),
     // Caster: spell slots and spell list up top and prominent.
     buildLayout('caster', 'Caster', [
@@ -78,7 +79,8 @@ export function builtinPresets(): SheetLayout[] {
       ['saves', 'full', 'narrow'],
       ['skills', 'full', 'narrow'],
       ['resources', 'full', 'wide'],
-      ['inventory', 'full', 'wide']
+      ['inventory', 'full', 'wide'],
+      ['notes', 'full', 'full']
     ]),
     // Martial: HP, resources, and gear front and centre.
     buildLayout('martial', 'Martial', [
@@ -95,7 +97,8 @@ export function builtinPresets(): SheetLayout[] {
       ['skills', 'full', 'wide'],
       ['traits', 'full', 'wide'],
       ['spells', 'full', 'narrow'],
-      ['spellSlots', 'full', 'narrow']
+      ['spellSlots', 'full', 'narrow'],
+      ['notes', 'full', 'full']
     ]),
     // Compact: everything narrow and terse, packs densely on any width.
     buildLayout('compact', 'Compact', [
@@ -109,7 +112,8 @@ export function builtinPresets(): SheetLayout[] {
       ['resources', 'full', 'narrow'],
       ['inventory', 'full', 'narrow'],
       ['spells', 'full', 'narrow'],
-      ['spellSlots', 'full', 'narrow']
+      ['spellSlots', 'full', 'narrow'],
+      ['notes', 'full', 'full']
     ])
   ];
 }

@@ -1,7 +1,10 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import { character, addNoteDoc, addNoteFolder, deleteNote, renameNote, saveNoteContent } from '../stores/character.js';
   import { isNoteFolder, type NoteDoc, type NoteFolder, type NoteNode } from '../character/index.js';
-  import { renderMarkdown } from '../render/markdown.js';
+  // Milkdown (Crepe) is heavy (ProseMirror); it's loaded lazily in the editor
+  // effect below so the main bundle stays light until a note is opened.
+  type CrepeInstance = import('@milkdown/crepe').Crepe;
 
   let { variant = 'full' }: { variant?: string } = $props();
 
@@ -11,8 +14,6 @@
   let activeId = $state<string | null>(null);
   // Whether the tree modal is open.
   let treeOpen = $state(false);
-  // Per-tab unsaved edits (id → content). Flushed to character on blur / tab switch.
-  let drafts = $state<Record<string, string>>({});
   // Inline rename state for tree.
   let renamingId = $state<string | null>(null);
   let renameValue = $state('');
@@ -20,6 +21,9 @@
   let addingIn = $state<string | null>(null); // folder id or 'root'
   let addingKind = $state<'doc' | 'folder'>('doc');
   let addingName = $state('');
+
+  // The mount node for the live Milkdown editor.
+  let editorEl = $state<HTMLDivElement>();
 
   /** Find a doc node anywhere in the tree by id. */
   function findDoc(nodes: NoteNode[], id: string): NoteDoc | null {
@@ -33,64 +37,84 @@
     return null;
   }
 
-  /** Collect all docs in DFS order for navigation. */
-  function allDocs(nodes: NoteNode[]): NoteDoc[] {
-    const out: NoteDoc[] = [];
-    for (const n of nodes) {
-      if (!isNoteFolder(n)) out.push(n as NoteDoc);
-      else out.push(...allDocs((n as NoteFolder).children));
-    }
-    return out;
-  }
-
   const notes = $derived($character.notes ?? []);
 
   const activeDoc = $derived(activeId ? findDoc(notes, activeId) : null);
 
-  const activeContent = $derived(activeId != null
-    ? (drafts[activeId] ?? activeDoc?.content ?? '')
-    : '');
-
   function openDoc(id: string) {
     if (!openIds.includes(id)) openIds = [...openIds, id];
     activeId = id;
-    // Initialise draft from saved content if not already tracking.
-    const doc = findDoc(notes, id);
-    if (doc && !(id in drafts)) drafts = { ...drafts, [id]: doc.content };
     treeOpen = false;
   }
 
   function closeTab(id: string) {
-    flushDraft(id);
     openIds = openIds.filter((x) => x !== id);
     if (activeId === id) {
       const idx = openIds.indexOf(id);
       activeId = openIds[idx] ?? openIds[idx - 1] ?? openIds[0] ?? null;
     }
-    const { [id]: _, ...rest } = drafts;
-    drafts = rest;
-  }
-
-  function flushDraft(id: string) {
-    if (id in drafts) saveNoteContent(id, drafts[id]);
-  }
-
-  function onInput(e: Event) {
-    if (!activeId) return;
-    const val = (e.target as HTMLTextAreaElement).value;
-    drafts = { ...drafts, [activeId]: val };
-  }
-
-  function onBlur() {
-    if (activeId) flushDraft(activeId);
   }
 
   function switchTab(id: string) {
-    if (activeId) flushDraft(activeId);
     activeId = id;
-    const doc = findDoc(notes, id);
-    if (doc && !(id in drafts)) drafts = { ...drafts, [id]: doc.content };
   }
+
+  // --- Live Milkdown editor ---
+  //
+  // One editor instance bound to the active doc. Switching tabs (or closing
+  // one) tears it down and rebuilds it for the new doc; the cleanup flushes the
+  // latest markdown back into the character store so nothing is lost. Edits are
+  // debounced so we don't rebuild the calc graph on every keystroke.
+
+  $effect(() => {
+    const id = activeId;
+    const el = editorEl;
+    if (!id || !el) return;
+    const initial = untrack(() => findDoc(notes, id)?.content ?? '');
+
+    let saveTimer: ReturnType<typeof setTimeout> | undefined;
+    let destroyed = false;
+    let crepe: CrepeInstance | undefined;
+
+    (async () => {
+      const [{ Crepe }] = await Promise.all([
+        import('@milkdown/crepe'),
+        import('@milkdown/crepe/theme/common/style.css'),
+        import('@milkdown/crepe/theme/frame.css')
+      ]);
+      if (destroyed) return;
+      crepe = new Crepe({
+        root: el,
+        defaultValue: initial,
+        // No floating selection toolbar — keep the surface clean (Obsidian-like).
+        // The "/" slash menu (block-edit) stays for contextual inserts.
+        features: { [Crepe.Feature.Toolbar]: false }
+      });
+      crepe.on((api) => {
+        api.markdownUpdated((_ctx, markdown) => {
+          clearTimeout(saveTimer);
+          saveTimer = setTimeout(() => {
+            if (!destroyed) saveNoteContent(id, markdown);
+          }, 300);
+        });
+      });
+      await crepe.create();
+      if (destroyed) crepe.destroy();
+    })();
+
+    return () => {
+      destroyed = true;
+      clearTimeout(saveTimer);
+      if (!crepe) return;
+      // Flush the very latest content before the instance goes away.
+      try {
+        saveNoteContent(id, crepe.getMarkdown());
+      } catch {
+        /* editor not ready — nothing to flush */
+      }
+      crepe.destroy();
+    };
+  });
 
   // --- Tree actions ---
 
@@ -132,8 +156,6 @@
     }
   }
 
-  const preview = $derived(renderMarkdown(activeContent));
-
   /** Svelte action: focus element on mount. */
   function focusOnMount(el: HTMLElement) {
     el.focus();
@@ -146,15 +168,15 @@
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div class="tree-overlay" onclick={() => { treeOpen = false; }}>
-    <div class="tree-modal" onclick={(e) => e.stopPropagation()} role="dialog" aria-label="Notes tree">
+    <div class="tree-modal" onclick={(e) => e.stopPropagation()} role="dialog" tabindex="-1" aria-label="Notes tree">
       <div class="tree-head">
         <span>Notes</span>
         <button class="close-btn" onclick={() => { treeOpen = false; }} aria-label="Close tree">✕</button>
       </div>
       <div class="tree-body">
-        {@render nodeList(notes, null)}
+        {@render nodeList(notes)}
         {#if addingIn === 'root'}
-          {@render addForm(null)}
+          {@render addForm()}
         {:else}
           <div class="tree-actions">
             <button onclick={() => startAdd(null, 'doc')}>+ Doc</button>
@@ -166,7 +188,7 @@
   </div>
 {/if}
 
-{#snippet nodeList(nodes: NoteNode[], parentId: string | null)}
+{#snippet nodeList(nodes: NoteNode[])}
   <ul class="node-list">
     {#each nodes as node (node.id)}
       <li class="node-item">
@@ -192,9 +214,9 @@
             </span>
           </div>
           <div class="folder-children">
-            {@render nodeList((node as NoteFolder).children, node.id)}
+            {@render nodeList((node as NoteFolder).children)}
             {#if addingIn === node.id}
-              {@render addForm(node.id)}
+              {@render addForm()}
             {:else}
               <div class="tree-actions sub">
                 <button onclick={() => startAdd(node.id, 'doc')}>+ Doc</button>
@@ -227,7 +249,7 @@
   </ul>
 {/snippet}
 
-{#snippet addForm(parentId: string | null)}
+{#snippet addForm()}
   <div class="add-form">
     <select bind:value={addingKind}>
       <option value="doc">Doc</option>
@@ -246,7 +268,7 @@
 {/snippet}
 
 <!-- Main block -->
-<div class="notes-block">
+<div class="notes-block" data-variant={variant}>
   <!-- Tab bar -->
   <div class="tab-bar">
     <button class="tree-btn" onclick={() => { treeOpen = !treeOpen; }} title="Open notes tree">📂 Notes</button>
@@ -275,22 +297,12 @@
     <button class="new-btn" title="New document at root" onclick={() => { startAdd(null, 'doc'); treeOpen = true; }}>+</button>
   </div>
 
-  <!-- Editor / preview -->
+  <!-- Inline WYSIWYG editor (Milkdown). Keyed by doc so each tab gets a fresh
+       mount; the $effect builds/tears down the live instance. -->
   {#if activeId && activeDoc}
-    <div class="editor-area">
-      <textarea
-        class="md-editor"
-        value={activeContent}
-        oninput={onInput}
-        onblur={onBlur}
-        placeholder="Write in Markdown…"
-        spellcheck="true"
-      ></textarea>
-      <div class="md-preview">
-        <!-- eslint-disable-next-line svelte/no-at-html-tags -->
-        {@html preview}
-      </div>
-    </div>
+    {#key activeId}
+      <div class="editor-host" bind:this={editorEl}></div>
+    {/key}
   {:else}
     <div class="empty-state">
       <p>Open a document from the <button class="inline-link" onclick={() => { treeOpen = true; }}>notes tree</button>, or <button class="inline-link" onclick={() => { startAdd(null, 'doc'); treeOpen = true; }}>create one</button>.</p>
@@ -377,54 +389,46 @@
   }
   .new-btn:hover { color: var(--fg); background: var(--field-hover); }
 
-  /* Editor */
-  .editor-area {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0;
+  /* Live editor (Milkdown). Map Crepe's theme variables onto the app tokens so
+     it follows light/dark automatically, and let the editor surface scroll. */
+  .editor-host {
     flex: 1;
-    overflow: hidden;
+    overflow-y: auto;
+    min-height: 0;
+
+    --crepe-color-background: var(--bg);
+    --crepe-color-on-background: var(--fg);
+    --crepe-color-surface: var(--bg);
+    --crepe-color-surface-low: var(--field-hover);
+    --crepe-color-on-surface: var(--fg);
+    --crepe-color-on-surface-variant: var(--muted);
+    --crepe-color-outline: var(--line);
+    --crepe-color-primary: var(--accent);
+    --crepe-color-secondary: var(--field-hover);
+    --crepe-color-on-secondary: var(--fg);
+    --crepe-color-inverse: var(--fg);
+    --crepe-color-on-inverse: var(--bg);
+    --crepe-color-inline-code: var(--accent);
+    --crepe-color-inline-area: var(--field-hover);
+    --crepe-color-hover: var(--field-hover);
+    --crepe-color-selected: var(--field-hover);
+    --crepe-color-error: #c0392b;
+    --crepe-font-default: var(--font-body);
+    --crepe-font-title: var(--font-body);
+    --crepe-font-code: 'Menlo', 'Monaco', 'Consolas', monospace;
   }
 
-  .md-editor {
-    resize: none;
-    border: none;
-    border-right: 1px solid var(--line);
+  .editor-host :global(.milkdown) {
     background: var(--bg);
-    color: var(--fg);
-    font-family: 'Menlo', 'Monaco', 'Consolas', monospace;
-    font-size: 0.85rem;
-    padding: 0.75rem;
+    height: 100%;
+  }
+  .editor-host :global(.milkdown .ProseMirror) {
+    padding: 0.75rem 1rem;
     outline: none;
-    overflow-y: auto;
-    line-height: 1.55;
   }
-
-  .md-preview {
-    padding: 0.75rem;
-    overflow-y: auto;
-    font-size: 0.875rem;
-    line-height: 1.65;
-  }
-
-  /* Markdown preview typography */
-  .md-preview :global(h1) { font-size: 1.25rem; margin: 0.5rem 0; }
-  .md-preview :global(h2) { font-size: 1.1rem; margin: 0.5rem 0; }
-  .md-preview :global(h3) { font-size: 1rem; margin: 0.4rem 0; }
-  .md-preview :global(h4) { font-size: 0.9rem; margin: 0.3rem 0; }
-  .md-preview :global(h5) { font-size: 0.9rem; margin: 0.3rem 0; }
-  .md-preview :global(h6) { font-size: 0.9rem; margin: 0.3rem 0; }
-  .md-preview :global(p) { margin: 0.3rem 0; }
-  .md-preview :global(ul) { padding-left: 1.4rem; margin: 0.3rem 0; }
-  .md-preview :global(ol) { padding-left: 1.4rem; margin: 0.3rem 0; }
-  .md-preview :global(li) { margin: 0.15rem 0; }
-  .md-preview :global(code) { background: var(--field-hover); padding: 0.1em 0.3em; border-radius: 3px; font-family: monospace; font-size: 0.85em; }
-  .md-preview :global(pre) { background: var(--field-hover); padding: 0.6rem; border-radius: 4px; overflow-x: auto; }
-  .md-preview :global(pre code) { background: none; padding: 0; }
-  .md-preview :global(blockquote) { border-left: 3px solid var(--accent); margin: 0.4rem 0; padding: 0.2rem 0.6rem; color: var(--muted); }
-  .md-preview :global(hr) { border: none; border-top: 1px solid var(--line); margin: 0.6rem 0; }
-  .md-preview :global(a) { color: var(--accent); }
-  .md-preview :global(strong) { font-weight: 600; }
+  /* Keep prior markdown-block visuals from leaking; nothing else references
+     .md-preview now, but guard the fenced-code styling Crepe reuses. */
+  .editor-host :global(pre code) { background: none; padding: 0; }
 
   /* Empty state */
   .empty-state {

@@ -24,6 +24,8 @@
     "vitest": "^3.0.4"
   },
   "dependencies": {
+    "@milkdown/crepe": "^7.21.2",
+    "@milkdown/kit": "^7.21.2",
     "express": "^4.21.2",
     "fflate": "^0.8.3",
     "pdf-lib": "^1.17.1"
