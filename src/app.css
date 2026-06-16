@@ -29,6 +29,10 @@ body {
   color: var(--fg);
 }
 
+.cell, .cell .block, .cell .body {
+    height: 100%;
+}
+
 /* ----- Print / PDF ----------------------------------------------------------
    The print view (PrintView.svelte) renders the active layout on a page-sized
    white sheet. These rules are global so they reach into the block components,
@@ -77,6 +81,8 @@ body {
   .print-pages {
     width: 100% !important;
     padding: 0 !important;
-    box-shadow: none !important;
+    box-shadow: none !import.cell, .cell .block, .cell .body {
+    height: 100%;
+}ant;
   }
 }
