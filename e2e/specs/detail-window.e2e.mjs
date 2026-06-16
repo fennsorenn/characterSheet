@@ -43,6 +43,11 @@ export default async function ({ page, baseUrl }) {
   await cell(page, 'Inventory').locator('button.name', { hasText: 'Longsword' }).first().click();
   await page.waitForTimeout(150);
   assert((await win.locator('.title').innerText()) === 'Longsword', 'window switches to the item detail');
+
+  // A weapon name in the Attacks block opens its detail too.
+  await cell(page, 'Attacks').locator('button.name', { hasText: 'Longsword' }).first().click();
+  await page.waitForTimeout(150);
+  assert((await win.locator('.title').innerText()) === 'Longsword', 'attack name opens the item detail');
   await win.locator('button[aria-label="Close"]').click();
   await page.waitForTimeout(120);
   assert((await page.locator('.win').count()) === 0, 'close button closes the window');

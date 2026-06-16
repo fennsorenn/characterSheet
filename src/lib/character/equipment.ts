@@ -114,12 +114,21 @@ export function computeEquipmentEffects(
     pushBonus(modifiers, item, 'bonusProficiencyBonus', ['prof.bonus']);
     pushBonus(modifiers, item, 'bonusAbilityCheck', SKILLS.map((s) => skillNodeId(s)));
 
+    const ability = item.ability as (Record<string, number> & { static?: Record<string, number> }) | undefined;
     // Items that set an ability score to a fixed value (no effect if already higher).
-    const statics = (item.ability as { static?: Record<string, number> } | undefined)?.static;
+    const statics = ability?.static;
     if (statics) {
       for (const a of ABILITIES) {
         if (typeof statics[a] === 'number' && statics[a] > (abilitySets[a]?.value ?? 0)) {
           abilitySets[a] = { value: statics[a], source: item.name, icon: iconForItem(item) };
+        }
+      }
+    }
+    // Flat ability bonuses, e.g. Belt of Dwarvenkind ({con: 2}).
+    if (ability) {
+      for (const a of ABILITIES) {
+        if (typeof ability[a] === 'number') {
+          modifiers.push({ target: `ability.${a}.score`, source: item.name, value: ability[a] });
         }
       }
     }

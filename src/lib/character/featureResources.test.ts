@@ -94,6 +94,19 @@ describe('stat-scaled feature resources', () => {
     expect(bi).toMatchObject({ name: 'Bardic Inspiration', max: 3, recharge: 'long', scaledBy: 'cha' });
   });
 
+  it('derives a fixed pool from "Once per day" text (Arcane Recovery)', () => {
+    const cat = catalog();
+    (cat.entries.class as never[]).push({ name: 'Wizard', source: 'PHB', classFeatures: ['Arcane Recovery|Wizard||1'] } as never);
+    (cat.classData.classFeature as never[]).push({
+      name: 'Arcane Recovery', source: 'PHB', className: 'Wizard', level: 1,
+      entries: ['Once per day when you finish a short rest, you can recover expended spell slots.']
+    } as never);
+    const c = createCharacter({ classes: [{ name: 'Wizard', source: 'PHB', level: 5 }] });
+    const ar = featureResources(c, cat, mod as never, 2).find((r) => r.name === 'Arcane Recovery');
+    expect(ar).toMatchObject({ name: 'Arcane Recovery', max: 1, recharge: 'long' }); // "per day" → long rest
+    expect(ar?.scaledBy).toBeUndefined();
+  });
+
   it('is at least 1 and omitted without an ability-mod resolver', () => {
     const c = createCharacter({ classes: [{ name: 'Bard', source: 'PHB', level: 1 }] });
     const lowCha = (a: string) => (a === 'cha' ? -1 : 0);

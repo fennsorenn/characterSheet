@@ -239,4 +239,16 @@ describe('ability-setting items', () => {
     });
     expect(buildGraph(strong, lookupOf(belt)).get('ability.str.mod')).toBe(7); // keeps 24
   });
+
+  it('applies a flat ability bonus item (Belt of Dwarvenkind: +2 Con)', () => {
+    const dwarven: NamedEntry = { name: 'Belt of Dwarvenkind', source: 'DMG', reqAttune: true, ability: { con: 2 } };
+    const c = createCharacter({
+      abilities: { con: 10 } as never,
+      inventory: [{ ...equip(dwarven), attuned: true }]
+    });
+    expect(buildGraph(c, lookupOf(dwarven)).get('ability.con.score')).toBe(12);
+    // Unattuned → no effect (magic gated on attunement).
+    const off = createCharacter({ abilities: { con: 10 } as never, inventory: [equip(dwarven)] });
+    expect(buildGraph(off, lookupOf(dwarven)).get('ability.con.score')).toBe(10);
+  });
 });

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { character, graph, grantPool, setItemProficient } from '../stores/character.js';
   import { catalogLookup } from '../stores/catalog.js';
+  import { openDetail } from '../stores/detail.js';
   import {
     weaponAttacks,
     weaponProficiencySet,
@@ -31,6 +32,12 @@
   function dmgLabel(a: WeaponAttack): string {
     const abil = $graph.has(`ability.${a.ability}.mod`) ? $graph.get(`ability.${a.ability}.mod`) : 0;
     return `${ABILITY_NAMES[a.ability].slice(0, 3)} ${sign(abil)}${a.damageBonus ? `, magic ${sign(a.damageBonus)}` : ''}`;
+  }
+
+  function openWeaponDetail(idx: number, el: Element) {
+    const inv = $character.inventory[idx];
+    const entry = inv && $catalogLookup.getItem(inv.name, inv.source);
+    if (entry) openDetail('item', entry, el.closest('.cell') ?? el);
   }
 
   /** Roll the attack d20 (adv/disadv per the roller's mode) and its damage together. */
@@ -70,7 +77,7 @@
         {@const wic = iconForItem({ name: a.name })}
         <li>
           <span class="wicon" title={iconLabel(wic)}><Icon name={wic} /></span>
-          <span class="name">{a.name}</span>
+          <button class="name" title="Show details" onclick={(e) => openWeaponDetail(idx, e.currentTarget)}>{a.name}</button>
           <span class="hit" title="{ABILITY_NAMES[a.ability]} attack">
             <StatValue node={`attack.${a.id}.hit`} signed />
           </span>
@@ -109,7 +116,8 @@
   }
   .wicon { color: var(--muted); display: inline-flex; }
   .wicon :global(.icon) { width: 1.05rem; height: 1.05rem; }
-  .name { font-weight: 600; }
+  .name { font-weight: 600; text-align: left; background: none; border: none; padding: 0; color: var(--fg); font: inherit; cursor: pointer; }
+  .name:hover { color: var(--accent); }
   .hit { font-weight: 700; }
   .dmg { font-size: 0.85rem; color: var(--muted); font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; gap: 0.25rem; }
   .dicon { display: inline-flex; }

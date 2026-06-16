@@ -92,14 +92,16 @@ const ABIL_RE = new RegExp(
   'i'
 );
 const PROF_RE = /(?:number of times|times|uses?)\s+equal to your proficiency bonus/i;
+// Fixed counts: "Once per day", "twice per long rest", "3 times per short rest".
+const FIXED_RE = /\b(once|twice|(\d+)\s*times)\s+per\s+(day|short rest|long rest)\b/i;
 
 /**
- * Pools whose size is an ability modifier or proficiency bonus, described in the
- * feature text (e.g. Bardic Inspiration — "a number of times equal to your
- * Charisma modifier"). Not in the level table, so we read them from the resolved
- * feature entries. Size is at least 1 (these features specify a minimum of one).
+ * Pools described in the feature text rather than the level table: sized by an
+ * ability modifier / proficiency bonus (e.g. Bardic Inspiration — "a number of
+ * times equal to your Charisma modifier") or a fixed count (e.g. Arcane Recovery
+ * — "Once per day"). Stat-sized pools need the live modifiers; fixed ones don't.
  */
-function statResources(
+function textResources(
   character: Character,
   catalog: Catalog,
   abilityMod: (a: Ability) => number,
@@ -109,16 +111,26 @@ function statResources(
   const seen = new Set<string>();
   for (const f of resolveFeatures(character, catalog)) {
     const text = flatten(f.entries);
-    const abilMatch = text.match(ABIL_RE);
-    const profMatch = !abilMatch && PROF_RE.test(text);
-    if (!abilMatch && !profMatch) continue;
+    let max: number | null = null;
+    let scaledBy: Ability | 'prof' | undefined;
+    let recharge: RestType = /short(?:\s+or\s+long)?\s+rest/i.test(text) ? 'short' : 'long';
 
-    const scaledBy: Ability | 'prof' = abilMatch
-      ? (ABILITIES.find((a) => lc(ABILITY_NAMES[a]) === lc(abilMatch[1]))!)
-      : 'prof';
-    const max = Math.max(1, scaledBy === 'prof' ? profBonus : abilityMod(scaledBy));
-    // Recharge: "short rest" (or "short or long") refills on a short rest.
-    const recharge: RestType = /short(?:\s+or\s+long)?\s+rest/i.test(text) ? 'short' : 'long';
+    const abilMatch = text.match(ABIL_RE);
+    if (abilMatch) {
+      scaledBy = ABILITIES.find((a) => lc(ABILITY_NAMES[a]) === lc(abilMatch[1]))!;
+      max = Math.max(1, abilityMod(scaledBy));
+    } else if (PROF_RE.test(text)) {
+      scaledBy = 'prof';
+      max = Math.max(1, profBonus);
+    } else {
+      const fm = text.match(FIXED_RE);
+      if (fm) {
+        max = /once/i.test(fm[1]) ? 1 : /twice/i.test(fm[1]) ? 2 : parseInt(fm[2], 10) || 1;
+        recharge = /short rest/i.test(fm[3]) ? 'short' : 'long'; // "per day" recharges on a long rest
+      }
+    }
+    if (max == null) continue;
+
     const name = baseName(f.name);
     const owner = f.subtitle?.replace(/\s+\d+$/, '') ?? f.group;
     const key = `${recharge}|${owner}|${name}`;
@@ -155,7 +167,7 @@ export function featureResources(
   }
   if (abilityMod) {
     const tableNames = new Set(out.map((r) => r.name.toLowerCase()));
-    for (const r of statResources(character, catalog, abilityMod, profBonus ?? 2)) {
+    for (const r of textResources(character, catalog, abilityMod, profBonus ?? 2)) {
       if (!tableNames.has(r.name.toLowerCase())) out.push(r); // table pool wins on name clash
     }
   }
