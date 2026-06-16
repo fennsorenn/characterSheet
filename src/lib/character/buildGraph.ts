@@ -124,15 +124,23 @@ export function buildGraph(character: Character, lookup?: CatalogLookup, grants:
 
   // Weapon attacks: a to-hit node (ability + proficiency + magic) and a numeric
   // damage-bonus node per equipped weapon, both introspectable in the popover.
+  // Attack rolls are d20 Tests, so exhaustion's -2-per-level penalty applies to
+  // each `attack.<id>.hit` node here (the weapon ids only exist at this point,
+  // so exhaustionModifiers — which is id-agnostic — can't reach them).
+  const exhaustion = character.exhaustion ?? 0;
   if (lookup) {
     const weaponProfs = weaponProficiencySet(
       grants.sets.filter((s) => s.category === 'weaponProf').map((s) => s.member)
     );
     for (const atk of weaponAttacks(character, lookup, weaponProfs)) {
       const abilMod = `ability.${atk.ability}.mod`;
-      g.define(`attack.${atk.id}.hit`, [abilMod, 'prof.bonus'], (c) =>
+      const hitNode = `attack.${atk.id}.hit`;
+      g.define(hitNode, [abilMod, 'prof.bonus'], (c) =>
         c.get(abilMod) + (atk.proficient ? c.get('prof.bonus') : 0) + atk.attackBonus
       );
+      if (exhaustion > 0) {
+        g.addModifier(hitNode, { source: `Exhaustion ${exhaustion}`, value: -2 * exhaustion });
+      }
       g.define(`attack.${atk.id}.dmg`, [abilMod], (c) => c.get(abilMod) + atk.damageBonus);
     }
   }
