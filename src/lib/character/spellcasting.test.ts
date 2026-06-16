@@ -44,12 +44,26 @@ describe('casterClasses', () => {
       'Paladin:prepared:null:7' // no cantrips, floor(6/2)=3 + 4
     ]); // Fighter excluded (no spellcasting)
   });
+
+  it('gives a Wizard a prepared limit and a summed spellbook total', () => {
+    const c = createCharacter({ classes: [{ name: 'Wizard', source: 'PHB', level: 5 }] });
+    const [wiz] = casterClasses(c, catalog(), mod, 3);
+    expect(wiz.kind).toBe('prepared');
+    expect(wiz.cantrips).toBe(4); // cantripProgression[5]
+    expect(wiz.spells).toBe(8); // prepared = level 5 + int mod 3
+    expect(wiz.book).toBe(14); // sum of [6,2,2,2,2] = 6 + 2*(5-1)
+  });
+
+  it('does not give non-spellbook prepared casters a book', () => {
+    const c = createCharacter({ classes: [{ name: 'Cleric', source: 'PHB', level: 5 }] });
+    expect(casterClasses(c, catalog(), mod, 3)[0].book).toBeNull();
+  });
 });
 
 describe('assignSpellCounts', () => {
-  const cleric: CasterClass = { name: 'Cleric', source: 'PHB', level: 5, ability: 'wis', kind: 'prepared', cantrips: 4, spells: 8 };
-  const wizard: CasterClass = { name: 'Wizard', source: 'PHB', level: 5, ability: 'int', kind: 'prepared', cantrips: 4, spells: 8 };
-  const bard: CasterClass = { name: 'Bard', source: 'PHB', level: 5, ability: 'cha', kind: 'known', cantrips: 3, spells: 8 };
+  const cleric: CasterClass = { name: 'Cleric', source: 'PHB', level: 5, ability: 'wis', kind: 'prepared', cantrips: 4, spells: 8, book: null };
+  const wizard: CasterClass = { name: 'Wizard', source: 'PHB', level: 5, ability: 'int', kind: 'prepared', cantrips: 4, spells: 8, book: 14 };
+  const bard: CasterClass = { name: 'Bard', source: 'PHB', level: 5, ability: 'cha', kind: 'known', cantrips: 3, spells: 8, book: null };
 
   it('counts prepared spells per class and frees a prepared caster’s unprepared spells', () => {
     const counts = assignSpellCounts(
@@ -88,5 +102,25 @@ describe('assignSpellCounts', () => {
     );
     const byName = Object.fromEntries(counts.map((c) => [c.name, c.spellsUsed]));
     expect(byName).toEqual({ Cleric: 0, Bard: 1 });
+  });
+
+  it('counts every leveled wizard spell toward its book regardless of prepared status, and may exceed the book limit without flagging', () => {
+    // Book limit 3, but 5 leveled wizard spells (mix prepared/unprepared) recorded.
+    const counts = assignSpellCounts(
+      [{ ...wizard, spells: 8, book: 3 }],
+      [
+        { level: 0, classes: ['Wizard'], prepared: false }, // cantrip — not a book spell
+        { level: 1, classes: ['Wizard'], prepared: true },
+        { level: 1, classes: ['Wizard'], prepared: true },
+        { level: 2, classes: ['Wizard'], prepared: false }, // known but unprepared → still in book
+        { level: 3, classes: ['Wizard'], prepared: false },
+        { level: 4, classes: ['Wizard'], prepared: false }
+      ]
+    );
+    expect(counts[0].bookLimit).toBe(3);
+    expect(counts[0].bookUsed).toBe(5); // all 5 leveled spells, cantrip excluded
+    expect(counts[0].bookUsed).toBeGreaterThan(counts[0].bookLimit!); // not clamped/flagged
+    // Prepared slots still tally only prepared (or known-only) leveled spells.
+    expect(counts[0].spellsUsed).toBe(2);
   });
 });

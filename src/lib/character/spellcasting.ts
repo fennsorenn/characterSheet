@@ -17,6 +17,12 @@ import { ABILITIES, type Ability } from './abilities.js';
  * greedily, most-constrained spells first (fewest fitting classes), each placed
  * in the fitting class with the most remaining room. Unprepared spells that a
  * prepared caster simply *knows* (it knows its whole list) don't consume a slot.
+ *
+ * The Wizard additionally tracks a *spellbook* size (sum of the per-level
+ * `spellsKnownProgressionFixed` deltas). Every leveled spell that fits the
+ * wizard counts toward its book regardless of prepared status. This is purely
+ * informational: wizards copy extra spells into their book, so exceeding the
+ * book size is normal and is never flagged as over-limit.
  */
 
 export type CasterKind = 'prepared' | 'known';
@@ -31,6 +37,13 @@ export interface CasterClass {
   cantrips: number | null;
   /** Leveled-spell limit: prepared limit (prepared) or spells-known (known). */
   spells: number | null;
+  /**
+   * Spellbook size — the number of leveled spells the class can have recorded
+   * (Wizard only; sum of `spellsKnownProgressionFixed` up to the class level).
+   * Informational: wizards copy extra spells in, so this is expected to be
+   * exceeded and is never flagged as over-limit. Null for non-spellbook classes.
+   */
+  book: number | null;
 }
 
 /** Per-class spell counts vs limits, after assignment. */
@@ -41,6 +54,10 @@ export interface ClassSpellCount {
   cantripLimit: number | null;
   spellsUsed: number;
   spellLimit: number | null;
+  /** Leveled spells assigned to this class regardless of status (spellbook). */
+  bookUsed: number;
+  /** Spellbook size; informational (may be exceeded), null if not applicable. */
+  bookLimit: number | null;
 }
 
 const lc = (s: string) => s.toLowerCase();
@@ -100,6 +117,13 @@ export function casterClasses(
     const cp = c.cantripProgression;
     const cantrips = Array.isArray(cp) ? atLevel(cp as number[], cls.level) : null;
 
+    // Spellbook size: `spellsKnownProgressionFixed` is a per-level DELTA array,
+    // so the total recorded spells = sum of the first `level` entries.
+    const skf = c.spellsKnownProgressionFixed;
+    const book = Array.isArray(skf)
+      ? (skf as number[]).slice(0, Math.max(0, cls.level)).reduce((a, b) => a + b, 0)
+      : null;
+
     let kind: CasterKind;
     let spells: number | null;
     if (typeof c.preparedSpells === 'string') {
@@ -119,7 +143,8 @@ export function casterClasses(
       ability: isAbility(ability) ? ability : 'int',
       kind,
       cantrips,
-      spells
+      spells,
+      book
     });
   }
   return out;
@@ -135,6 +160,11 @@ interface SpellRef {
 export function assignSpellCounts(casters: CasterClass[], spells: SpellRef[]): ClassSpellCount[] {
   const cantripUsed = new Map<string, number>(casters.map((c) => [c.name, 0]));
   const spellUsed = new Map<string, number>(casters.map((c) => [c.name, 0]));
+  // Spellbook tally: leveled spells assigned to a book class regardless of
+  // prepared status. A leveled spell counts toward a book class whenever it can
+  // only be cast/recorded by book classes (e.g. a Wizard-only spell), even if it
+  // doesn't consume a prepared slot.
+  const bookUsed = new Map<string, number>(casters.map((c) => [c.name, 0]));
 
   const fits = (s: SpellRef, name: string) =>
     s.classes.length === 0 || s.classes.some((cn) => lc(cn) === lc(name));
@@ -169,6 +199,16 @@ export function assignSpellCounts(casters: CasterClass[], spells: SpellRef[]): C
     else pool = prepared.length ? [] : known; // known by a prepared caster → free
     const pick = mostRoom(pool, spellUsed, (c) => c.spells);
     if (pick) spellUsed.set(pick.name, (spellUsed.get(pick.name) ?? 0) + 1);
+
+    // Spellbook: any leveled spell that fits a book class is recorded in it,
+    // regardless of prepared status. Prefer the book class the prepared slot
+    // went to (when any), else the fitting book class with the most room.
+    const bookCands = fitting.filter((c) => c.book != null);
+    if (bookCands.length) {
+      const bookPick =
+        pick && pick.book != null ? pick : mostRoom(bookCands, bookUsed, (c) => c.book);
+      if (bookPick) bookUsed.set(bookPick.name, (bookUsed.get(bookPick.name) ?? 0) + 1);
+    }
   }
 
   return casters.map((c) => ({
@@ -177,6 +217,8 @@ export function assignSpellCounts(casters: CasterClass[], spells: SpellRef[]): C
     cantripsUsed: cantripUsed.get(c.name) ?? 0,
     cantripLimit: c.cantrips,
     spellsUsed: spellUsed.get(c.name) ?? 0,
-    spellLimit: c.spells
+    spellLimit: c.spells,
+    bookUsed: bookUsed.get(c.name) ?? 0,
+    bookLimit: c.book
   }));
 }

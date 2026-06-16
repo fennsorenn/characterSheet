@@ -166,6 +166,9 @@
               {#if cc.spellLimit != null}
                 <span class:over={over(cc.spellsUsed, cc.spellLimit)} title="{cc.name} {cc.kind === 'prepared' ? 'prepared' : 'known'} leveled spells / limit">· {cc.spellsUsed}/{cc.spellLimit} {cc.kind === 'prepared' ? 'prep' : 'known'}</span>
               {/if}
+              {#if cc.bookLimit != null}
+                <span class="book" title="{cc.name} spellbook — leveled spells recorded / level total (wizards copy extra spells in, so exceeding this is normal)">· {cc.bookUsed}/{cc.bookLimit} book</span>
+              {/if}
             </span>
           {/each}
           {#if counts.favorite}<span title="Favorites — kept handy for swapping">★{counts.favorite}</span>{/if}
@@ -269,6 +272,9 @@
   .clsgrp { display: inline-flex; gap: 0.25rem; align-items: baseline; }
   .clsname { font-weight: 700; color: var(--fg); text-transform: none; }
   .counts .over { color: #d2645a; font-weight: 600; }
+  /* Spellbook count is informational — wizards copy extra spells in, so going
+     over is expected; keep it muted, never the red over-limit style. */
+  .counts .book { color: var(--muted); font-style: italic; }
   .empty { color: var(--muted); font-size: 0.85rem; margin: 0; }
 
   .statusfilter { display: flex; gap: 0.3rem; margin-bottom: 0.4rem; }
