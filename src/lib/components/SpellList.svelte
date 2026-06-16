@@ -1,6 +1,7 @@
 <script lang="ts">
   import { character, graph, setSpellStatus, setSpellGranted, removeSpell } from '../stores/character.js';
   import { catalogLookup, catalogState } from '../stores/catalog.js';
+  import { openDetail } from '../stores/detail.js';
   import {
     spellTags,
     spellStatus,
@@ -137,6 +138,12 @@
     })
   );
 
+  function openSpellDetail(r: Row, el: Element) {
+    const entry = $catalogLookup.getSpell(r.name, r.source);
+    // Anchor to the whole block so the window opens beside the list, not over it.
+    if (entry) openDetail('spell', entry, el.closest('.cell') ?? el);
+  }
+
   function toggleTag(id: string) {
     const next = new Set(selectedTags);
     next.has(id) ? next.delete(id) : next.add(id);
@@ -225,7 +232,7 @@
                 onclick={() => setSpellStatus(r.index!, r.status === 'favorite' ? 'known' : 'favorite')}
               >★</button>
             {/if}
-            <span class="name">{r.name}</span>
+            <button class="name" title="Show details" onclick={(e) => openSpellDetail(r, e.currentTarget)}>{r.name}</button>
             <span class="lvl">{r.level}</span>
             {#if r.grantedBy}
               <span class="src gby" title="Granted by">{r.grantedBy}</span>
@@ -294,7 +301,8 @@
   .status { width: 1.3rem; height: 1.3rem; flex: none; font: inherit; font-size: 0.8rem; line-height: 1; border: 1px solid var(--line); background: var(--bg); color: var(--muted); border-radius: 4px; cursor: pointer; }
   .status.on { background: var(--accent); border-color: var(--accent); color: #fff; }
   .status.gicon { border: none; background: none; color: var(--accent); cursor: default; }
-  .name { flex: 1; font-weight: 500; }
+  .name { flex: 1; font-weight: 500; text-align: left; background: none; border: none; padding: 0; color: var(--fg); font: inherit; cursor: pointer; }
+  .name:hover { color: var(--accent); }
   .lvl { font-size: 0.72rem; color: var(--accent); }
   .src { font-size: 0.68rem; text-transform: uppercase; color: var(--muted); }
   .src.gby { text-transform: none; font-style: italic; color: var(--accent); }

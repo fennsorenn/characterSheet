@@ -7,6 +7,7 @@
     removeInventoryItem
   } from '../stores/character.js';
   import { catalogLookup } from '../stores/catalog.js';
+  import { openDetail } from '../stores/detail.js';
   import { ATTUNEMENT_LIMIT, iconForItem, iconLabel } from '../character/index.js';
   import NumberField from './NumberField.svelte';
   import Icon from './Icon.svelte';
@@ -16,6 +17,12 @@
   const attunedCount = $derived($character.inventory.filter((i) => i.attuned).length);
   const needsAttune = (name: string, source: string) =>
     !!$catalogLookup.getItem(name, source)?.reqAttune;
+
+  function openItemDetail(name: string, source: string, el: Element) {
+    const entry = $catalogLookup.getItem(name, source);
+    // Anchor to the whole block so the window opens beside the list, not over it.
+    if (entry) openDetail('item', entry, el.closest('.cell') ?? el);
+  }
 
   // Icon for an item — uses the catalog entry's type/dmgType when available,
   // otherwise resolves from the name alone.
@@ -61,7 +68,7 @@
             <NumberField value={item.quantity} min={0} onchange={(v) => setItemQuantity(i, v)} />
           </span>
           <span class="itemicon" title={iconLabel(ic)}><Icon name={ic} /></span>
-          <span class="name" class:equipped={item.equipped}>{item.name}</span>
+          <button class="name" class:equipped={item.equipped} title="Show details" onclick={(e) => openItemDetail(item.name, item.source, e.currentTarget)}>{item.name}</button>
           {#if needsAttune(item.name, item.source)}
             <button
               class="attune"
@@ -100,7 +107,8 @@
   .qty { width: 2.5ch; }
   .itemicon { color: var(--muted); display: inline-flex; }
   .itemicon :global(.icon) { width: 1.05rem; height: 1.05rem; }
-  .name { flex: 1; }
+  .name { flex: 1; text-align: left; background: none; border: none; padding: 0; color: var(--fg); font: inherit; cursor: pointer; }
+  .name:hover { color: var(--accent); }
   .name.equipped { font-weight: 600; }
   .src { font-size: 0.7rem; text-transform: uppercase; color: var(--muted); }
   .note { font-size: 0.75rem; color: var(--accent); }
