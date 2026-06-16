@@ -6,11 +6,14 @@ export default async function ({ page }) {
   const traits = cell(page, 'Traits & Proficiencies');
   assert((await traits.count()) === 1, 'Traits & Proficiencies block is present');
 
-  const conInput = page.locator('.ability', { hasText: 'Con' }).first().locator('input').first();
+  const conInput = page.locator('.ability', { hasText: 'Con' }).first().locator('.base input').first();
   await browseAdd(page, 'race', 'Dwarf');
 
-  const conEff = await page.locator('.ability', { hasText: 'Con' }).first().locator('.eff .value').innerText();
-  assert(conEff === '12', `Dwarf grants +2 Con (effective ${conEff})`);
+  // Racial bonuses are PERSISTENT, so the score shows as a plain number (no badge).
+  const conCell = page.locator('.ability', { hasText: 'Con' }).first();
+  const conEff = await conCell.locator('.persistent').first().innerText();
+  assert(conEff === '12', `Dwarf grants +2 Con (effective ${conEff}, shown plain)`);
+  assert((await conCell.locator('.eff').count()) === 0, 'persistent racial bonus shows no fleeting badge');
   assert((await conInput.inputValue()) === '10', 'base Con stays 10 (non-destructive)');
 
   const rows = (await traits.locator('.row').allInnerTexts()).join(' | ');
@@ -29,7 +32,7 @@ export default async function ({ page }) {
   await page.waitForTimeout(200);
   assert((await resRow.locator('.pbadge').count()) === 0, 'Resilient pending badge clears after both picks');
 
-  const conEff2 = await page.locator('.ability', { hasText: 'Con' }).first().locator('.eff .value').innerText();
+  const conEff2 = await conCell.locator('.persistent').first().innerText();
   assert(conEff2 === '13', `Con = 10 + 2 (Dwarf) + 1 (Resilient) = 13 (got ${conEff2})`);
 
   const saves = cell(page, 'Saving Throws');
