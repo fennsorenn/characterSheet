@@ -1,6 +1,8 @@
 <script lang="ts">
   import { character, rest, spendHitDie, adjustHitDie } from '../stores/character.js';
-  import { conModifier, hpGainAverage, hpGainRoll, totalHpGain } from '../character/index.js';
+  import { conModifier, hpGainAverage, totalHpGain } from '../character/index.js';
+  import { rollParts } from '../stores/dice.js';
+  import { rollTerms } from '../dice/dice.js';
   import PipTracker from './PipTracker.svelte';
   import LevelUpModal from './LevelUpModal.svelte';
 
@@ -17,10 +19,16 @@
     return totalHpGain(hpGainAverage(die), conModifier($character));
   }
 
-  // Roll one die of this size, heal (roll + CON, min 1), and flash the result.
+  // Roll one die of this size in the dice roller (so it lands in the log), heal
+  // by the result (+ CON, min 1), and flash the amount.
   function rollFor(die: number): void {
-    const heal = totalHpGain(hpGainRoll(die), conModifier($character));
+    const con = conModifier($character);
+    const part = rollTerms([{ count: 1, faces: die }], con, `Hit Die d${die}`, {
+      modifierLabel: `CON ${con >= 0 ? '+' : '−'}${Math.abs(con)}`
+    });
+    const heal = Math.max(1, part.total);
     spendHitDie(die, heal);
+    rollParts(`Hit Die d${die}`, [part]);
     rolled[die] = heal;
     clearTimeout(rollTimers[die]);
     rollTimers[die] = setTimeout(() => {

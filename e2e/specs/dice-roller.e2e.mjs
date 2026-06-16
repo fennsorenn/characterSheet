@@ -53,4 +53,20 @@ export default async function ({ page, baseUrl }) {
   await cell(page, 'Spells').filter({ has: page.locator('button.roll') }).first().locator('li', { hasText: 'Fireball' }).locator('button.roll').first().click();
   await page.waitForTimeout(150);
   assert((await roller.locator('.gtitle').innerText()).toUpperCase() === 'FIREBALL', 'spell roll works');
+
+  // Hit-dice roll lands in the roller/log too (with the die + CON).
+  await page.evaluate(() => {
+    const c = JSON.parse(localStorage.getItem('charactersheet.character'));
+    c.abilities.con = 14;
+    c.hp = { max: 44, current: 20, temp: 0 };
+    c.hitDice = [{ die: 10, max: 5, used: 0 }];
+    localStorage.setItem('charactersheet.character', JSON.stringify(c));
+  });
+  await page.goto(baseUrl, { waitUntil: 'networkidle' });
+  await page.waitForSelector('.data-toggle:has-text("Data ✓")', { timeout: 60000 });
+  await page.locator('header.top button', { hasText: 'Dice' }).click();
+  await cell(page, 'Rest & Level Up').locator('button.roll', { hasText: 'Roll' }).first().click();
+  await page.waitForTimeout(150);
+  assert((await roller.locator('.gtitle').innerText()).toUpperCase() === 'HIT DIE D10', 'hit-dice roll shows in the roller');
+  assert(/CON/.test((await roller.locator('.latest .mod').getAttribute('title')) ?? ''), 'hit-dice roll includes the CON modifier');
 }
