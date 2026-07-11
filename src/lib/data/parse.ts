@@ -7,6 +7,7 @@ import {
 import { expandVariants } from './variants.js';
 import { annotateSpellClasses } from './spellSources.js';
 import { asNamedEntries } from './entries.js';
+import { flattenRaces } from './mergeRace.js';
 
 /**
  * Build a {@link Catalog} from an unpacked data tree.
@@ -22,10 +23,13 @@ export function parseCatalog(reader: DataReader, version: string): Catalog {
 
   catalog.entries.feat = readArray(reader, 'feats.json', 'feat');
   catalog.entries.background = readArray(reader, 'backgrounds.json', 'background');
-  catalog.entries.race = [
-    ...readArray(reader, 'races.json', 'race'),
-    ...readArray(reader, 'races.json', 'subrace')
-  ];
+  // Races: 5etools splits a playable race into a base race + subraces that merge
+  // onto it. Flatten to single complete entries (see flattenRaces). Subraces are
+  // read raw (not name-filtered) because the "standard" variant is nameless.
+  catalog.entries.race = flattenRaces(
+    readArray(reader, 'races.json', 'race'),
+    readRaw(reader, 'races.json', 'subrace')
+  );
   catalog.entries.action = readArray(reader, 'actions.json', 'action');
   catalog.entries.optionalfeature = readArray(
     reader,
@@ -58,6 +62,13 @@ export function parseCatalog(reader: DataReader, version: string): Catalog {
 function readArray(reader: DataReader, path: string, prop: string): NamedEntry[] {
   const data = reader.json<Record<string, unknown>>(path);
   return asNamedEntries(data?.[prop]);
+}
+
+/** Read `prop` as a raw object array, without the name+source filter. */
+function readRaw(reader: DataReader, path: string, prop: string): Record<string, unknown>[] {
+  const data = reader.json<Record<string, unknown>>(path);
+  const value = data?.[prop];
+  return Array.isArray(value) ? (value.filter((e) => e && typeof e === 'object') as Record<string, unknown>[]) : [];
 }
 
 /**

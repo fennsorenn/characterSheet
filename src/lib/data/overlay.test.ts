@@ -41,12 +41,15 @@ describe('parseOverlayEntries', () => {
     expect(entries.feat.map((f) => f.name)).toEqual(['Telepath']);
   });
 
-  it('combines race and subrace into the race category', () => {
+  it('merges a subrace onto its base race with a composed name', () => {
     const { entries } = parseOverlayEntries({
-      race: [{ name: 'Hexling', source: 'X' }],
-      subrace: [{ name: 'Fiendish', source: 'X', raceName: 'Hexling' }]
+      race: [{ name: 'Hexling', source: 'X', ability: [{ cha: 2 }] }],
+      subrace: [{ name: 'Fiendish', source: 'X', raceName: 'Hexling', ability: [{ int: 1 }] }]
     });
-    expect(entries.race.map((r) => r.name).sort()).toEqual(['Fiendish', 'Hexling']);
+    // Base Hexling has a subrace, so it's represented by the merged child only.
+    expect(entries.race.map((r) => r.name)).toEqual(['Hexling (Fiendish)']);
+    // Both ability blocks flow through (base Cha +2, subrace Int +1).
+    expect(entries.race[0].ability).toEqual([{ cha: 2 }, { int: 1 }]);
   });
 
   it('combines the condition/disease/status family', () => {

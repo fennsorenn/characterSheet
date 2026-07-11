@@ -6,6 +6,7 @@ import {
 } from './catalog.js';
 import { asNamedEntries } from './entries.js';
 import { expandVariants } from './variants.js';
+import { flattenRaces } from './mergeRace.js';
 
 /**
  * Overlay content — a single loose 5etools JSON file (a UA/prerelease or
@@ -36,6 +37,14 @@ function prop(doc: OverlayDoc, name: string): NamedEntry[] {
   return asNamedEntries(doc[name]);
 }
 
+/** Read one prop as a raw object array (no name+source filter). */
+function rawProp(doc: OverlayDoc, name: string): Record<string, unknown>[] {
+  const value = doc[name];
+  return Array.isArray(value)
+    ? (value.filter((e) => e && typeof e === 'object') as Record<string, unknown>[])
+    : [];
+}
+
 /**
  * Build overlay categories from a parsed JSON document. Categories that combine
  * several props (race + subrace, the item family, the condition family) follow
@@ -50,7 +59,7 @@ export function parseOverlayEntries(doc: OverlayDoc): {
 
   entries.feat = prop(doc, 'feat');
   entries.background = prop(doc, 'background');
-  entries.race = [...prop(doc, 'race'), ...prop(doc, 'subrace')];
+  entries.race = flattenRaces(prop(doc, 'race'), rawProp(doc, 'subrace'));
   entries.action = prop(doc, 'action');
   entries.optionalfeature = prop(doc, 'optionalfeature');
   entries.condition = [
