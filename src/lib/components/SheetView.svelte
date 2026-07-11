@@ -17,6 +17,7 @@
   import DetailWindow from './DetailWindow.svelte';
   import DiceRoller from './DiceRoller.svelte';
   import Icon from './Icon.svelte';
+  import UiIcon from './UiIcon.svelte';
 
   // Where "← Back" returns: the owning overview.
   let { backTo = '/local' }: { backTo?: string } = $props();
@@ -33,7 +34,7 @@
       <button class="data-toggle" title="Dice roller" onclick={() => diceOpen.update((o) => !o)}><Icon name="dice" /> Dice</button>
       <button class="data-toggle" onclick={openPrint}>Print / PDF</button>
       <button class="data-toggle" onclick={() => (showData = !showData)}>
-        {$catalogState.catalog ? 'Data ✓' : 'Load data'}
+        {#if $catalogState.catalog}Data <UiIcon name="check" size="0.85em" />{:else}Load data{/if}
       </button>
     </div>
   </header>

@@ -8,7 +8,8 @@ were made.
 
 The basic-UI icons in `src/lib/components/uiIcons.generated.ts` are from
 [Lucide](https://lucide.dev/) ([ISC License](https://github.com/lucide-icons/lucide/blob/main/LICENSE)):
-close, check, chevron-down, chevron-right, pencil, arrow-up, arrow-down, star.
+close, check, chevron-down, chevron-right, pencil, arrow-up, arrow-down, star,
+flag, eye, eye-off.
 Only the inner path markup is vendored; the SVG shell is supplied at render time.
 
 Icons used, by author:

@@ -35,7 +35,6 @@
   import { parseTaggedString, renderToHtml } from '../render/tags.js';
   import AsiEditor from './AsiEditor.svelte';
   import GrantChoiceEditor from './GrantChoiceEditor.svelte';
-  import Icon from './Icon.svelte';
   import UiIcon from './UiIcon.svelte';
   import { scrollStyle, resizePersist } from './scrollCell.js';
 
@@ -192,7 +191,7 @@
       {/each}
       <span class="spacer"></span>
       <button class="mini" title="Add tag" onclick={() => addTag(f)}>#</button>
-      <button class="mini" title={hideable ? 'Hide' : 'Unhide'} onclick={() => setFeatureHidden(metaKey(f), hideable)}><Icon name={hideable ? 'invisible' : 'vision'} /></button>
+      <button class="mini" title={hideable ? 'Hide' : 'Unhide'} onclick={() => setFeatureHidden(metaKey(f), hideable)}><UiIcon name={hideable ? 'eye-off' : 'eye'} /></button>
       <button class="mini" title={expanded.has(featKey(f)) ? 'Collapse' : 'Expand'} onclick={() => toggleExpand(f)}><UiIcon name={expanded.has(featKey(f)) ? 'chevron-down' : 'chevron-right'} /></button>
     </div>
 

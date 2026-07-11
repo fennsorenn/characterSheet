@@ -297,7 +297,7 @@
                 class:on={r.grantedBy}
                 title={r.grantedBy ? 'Unmark granted' : 'Mark as granted by a feature/item'}
                 onclick={() => setSpellGranted(r.index!, r.grantedBy ? undefined : 'Feature')}
-              >⚑</button>
+              ><UiIcon name="flag" filled={!!r.grantedBy} /></button>
               <button class="rm" aria-label="Remove" onclick={() => removeSpell(r.index!)}><UiIcon name="close" size="0.85em" /></button>
             {/if}
           </div>
