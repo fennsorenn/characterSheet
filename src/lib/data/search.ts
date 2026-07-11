@@ -33,6 +33,11 @@ export class SearchIndex {
   constructor(catalog: Catalog) {
     for (const category of Object.keys(catalog.entries) as Category[]) {
       for (const entry of catalog.entries[category]) {
+        // Generated magic-item variants (+1 X, X of Fire Resistance, …) stay in
+        // the catalog so an equipped one resolves its effects, but are excluded
+        // from search to avoid flooding results — they're added via the
+        // per-base "Add variant" picker instead.
+        if (entry._isVariant) continue;
         this.items.push({ category, entry, haystack: normalize(entry.name) });
       }
     }
@@ -66,6 +71,17 @@ function normalize(s: string): string {
   return s.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').trim();
 }
 
+/**
+ * Order-independent token filter for simple lists (e.g. the variant picker):
+ * every whitespace-separated token in `query` must appear in `text`, in any
+ * order — so "mail chain" matches "Chain Mail". Empty query matches everything.
+ */
+export function tokenMatch(text: string, query: string): boolean {
+  const h = normalize(text);
+  const tokens = normalize(query).split(/\s+/).filter(Boolean);
+  return tokens.every((t) => h.includes(t));
+}
+
 /** Higher is better; 0 means no match. */
 function scoreMatch(haystack: string, query: string): number {
   if (haystack === query) return 100;
@@ -74,6 +90,11 @@ function scoreMatch(haystack: string, query: string): number {
   const boundary = new RegExp(`(^|[^a-z0-9])${escapeRegExp(query)}`).test(haystack);
   if (boundary) return 60;
   if (haystack.includes(query)) return 40;
+  // Token fallback: every whitespace-separated token appears somewhere, in any
+  // order — so "mail chain" still finds "Chain Mail". Scored below any
+  // whole-query match so contiguous matches always rank first.
+  const tokens = query.split(/\s+/).filter(Boolean);
+  if (tokens.length > 1 && tokens.every((t) => haystack.includes(t))) return 20;
   return 0;
 }
 

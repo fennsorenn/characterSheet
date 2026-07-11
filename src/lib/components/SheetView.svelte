@@ -13,6 +13,7 @@
   import SpellPicker from './SpellPicker.svelte';
   import OptionalFeaturePicker from './OptionalFeaturePicker.svelte';
   import FeatPicker from './FeatPicker.svelte';
+  import VariantPicker from './VariantPicker.svelte';
   import DetailWindow from './DetailWindow.svelte';
   import DiceRoller from './DiceRoller.svelte';
   import Icon from './Icon.svelte';
@@ -55,6 +56,7 @@
 <SpellPicker />
 <OptionalFeaturePicker />
 <FeatPicker />
+<VariantPicker />
 <DetailWindow />
 <DiceRoller />
 
