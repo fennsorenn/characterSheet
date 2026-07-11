@@ -1,33 +1,51 @@
-import { writable, derived, get } from 'svelte/store';
+import { writable, derived } from 'svelte/store';
 import {
   loadFromFile,
   loadFromUrl,
   loadCachedCatalog,
   clearCachedCatalogs,
   SearchIndex,
+  composeCatalog,
+  parseOverlay,
+  isEmptyOverlay,
+  saveOverlay,
+  loadOverlays,
+  deleteOverlay,
+  clearOverlays,
+  fetchRepoFile,
+  type Overlay,
+  type RepoConfig,
+  type RepoSource,
   type Catalog,
   type NamedEntry,
   type LoadStage
 } from '../data/index.js';
 
 /**
- * Reactive wrapper around the data layer. The catalog and its search index live
- * here so any component can react to load state; the heavy lifting stays in the
+ * Reactive wrapper around the data layer. Holds the base catalog plus any active
+ * prerelease/homebrew overlays, and composes them into the single catalog every
+ * consumer (search, lookups, calc graph) reads. The heavy lifting stays in the
  * framework-agnostic data modules.
  */
 
 export interface CatalogState {
-  catalog: Catalog | null;
+  /** The base dataset (5etools release), before overlays. */
+  base: Catalog | null;
+  /** Active prerelease/homebrew overlays layered on top of the base. */
+  overlays: Overlay[];
   stage: LoadStage | 'idle' | 'error';
   error: string | null;
 }
 
-const state = writable<CatalogState>({ catalog: null, stage: 'idle', error: null });
+const state = writable<CatalogState>({ base: null, overlays: [], stage: 'idle', error: null });
 
-/** Search index rebuilt whenever the catalog changes. */
-export const searchIndex = derived(state, ($s) =>
-  $s.catalog ? new SearchIndex($s.catalog) : null
+/** The composed catalog: base + overlays. Null until a base dataset is loaded. */
+const composed = derived(state, ($s) =>
+  $s.base ? composeCatalog($s.base, $s.overlays) : null
 );
+
+/** Search index rebuilt whenever the composed catalog changes. */
+export const searchIndex = derived(composed, ($c) => ($c ? new SearchIndex($c) : null));
 
 const itemKey = (name: string, source: string) =>
   `${name.toLowerCase()}|${source.toLowerCase()}`;
@@ -36,15 +54,15 @@ const itemKey = (name: string, source: string) =>
  * Item lookup for the calc graph — equipped items resolve their mechanical
  * effects (armor AC, magic bonuses) through this. Rebuilt with the catalog.
  */
-export const catalogLookup = derived(state, ($s) => {
+export const catalogLookup = derived(composed, ($c) => {
   const items = new Map<string, NamedEntry>();
   const feats = new Map<string, NamedEntry>();
   const spells = new Map<string, NamedEntry>();
   const spellsByName = new Map<string, NamedEntry>();
-  if ($s.catalog) {
-    for (const item of $s.catalog.entries.item) items.set(itemKey(item.name, item.source), item);
-    for (const feat of $s.catalog.entries.feat) feats.set(itemKey(feat.name, feat.source), feat);
-    for (const spell of $s.catalog.entries.spell) {
+  if ($c) {
+    for (const item of $c.entries.item) items.set(itemKey(item.name, item.source), item);
+    for (const feat of $c.entries.feat) feats.set(itemKey(feat.name, feat.source), feat);
+    for (const spell of $c.entries.spell) {
       spells.set(itemKey(spell.name, spell.source), spell);
       const n = spell.name.toLowerCase();
       if (!spellsByName.has(n)) spellsByName.set(n, spell); // first wins
@@ -58,23 +76,32 @@ export const catalogLookup = derived(state, ($s) => {
   };
 });
 
-export const catalogState = { subscribe: state.subscribe };
+/**
+ * Back-compat façade: consumers read `$catalogState.catalog` (the composed
+ * catalog) exactly as before overlays existed, plus `overlays` for the manager.
+ */
+export const catalogState = derived([state, composed], ([$s, $c]) => ({
+  catalog: $c,
+  overlays: $s.overlays,
+  stage: $s.stage,
+  error: $s.error
+}));
 
 function track(stage: LoadStage) {
   state.update((s) => ({ ...s, stage }));
 }
 
 async function run(load: () => Promise<Catalog>) {
-  state.set({ catalog: get(state).catalog, stage: 'downloading', error: null });
+  state.update((s) => ({ ...s, stage: 'downloading', error: null }));
   try {
-    const catalog = await load();
-    state.set({ catalog, stage: 'done', error: null });
+    const base = await load();
+    state.update((s) => ({ ...s, base, stage: 'done', error: null }));
   } catch (err) {
-    state.set({
-      catalog: get(state).catalog,
+    state.update((s) => ({
+      ...s,
       stage: 'error',
       error: err instanceof Error ? err.message : String(err)
-    });
+    }));
   }
 }
 
@@ -86,13 +113,66 @@ export function importUrl(url: string) {
   return run(() => loadFromUrl(url, { onProgress: track }));
 }
 
-/** Restore a previously cached catalog on startup, if present. */
+/** Restore a previously cached base catalog and overlays on startup, if present. */
 export async function restoreCached() {
-  const cached = await loadCachedCatalog();
-  if (cached) state.set({ catalog: cached, stage: 'done', error: null });
+  const [base, overlays] = await Promise.all([loadCachedCatalog(), loadOverlays()]);
+  state.update((s) => ({
+    ...s,
+    base: base ?? s.base,
+    overlays: overlays.length ? overlays : s.overlays,
+    stage: base ? 'done' : s.stage
+  }));
 }
 
 export async function resetCatalog() {
   await clearCachedCatalogs();
-  state.set({ catalog: null, stage: 'idle', error: null });
+  state.update((s) => ({ ...s, base: null, stage: 'idle', error: null }));
+}
+
+// ── Overlay (prerelease/homebrew) management ────────────────────────────────
+
+/** Add an overlay from an already-parsed document, persisting and activating it. */
+async function addOverlay(overlay: Overlay): Promise<void> {
+  await saveOverlay(overlay);
+  state.update((s) => ({
+    ...s,
+    // Replace any existing overlay with the same source id.
+    overlays: [...s.overlays.filter((o) => o.sourceId !== overlay.sourceId), overlay]
+  }));
+}
+
+/** Fetch a source from a repo index, parse it, and activate it as an overlay. */
+export async function addOverlayFromRepo(config: RepoConfig, source: RepoSource): Promise<void> {
+  const doc = await fetchRepoFile(config, source.path);
+  const overlay = parseOverlay(doc, source.sourceId, source.name);
+  if (isEmptyOverlay(overlay)) {
+    throw new Error(`"${source.name}" has no content this app can use.`);
+  }
+  await addOverlay(overlay);
+}
+
+/** Parse a user-picked JSON file and activate it as an overlay. */
+export async function addOverlayFromFile(file: File): Promise<void> {
+  const doc = JSON.parse(await file.text()) as Record<string, unknown>;
+  // Prefer the file's declared source id; fall back to the filename.
+  const meta = (doc._meta as { sources?: { json?: string; full?: string }[] } | undefined);
+  const src = meta?.sources?.[0];
+  const sourceId = src?.json ?? file.name.replace(/\.json$/i, '');
+  const overlay = parseOverlay(doc, sourceId, src?.full ?? sourceId);
+  if (isEmptyOverlay(overlay)) {
+    throw new Error(`"${file.name}" has no content this app can use.`);
+  }
+  await addOverlay(overlay);
+}
+
+/** Remove an active overlay by source id. */
+export async function removeOverlay(sourceId: string): Promise<void> {
+  await deleteOverlay(sourceId);
+  state.update((s) => ({ ...s, overlays: s.overlays.filter((o) => o.sourceId !== sourceId) }));
+}
+
+/** Remove all overlays. */
+export async function removeAllOverlays(): Promise<void> {
+  await clearOverlays();
+  state.update((s) => ({ ...s, overlays: [] }));
 }

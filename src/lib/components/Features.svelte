@@ -368,7 +368,7 @@
   .ctag { display: inline-flex; align-items: center; gap: 0.1rem; font-size: 0.72rem; padding: 0.05rem 0.4rem; border: 1px solid var(--line); border-radius: 999px; }
   .classchip { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.1rem 0.3rem 0.1rem 0.5rem; border: 1px solid var(--line); border-radius: 8px; }
   .classchip .cname { font-weight: 600; font-size: 0.78rem; }
-  .classchip .lvl { width: 3ch; font: inherit; font-size: 0.76rem; text-align: center; padding: 0.05rem 0.1rem; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--fg); }
+  .classchip .lvl { width: 6ch; min-width: 6ch; font: inherit; font-size: 0.76rem; text-align: center; padding: 0.05rem 0.25rem; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--fg); }
   .classchip .sub { font-size: 0.72rem; max-width: 11rem; }
   .x { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.95rem; line-height: 1; padding: 0; }
   .x:hover { color: var(--accent); }

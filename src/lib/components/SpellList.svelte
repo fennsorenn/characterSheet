@@ -267,7 +267,7 @@
               <span class="src">{r.source}</span>
             {/if}
             {#if r.dmg}
-              <button class="roll" title="Roll {r.dmg.isAttack ? 'attack + ' : ''}damage ({r.dmg.dice})" aria-label="Roll {r.name}" onclick={() => rollSpell(r)}>⚄</button>
+              <button class="roll" title="Roll {r.dmg.isAttack ? 'attack + ' : ''}damage ({r.dmg.dice})" aria-label="Roll {r.name}" onclick={() => rollSpell(r)}><Icon name="dice" /></button>
             {/if}
             {#if r.index !== null}
               <button

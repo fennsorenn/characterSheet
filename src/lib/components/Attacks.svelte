@@ -94,7 +94,7 @@
             title={a.proficient ? 'Proficient' : 'Not proficient'}
             onclick={() => setItemProficient(idx, !a.proficient)}
           >prof</button>
-          <button class="roll" title="Roll attack + damage" aria-label="Roll {a.name}" onclick={() => rollAttack(a)}>⚄</button>
+          <button class="roll" title="Roll attack + damage" aria-label="Roll {a.name}" onclick={() => rollAttack(a)}><Icon name="dice" /></button>
         </li>
       {/each}
     </ul>

@@ -5,6 +5,7 @@
   import { rollTerms } from '../dice/dice.js';
   import PipTracker from './PipTracker.svelte';
   import LevelUpModal from './LevelUpModal.svelte';
+  import Icon from './Icon.svelte';
 
   let { variant = 'full' }: { variant?: string } = $props();
 
@@ -71,7 +72,7 @@
           title="Roll the die to heal (roll + CON)"
           onclick={() => rollFor(pool.die)}
         >
-          Roll ⚄
+          Roll <Icon name="dice" />
         </button>
         {#if rolled[pool.die] != null}
           <span class="rolled" aria-live="polite">+{rolled[pool.die]}</span>

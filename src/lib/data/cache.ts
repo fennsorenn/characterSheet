@@ -11,7 +11,12 @@ import type { Catalog } from './catalog.js';
 
 const DB_NAME = 'charactersheet';
 const STORE = 'catalog';
+const OVERLAY_STORE = 'overlays';
 const CURRENT_KEY = '__current__';
+// Bumped to 2 to add the `overlays` store (see overlayCache.ts). Both modules
+// open the shared database at the same version with the same upgrade so neither
+// blocks the other's schema.
+const DB_VERSION = 2;
 
 function hasIndexedDB(): boolean {
   return typeof indexedDB !== 'undefined';
@@ -19,11 +24,11 @@ function hasIndexedDB(): boolean {
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 1);
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
     req.onupgradeneeded = () => {
-      if (!req.result.objectStoreNames.contains(STORE)) {
-        req.result.createObjectStore(STORE);
-      }
+      const db = req.result;
+      if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
+      if (!db.objectStoreNames.contains(OVERLAY_STORE)) db.createObjectStore(OVERLAY_STORE);
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);

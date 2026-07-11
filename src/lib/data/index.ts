@@ -5,6 +5,30 @@ export { expandVariants } from './variants.js';
 export { readerFromZip, readerFromFiles } from './zip.js';
 export { SearchIndex, type SearchHit, type SearchOptions } from './search.js';
 export { saveCatalog, loadCachedCatalog, clearCachedCatalogs } from './cache.js';
+export { composeCatalog } from './compose.js';
+export {
+  parseOverlay,
+  parseOverlayEntries,
+  isEmptyOverlay,
+  type Overlay
+} from './overlay.js';
+export {
+  saveOverlay,
+  loadOverlays,
+  deleteOverlay,
+  clearOverlays
+} from './overlayCache.js';
+export {
+  fetchRepoIndex,
+  fetchRepoFile,
+  supportedProps,
+  mergeRepoIndex,
+  propsByPath,
+  REPO_PRESETS,
+  SUPPORTED_PROPS,
+  type RepoConfig,
+  type RepoSource
+} from './repoIndex.js';
 export {
   loadFromBytes,
   loadFromFile,

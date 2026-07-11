@@ -1,6 +1,7 @@
 <script lang="ts">
   import { catalogState, importFile, importUrl, resetCatalog } from '../stores/catalog.js';
   import { CATEGORIES } from '../data/index.js';
+  import PrereleaseManager from './PrereleaseManager.svelte';
 
   let url = $state(
     'https://github.com/5etools-mirror-3/5etools-src/releases/download/v2.30.0/5etools-v2.30.0.zip'
@@ -38,6 +39,8 @@
       </ul>
       <button onclick={resetCatalog}>Load different data</button>
     </div>
+    <hr class="sep" />
+    <PrereleaseManager />
   {:else}
     <p class="intro">
       This app ships without game data. Supply the 5etools release zip to begin —
@@ -113,4 +116,5 @@
   .counts span { color: var(--fg); font-weight: 600; margin-right: 0.25rem; }
   .status { color: var(--muted); }
   .status.error { color: var(--accent); }
+  .sep { border: none; border-top: 1px solid var(--line); margin: 1rem 0; }
 </style>

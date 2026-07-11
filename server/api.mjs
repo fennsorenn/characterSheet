@@ -53,8 +53,40 @@ function clearSession(res) {
 export function apiMiddleware(req, res, next) {
   const url = new URL(req.url, 'http://localhost');
   const path = url.pathname;
+  if (path === '/api/fetch') {
+    proxyFetch(req, res, url).catch((e) => sendJson(res, 502, { error: `Proxy fetch failed: ${e?.message ?? e}` }));
+    return;
+  }
   if (!path.startsWith('/api/auth') && !path.startsWith('/api/characters')) return next();
   handle(req, res, path).catch((e) => sendJson(res, 500, { error: String(e?.message ?? e) }));
+}
+
+/**
+ * CORS-bypass proxy so the frontend can load a release zip or a prerelease/brew
+ * JSON supplied by URL. Only https URLs are proxied; the upstream body is
+ * streamed straight back to the browser. Lives here (not just in the Express
+ * entry) so it works under the Vite dev server too.
+ */
+async function proxyFetch(req, res, url) {
+  const target = url.searchParams.get('url');
+  if (typeof target !== 'string' || !/^https:\/\//i.test(target)) {
+    return sendJson(res, 400, { error: 'A valid https url is required.' });
+  }
+  const upstream = await fetch(target, { redirect: 'follow' });
+  if (!upstream.ok || !upstream.body) {
+    return sendJson(res, 502, { error: `Upstream responded ${upstream.status}` });
+  }
+  res.statusCode = 200;
+  res.setHeader('Content-Type', upstream.headers.get('content-type') ?? 'application/octet-stream');
+  const length = upstream.headers.get('content-length');
+  if (length) res.setHeader('Content-Length', length);
+  const reader = upstream.body.getReader();
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    res.write(value);
+  }
+  res.end();
 }
 
 async function handle(req, res, path) {

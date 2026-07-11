@@ -9,6 +9,7 @@
     clearLog
   } from '../stores/dice.js';
   import { partDetail, type RollGroup, type RollPart } from '../dice/dice.js';
+  import Icon from './Icon.svelte';
 
   const WIDTH = 300;
   const DICE = [20, 12, 10, 8, 6, 4, 100];
@@ -104,7 +105,7 @@
         {#each latest.parts as p}{@render part(p)}{/each}
       </div>
     {:else}
-      <p class="empty">Roll a die, type an expression, or hit ⚄ on an attack/spell.</p>
+      <p class="empty">Roll a die, type an expression, or hit <Icon name="dice" /> on an attack/spell.</p>
     {/if}
 
     {#if older.length}

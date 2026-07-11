@@ -4,4 +4,8 @@ dist/
 .DS_Store
 .vite/
 .claude/worktrees/
-data/
+# Root runtime data store only (not src/lib/data/).
+/data/
+
+# Claude Code session/tooling directory
+.claude/
