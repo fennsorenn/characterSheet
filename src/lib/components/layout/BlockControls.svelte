@@ -1,14 +1,16 @@
 <script lang="ts">
   import { blockMeta } from '../../layout/blocks.js';
   import { getLayoutController } from '../../layout/controller.js';
-  import type { BlockInstance } from '../../layout/types.js';
+  import { BLOCK_SIZES, type BlockInstance, type BlockSize } from '../../layout/types.js';
 
-  // The edit-mode toolbar shown on each block: change variant, resize, reorder,
-  // or remove. Drag handle lives here too (the parent cell is draggable).
+  // The edit-mode toolbar shown on each block: change variant, resize, split,
+  // reorder, or remove. Drag handle lives here too (the parent cell is draggable).
   // Acts on whichever layout the surrounding controller manages.
   let { block }: { block: BlockInstance } = $props();
   const ctrl = getLayoutController();
   const meta = $derived(blockMeta(block.type));
+
+  const SIZE_LABELS: Record<BlockSize, string> = { narrow: 'Narrow', wide: 'Wide', full: 'Full' };
 </script>
 
 <div class="controls">
@@ -27,7 +29,25 @@
     </select>
   {/if}
 
-  <button title="Resize" onclick={() => ctrl.cycleSize(block.id)}>{block.size}</button>
+  <select
+    class="size"
+    value={block.stack ? '' : block.size}
+    title="Width"
+    disabled={!!block.stack}
+    onchange={(e) => ctrl.setSize(block.id, (e.target as HTMLSelectElement).value as BlockSize)}
+  >
+    {#if block.stack}<option value="">—</option>{/if}
+    {#each BLOCK_SIZES as size}
+      <option value={size}>{SIZE_LABELS[size]}</option>
+    {/each}
+  </select>
+
+  <button
+    class="split"
+    class:on={block.stack}
+    title={block.stack ? 'Unstack into its own cell' : 'Stack below the block above (split cell)'}
+    onclick={() => ctrl.toggleStack(block.id)}
+  >⊟</button>
   <button title="Move up" onclick={() => ctrl.moveBlock(block.id, -1)}>↑</button>
   <button title="Move down" onclick={() => ctrl.moveBlock(block.id, 1)}>↓</button>
   <button class="rm" title="Remove" onclick={() => ctrl.removeBlock(block.id)}>✕</button>
@@ -56,4 +76,6 @@
     cursor: pointer;
   }
   .rm { color: var(--accent); border-color: var(--accent); }
+  .split.on { color: var(--accent); border-color: var(--accent); }
+  select:disabled { opacity: 0.5; cursor: not-allowed; }
 </style>

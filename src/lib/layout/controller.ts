@@ -1,6 +1,6 @@
 import { getContext, setContext } from 'svelte';
 import type { Readable } from 'svelte/store';
-import type { SheetLayout } from './types.js';
+import type { BlockSize, SheetLayout } from './types.js';
 
 /**
  * Abstracts "a layout being edited" so the same renderer and block controls can
@@ -17,6 +17,9 @@ export interface LayoutController {
   reorderBlock(fromId: string, toId: string): void;
   setVariant(id: string, variant: string): void;
   cycleSize(id: string): void;
+  setSize(id: string, size: BlockSize): void;
+  /** Toggle stacking this block below the previous one (split cell). */
+  toggleStack(id: string): void;
 }
 
 const KEY = Symbol('layout-controller');

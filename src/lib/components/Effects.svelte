@@ -117,14 +117,14 @@
   ul { list-style: none; margin: 0; padding: 0; }
   li { display: flex; align-items: center; gap: 0.5rem; padding: 0.28rem 0; border-bottom: 1px solid var(--line); opacity: 0.6; }
   li.active { opacity: 1; }
-  .tog { display: flex; align-items: center; gap: 0.4rem; flex: 1; cursor: pointer; }
-  .name { font-weight: 600; }
+  .tog { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem; flex: 1; min-width: 0; cursor: pointer; }
+  .name { font-weight: 600; overflow-wrap: anywhere; }
   .sum { font-size: 0.78rem; color: var(--muted); }
   .ctag { font-size: 0.65rem; font-weight: 700; color: #fff; background: var(--accent); border-radius: 3px; padding: 0 0.25rem; }
   .rm { background: none; border: none; color: var(--muted); font-size: 1.1rem; cursor: pointer; line-height: 1; }
   .rm:hover { color: var(--accent); }
-  .addrow { display: flex; gap: 0.4rem; margin-top: 0.6rem; }
-  .addrow select { flex: 1; }
+  .addrow { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.6rem; }
+  .addrow select { flex: 1; min-width: 0; }
   .customform { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; align-items: center; }
   .customform .val { width: 4ch; flex: none; }
   .customform input:not([type='checkbox']) { flex: 1; min-width: 6rem; }

@@ -116,7 +116,7 @@
   }
   .wicon { color: var(--muted); display: inline-flex; }
   .wicon :global(.icon) { width: 1.05rem; height: 1.05rem; }
-  .name { font-weight: 600; text-align: left; background: none; border: none; padding: 0; color: var(--fg); font: inherit; cursor: pointer; }
+  .name { min-width: 0; font-weight: 600; text-align: left; background: none; border: none; padding: 0; color: var(--fg); font: inherit; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .name:hover { color: var(--accent); }
   .hit { font-weight: 700; }
   .dmg { font-size: 0.85rem; color: var(--muted); font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; gap: 0.25rem; }
@@ -132,4 +132,9 @@
   .prof.on { background: var(--accent); border-color: var(--accent); color: #fff; }
   .roll { font: inherit; font-size: 1rem; line-height: 1; padding: 0.1rem 0.35rem; border: 1px solid var(--accent); border-radius: 5px; background: var(--bg); color: var(--accent); cursor: pointer; }
   .roll:hover { background: var(--accent); color: #fff; }
+  /* In a narrow cell the fixed grid can't fit; wrap the stats under the name. */
+  @container cell (max-width: 340px) {
+    li { display: flex; flex-wrap: wrap; gap: 0.35rem 0.6rem; }
+    .name { flex: 1 1 60%; white-space: normal; overflow-wrap: anywhere; }
+  }
 </style>

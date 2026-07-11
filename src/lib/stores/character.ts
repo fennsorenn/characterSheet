@@ -511,6 +511,17 @@ export function removeInventoryItem(index: number) {
   update((c) => ({ ...c, inventory: c.inventory.filter((_, n) => n !== index) }));
 }
 
+/** Set (or clear, when blank) a custom display name for an inventory item. */
+export function renameInventoryItem(index: number, label: string) {
+  const trimmed = label.trim();
+  update((c) => ({
+    ...c,
+    inventory: c.inventory.map((i, n) =>
+      n === index ? { ...i, label: trimmed || undefined } : i
+    )
+  }));
+}
+
 /** Toggle attunement, refusing to exceed the attunement limit. */
 export function toggleAttuned(index: number) {
   update((c) => {

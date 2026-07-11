@@ -75,16 +75,16 @@
   h3 { margin: 0 0 0.6rem; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
   .empty { color: var(--muted); font-size: 0.85rem; margin: 0; }
   ul { list-style: none; margin: 0; padding: 0; }
-  li { display: flex; align-items: center; gap: 0.6rem; padding: 0.3rem 0; border-bottom: 1px solid var(--line); }
-  .name { flex: 1; font-weight: 600; }
+  li { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem 0.6rem; padding: 0.3rem 0; border-bottom: 1px solid var(--line); }
+  .name { flex: 1; min-width: 0; font-weight: 600; overflow-wrap: anywhere; }
   .owner { font-weight: 400; font-size: 0.68rem; color: var(--muted); text-transform: none; }
   li.auto .max { min-width: 1.5ch; text-align: right; }
   .max { font-size: 0.7rem; color: var(--muted); }
   .tag { font-size: 0.65rem; text-transform: uppercase; color: var(--muted); }
   .rm { background: none; border: none; color: var(--muted); font-size: 1.1rem; cursor: pointer; line-height: 1; }
   .rm:hover { color: var(--accent); }
-  .add { display: flex; gap: 0.4rem; margin-top: 0.6rem; }
-  .add input { flex: 1; }
+  .add { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.6rem; }
+  .add input { flex: 1; min-width: 6rem; }
   .add input, .add select { padding: 0.3rem 0.4rem; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); color: var(--fg); }
   .add button { padding: 0.3rem 0.7rem; border: 1px solid var(--accent); background: var(--accent); color: #fff; border-radius: 5px; cursor: pointer; }
 </style>

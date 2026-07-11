@@ -16,6 +16,7 @@
     type SpellTag
   } from '../character/index.js';
   import Icon from './Icon.svelte';
+  import QuickAdd from './QuickAdd.svelte';
 
   let { variant = 'full' }: { variant?: string } = $props();
 
@@ -224,7 +225,7 @@
   </header>
 
   {#if $character.spells.length === 0 && granted.length === 0}
-    <p class="empty">No spells — add them via quick import.</p>
+    <p class="empty">No spells — add them with quick add below.</p>
   {:else}
     <div class="statusfilter">
       {#each STATUS_FILTERS as [val, label]}
@@ -302,6 +303,7 @@
       {/each}
     </ul>
   {/if}
+  <QuickAdd kind="spell" />
 </section>
 
 <style>
@@ -331,11 +333,11 @@
   ul { list-style: none; margin: 0; padding: 0; }
   li { padding: 0.28rem 0; border-bottom: 1px solid var(--line); }
   li.granted { background: var(--field-hover); border-radius: 5px; padding: 0.28rem 0.3rem; }
-  .top { display: flex; align-items: center; gap: 0.4rem; }
+  .top { display: flex; align-items: center; flex-wrap: wrap; gap: 0.3rem 0.4rem; }
   .status { width: 1.3rem; height: 1.3rem; flex: none; font: inherit; font-size: 0.8rem; line-height: 1; border: 1px solid var(--line); background: var(--bg); color: var(--muted); border-radius: 4px; cursor: pointer; }
   .status.on { background: var(--accent); border-color: var(--accent); color: #fff; }
   .status.gicon { border: none; background: none; color: var(--accent); cursor: default; }
-  .name { flex: 1; font-weight: 500; text-align: left; background: none; border: none; padding: 0; color: var(--fg); font: inherit; cursor: pointer; }
+  .name { flex: 1; min-width: 6ch; font-weight: 500; text-align: left; background: none; border: none; padding: 0; color: var(--fg); font: inherit; cursor: pointer; overflow-wrap: anywhere; }
   .name:hover { color: var(--accent); }
   .roll { font: inherit; font-size: 0.9rem; line-height: 1; padding: 0.05rem 0.3rem; border: 1px solid var(--accent); border-radius: 4px; background: var(--bg); color: var(--accent); cursor: pointer; }
   .roll:hover { background: var(--accent); color: #fff; }

@@ -130,9 +130,10 @@
 <ExplainPopover />
 
 <style>
-  .head { display: flex; align-items: center; gap: 1rem; }
+  .head { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
   .char-name {
-    flex: 1;
+    flex: 1 1 12rem;
+    min-width: 0;
     font-size: 1.6rem;
     font-weight: 700;
     color: var(--fg);
@@ -143,7 +144,7 @@
   }
   .char-name:hover { border-bottom-color: var(--line); }
   .char-name:focus { outline: none; border-bottom-color: var(--accent); }
-  .tools { display: flex; gap: 0.5rem; flex: none; }
+  .tools { display: flex; gap: 0.5rem; flex-wrap: wrap; }
   .editbar {
     display: flex;
     align-items: center;

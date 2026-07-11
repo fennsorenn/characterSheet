@@ -6,6 +6,7 @@
   import StatValue from './StatValue.svelte';
   import BuffField from './BuffField.svelte';
   import EffectiveScore from './EffectiveScore.svelte';
+  import Saves from './Saves.svelte';
 
   let { variant = 'full' }: { variant?: string } = $props();
 
@@ -69,6 +70,9 @@
         </div>
       {/each}
     </div>
+    {#if variant === 'withSaves'}
+      <div class="saves-embed"><Saves /></div>
+    {/if}
   {/if}
 </section>
 
@@ -93,6 +97,15 @@
   .ab .name { font-weight: 600; }
   .ab .mod { font-weight: 700; }
 
+  /* Saving throws folded into the same cell: drop the nested block's frame so it
+     reads as one section, and separate it with a rule. */
+  .saves-embed { margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid var(--line); }
+  .saves-embed :global(.block) { border: none; border-radius: 0; padding: 0; }
+
+  /* Reflow to 3 wide when the cell itself is narrow, not just the viewport. */
+  @container cell (max-width: 340px) {
+    .grid { grid-template-columns: repeat(3, 1fr); }
+  }
   @media (max-width: 520px) {
     .grid { grid-template-columns: repeat(3, 1fr); }
   }

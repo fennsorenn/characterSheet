@@ -11,6 +11,7 @@ export const BLOCK_META: Record<string, BlockMeta> = {
     label: 'Ability Scores',
     variants: [
       { key: 'full', label: 'Full (editable boxes)', verbosity: 'full' },
+      { key: 'withSaves', label: 'Full + saving throws', verbosity: 'full' },
       { key: 'compact', label: 'Compact (row)', verbosity: 'compact' }
     ],
     defaultVariant: 'full',
