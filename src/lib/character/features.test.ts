@@ -66,6 +66,70 @@ describe('resolveFeatures', () => {
     expect(byGroup('Race')).toEqual(['Elf']);
     expect(byGroup('Feat')).toEqual(['Magic Initiate']);
   });
+
+  it('includes header-nested subclass features not in the explicit ref list', () => {
+    // A Cleric domain whose level-1 abilities (Domain Spells, bonus feature) are
+    // separate subclassFeature entries linked by shortName+source, NOT listed in
+    // `subclassFeatures` — as real 5etools domains store them.
+    const c = emptyCatalog('test');
+    c.entries.class = [{ name: 'Cleric', source: 'PHB', classFeatures: [] } as never];
+    c.classData.subclass = [
+      {
+        name: 'Fate Domain',
+        source: 'UAWonders',
+        className: 'Cleric',
+        classSource: 'PHB',
+        shortName: 'Fate',
+        subclassFeatures: ['Fate Domain|Cleric||Fate|UAWonders|1']
+      } as never
+    ];
+    c.classData.subclassFeature = [
+      { name: 'Fate Domain', source: 'UAWonders', className: 'Cleric', subclassShortName: 'Fate', subclassSource: 'UAWonders', level: 1, entries: ['Flavor.'] },
+      { name: 'Domain Spells', source: 'UAWonders', className: 'Cleric', subclassShortName: 'Fate', subclassSource: 'UAWonders', level: 1, header: 1, entries: ['Spells.'] },
+      { name: 'Omens and Portents', source: 'UAWonders', className: 'Cleric', subclassShortName: 'Fate', subclassSource: 'UAWonders', level: 1, header: 1, entries: ['Omens.'] }
+    ] as never;
+    const char = createCharacter({ classes: [{ name: 'Cleric', source: 'PHB', level: 1, subclass: 'Fate' }] });
+    const names = resolveFeatures(char, c).filter((f) => f.group === 'Subclass').map((f) => f.name);
+    expect(names).toEqual(['Fate Domain', 'Domain Spells', 'Omens and Portents']);
+  });
+
+  it('marks isClassFeatureVariant features as optional variants, off by default', () => {
+    const c = emptyCatalog('test');
+    c.entries.class = [{ name: 'Cleric', source: 'PHB', classFeatures: [] } as never];
+    c.classData.subclass = [
+      { name: 'Life Domain', source: 'PHB', className: 'Cleric', shortName: 'Life', subclassFeatures: ['Divine Strike|Cleric||Life||8', 'Blessed Strikes|Cleric||Life|UACFV|8'] } as never
+    ];
+    c.classData.subclassFeature = [
+      { name: 'Divine Strike', source: 'PHB', className: 'Cleric', subclassShortName: 'Life', subclassSource: 'PHB', level: 8, entries: ['Strike.'] },
+      { name: 'Blessed Strikes', source: 'UACFV', className: 'Cleric', subclassShortName: 'Life', subclassSource: 'PHB', level: 8, isClassFeatureVariant: true, entries: ['Variant.'] }
+    ] as never;
+    const off = createCharacter({ classes: [{ name: 'Cleric', source: 'PHB', level: 8, subclass: 'Life' }] });
+    const bs = resolveFeatures(off, c).find((f) => f.name === 'Blessed Strikes')!;
+    expect(bs.isVariant).toBe(true);
+    expect(bs.variantEnabled).toBe(false);
+    // Enabling it via variantChoices flips it on.
+    const on = createCharacter({
+      classes: [{ name: 'Cleric', source: 'PHB', level: 8, subclass: 'Life' }],
+      variantChoices: { [bs.variantKey!]: true }
+    });
+    expect(resolveFeatures(on, c).find((f) => f.name === 'Blessed Strikes')!.variantEnabled).toBe(true);
+    // Non-variant features are never marked.
+    expect(resolveFeatures(off, c).find((f) => f.name === 'Divine Strike')!.isVariant).toBeUndefined();
+  });
+
+  it('resolves a 2014-source subclass under a 2024-source class (cross-edition)', () => {
+    const c = emptyCatalog('test');
+    c.entries.class = [{ name: 'Cleric', source: 'XPHB', classFeatures: [] } as never]; // 2024 class
+    c.classData.subclass = [
+      { name: 'Fate Domain', source: 'UAWonders', className: 'Cleric', classSource: 'PHB', shortName: 'Fate', subclassFeatures: ['Fate Domain|Cleric||Fate|UAWonders|1'] } as never
+    ];
+    c.classData.subclassFeature = [
+      { name: 'Fate Domain', source: 'UAWonders', className: 'Cleric', subclassShortName: 'Fate', subclassSource: 'UAWonders', level: 1, entries: ['x'] }
+    ] as never;
+    const char = createCharacter({ classes: [{ name: 'Cleric', source: 'XPHB', level: 1, subclass: 'Fate' }] });
+    const names = resolveFeatures(char, c).filter((f) => f.group === 'Subclass').map((f) => f.name);
+    expect(names).toEqual(['Fate Domain']);
+  });
 });
 
 describe('ASI-or-feat slot cascade', () => {

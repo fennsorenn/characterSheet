@@ -110,6 +110,8 @@ function textResources(
   const out: FeatureResource[] = [];
   const seen = new Set<string>();
   for (const f of resolveFeatures(character, catalog)) {
+    // A disabled optional variant contributes nothing until enabled.
+    if (f.isVariant && !f.variantEnabled) continue;
     const text = flatten(f.entries);
     let max: number | null = null;
     let scaledBy: Ability | 'prof' | undefined;

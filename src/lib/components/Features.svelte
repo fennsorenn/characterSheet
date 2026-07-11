@@ -14,6 +14,7 @@
     setAbilityChoice,
     setFeatChoice,
     setFeatureHidden,
+    setFeatureVariant,
     addFeatureTag,
     removeFeatureTag
   } from '../stores/character.js';
@@ -41,6 +42,7 @@
   let expanded = $state<Set<string>>(new Set());
   let hiddenGroups = $state<Set<string>>(new Set()); // source tags filtered out
   let showHidden = $state(false);
+  let showVariants = $state(false);
 
   const features = $derived<Feature[]>(
     $catalogState.catalog ? resolveFeatures($character, $catalogState.catalog) : []
@@ -115,8 +117,17 @@
   const sources = $derived([...new Set(features.map((f) => f.group))]);
   const groupShown = (g: string) => !hiddenGroups.has(g);
 
-  const visible = $derived(features.filter((f) => groupShown(f.group) && !isHidden(f)));
-  const hidden = $derived(features.filter((f) => groupShown(f.group) && isHidden(f)));
+  // Optional variants get their own toggle section (all of them, enabled or not,
+  // so you can always turn one on/off). A *disabled* variant is additionally kept
+  // out of the normal applied lists since it contributes nothing yet.
+  const variants = $derived(features.filter((f) => f.isVariant && groupShown(f.group)));
+  const isPendingVariant = (f: Feature) => f.isVariant && !f.variantEnabled;
+  const visible = $derived(
+    features.filter((f) => groupShown(f.group) && !isPendingVariant(f) && !isHidden(f))
+  );
+  const hidden = $derived(
+    features.filter((f) => groupShown(f.group) && !isPendingVariant(f) && isHidden(f))
+  );
 
   function toggleGroup(g: string) {
     const next = new Set(hiddenGroups);
@@ -350,6 +361,30 @@
     {/if}
   {/if}
 
+  {#if variants.length > 0}
+    <button class="hidetoggle" onclick={() => (showVariants = !showVariants)}>
+      {showVariants ? '▾' : '▸'} Optional variants ({variants.length})
+    </button>
+    {#if showVariants}
+      <ul class="features variantlist">
+        {#each variants as f (featKey(f))}
+          <li class="feature variant">
+            <label class="vtoggle">
+              <input
+                type="checkbox"
+                checked={f.variantEnabled}
+                onchange={(e) => setFeatureVariant(f.variantKey!, (e.target as HTMLInputElement).checked)}
+              />
+              <span class="fname">{f.name}</span>
+              {#if f.subtitle}<span class="fsub">{f.subtitle}</span>{/if}
+            </label>
+            <div class="fbody vbody">{@html body(f.entries)}</div>
+          </li>
+        {/each}
+      </ul>
+    {/if}
+  {/if}
+
   {#if features.length === 0 && !$catalogState.catalog}
     <p class="empty">Load game data to see class features.</p>
   {/if}
@@ -401,5 +436,10 @@
   .fbody { font-size: 0.85rem; padding: 0 0 0.4rem 0.2rem; }
   .fbody :global(p) { margin: 0.25rem 0; }
   .hidetoggle { font: inherit; font-size: 0.78rem; background: none; border: none; color: var(--muted); cursor: pointer; padding: 0.4rem 0 0; }
+  .variantlist { opacity: 0.95; }
+  .variant .vtoggle { display: flex; align-items: baseline; gap: 0.4rem; cursor: pointer; }
+  .variant .vtoggle input { cursor: pointer; align-self: center; }
+  .variant .fsub { font-size: 0.72rem; color: var(--muted); }
+  .vbody { opacity: 0.85; }
   .empty { color: var(--muted); font-size: 0.85rem; margin: 0; }
 </style>

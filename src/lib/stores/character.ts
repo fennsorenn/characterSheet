@@ -420,6 +420,16 @@ function mergeMeta(c: Character, key: string, patch: Partial<Character['featureM
 export function setFeatureHidden(key: string, hidden: boolean) {
   update((c) => mergeMeta(c, key, { hidden }));
 }
+
+/** Enable/disable an optional class-feature variant (e.g. Blessed Strikes). */
+export function setFeatureVariant(key: string, enabled: boolean) {
+  update((c) => {
+    const variantChoices = { ...c.variantChoices };
+    if (enabled) variantChoices[key] = true;
+    else delete variantChoices[key];
+    return { ...c, variantChoices };
+  });
+}
 export function addFeatureTag(key: string, tag: string) {
   update((c) => {
     const tags = c.featureMeta[key]?.tags ?? [];

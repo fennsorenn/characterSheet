@@ -21,6 +21,17 @@ export interface Feature {
   subtitle?: string;
   level?: number;
   entries: unknown[];
+  /** True for an optional class-feature variant (isClassFeatureVariant). */
+  isVariant?: boolean;
+  /** Stable toggle key for a variant (`name|source|level`); set when isVariant. */
+  variantKey?: string;
+  /** For a variant: whether it is currently enabled by the character. */
+  variantEnabled?: boolean;
+}
+
+/** Stable key for a variant feature's on/off toggle. */
+export function variantKeyOf(f: { name: string; source: string; level?: number }): string {
+  return `${f.name}|${f.source}|${f.level ?? 0}`.toLowerCase();
 }
 
 const lc = (s: string) => s.toLowerCase();
@@ -45,6 +56,53 @@ function indexBy(list: NamedEntry[], keyFn: (e: NamedEntry) => string): Map<stri
   return m;
 }
 
+/**
+ * All feature entries belonging to a subclass, from its explicit `subclassFeatures`
+ * ref list plus any `subclassFeature` entries linked by className + subclassShortName
+ * + subclassSource (5etools' `header`-nested sub-features, which the ref list omits).
+ * Explicitly-listed features come first to preserve their intended order; the
+ * remaining siblings follow in level order. Class-source is intentionally ignored so
+ * a 2014/UA subclass resolves under a 2024 class.
+ */
+export function subclassFeatures(catalog: Catalog, sc: NamedEntry): NamedEntry[] {
+  const shortName = lc(String(sc.shortName ?? sc.name));
+  const scSource = lc(String(sc.source));
+  const className = lc(String(sc.className));
+  // Match on subclass short-name + source (unique per subclass) and the class
+  // *name* (not source) — so features attach across editions but never leak
+  // between two different subclasses that share a source.
+  const belongs = (f: NamedEntry) =>
+    lc(String(f.subclassShortName)) === shortName &&
+    lc(String(f.subclassSource ?? f.source)) === scSource &&
+    lc(String(f.className)) === className;
+
+  const byName = new Map<string, NamedEntry>();
+  for (const f of catalog.classData.subclassFeature) {
+    if (belongs(f)) byName.set(lc(`${f.name}|${Number(f.level) || 0}`), f);
+  }
+
+  const out: NamedEntry[] = [];
+  const used = new Set<string>();
+  // 1. Explicitly-listed features first, in listed order.
+  for (const ref of asArray(sc.subclassFeatures)) {
+    if (typeof ref !== 'string') continue;
+    const p = parseSubclassFeatureRef(ref);
+    const key = lc(`${p.name}|${p.level}`);
+    const feat = byName.get(key);
+    if (feat && !used.has(key)) {
+      used.add(key);
+      out.push(feat);
+    }
+  }
+  // 2. Remaining sibling features (header-nested, not in the ref list), by level.
+  const rest = [...byName.entries()]
+    .filter(([k]) => !used.has(k))
+    .map(([, f]) => f)
+    .sort((a, b) => (Number(a.level) || 0) - (Number(b.level) || 0));
+  out.push(...rest);
+  return out;
+}
+
 /** All resolved features for the character, in display groups. */
 export function resolveFeatures(character: Character, catalog: Catalog): Feature[] {
   const out: Feature[] = [];
@@ -64,9 +122,6 @@ export function resolveFeatures(character: Character, catalog: Catalog): Feature
 
   const cfIndex = indexBy(catalog.classData.classFeature, (e) =>
     lc(`${e.name}|${e.className}|${e.level}`)
-  );
-  const scfIndex = indexBy(catalog.classData.subclassFeature, (e) =>
-    lc(`${e.name}|${e.className}|${e.subclassShortName}|${e.level}`)
   );
 
   for (const cls of character.classes) {
@@ -94,20 +149,39 @@ export function resolveFeatures(character: Character, catalog: Catalog): Feature
           lc(String(s.className)) === lc(cls.name) &&
           (lc(String(s.shortName)) === lc(cls.subclass!) || lc(s.name) === lc(cls.subclass!))
       );
-      for (const ref of asArray(sc?.subclassFeatures)) {
-        if (typeof ref !== 'string') continue;
-        const p = parseSubclassFeatureRef(ref);
-        if (p.level > cls.level) continue;
-        const feat = scfIndex.get(lc(`${p.name}|${p.className}|${p.subclassShort}|${p.level}`));
-        if (feat) {
-          out.push({
+      if (sc) {
+        // A subclass's features come from two places: the explicit `subclassFeatures`
+        // ref list, AND `header`-nested sibling features (e.g. a Cleric domain's
+        // "Domain Spells" / bonus level-1 abilities) that belong to the subclass by
+        // className + subclassShortName + subclassSource but aren't in that list.
+        // Gather both, deduped by name+level, so nothing is dropped. Matching is
+        // tolerant of `classSource` so a 2014/UA subclass works under a 2024 class.
+        const feats = subclassFeatures(catalog, sc);
+        const seen = new Set<string>();
+        for (const feat of feats) {
+          const level = Number(feat.level) || 0;
+          if (level > cls.level) continue;
+          const dedupe = lc(`${feat.name}|${level}`);
+          if (seen.has(dedupe)) continue;
+          seen.add(dedupe);
+          const isVariant = feat.isClassFeatureVariant === true;
+          const f: Feature = {
             group: 'Subclass',
             name: feat.name,
             source: String(feat.source),
-            level: p.level,
-            subtitle: `${cls.subclass} ${p.level}`,
+            level,
+            subtitle: `${cls.subclass} ${level}`,
             entries: arrEntries(feat)
-          });
+          };
+          if (isVariant) {
+            // Optional variant (e.g. Blessed Strikes): off by default. Always
+            // emitted so the UI can offer the toggle; `variantEnabled` says whether
+            // it currently applies.
+            f.isVariant = true;
+            f.variantKey = variantKeyOf({ name: feat.name, source: String(feat.source), level });
+            f.variantEnabled = character.variantChoices?.[f.variantKey] === true;
+          }
+          out.push(f);
         }
       }
     }

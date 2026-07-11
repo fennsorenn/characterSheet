@@ -171,6 +171,9 @@ export interface Character {
   featChoices: Record<string, CatalogRef>;
   /** Per-feature UI overrides (hidden / custom tags), keyed by `name|source`. */
   featureMeta: Record<string, FeatureMeta>;
+  /** Enabled optional class-feature variants (isClassFeatureVariant), keyed by
+   * `name|source|level`. Off by default; enabling adds the variant as a feature. */
+  variantChoices: Record<string, boolean>;
   /** Notes: a tree of folders and markdown documents. */
   notes?: NoteNode[];
 }
@@ -246,7 +249,8 @@ export function createCharacter(partial: Partial<Character> = {}): Character {
     grantChoices: partial.grantChoices ?? {},
     optionalChoices: partial.optionalChoices ?? {},
     featChoices: partial.featChoices ?? {},
-    featureMeta: partial.featureMeta ?? {}
+    featureMeta: partial.featureMeta ?? {},
+    variantChoices: partial.variantChoices ?? {}
   };
 }
 
