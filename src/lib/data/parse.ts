@@ -51,6 +51,9 @@ export function parseCatalog(reader: DataReader, version: string): Catalog {
   catalog.entries.class = readIndexed(reader, 'class', 'class');
   catalog.classData = readClassData(reader);
   catalog.entries.item = readItems(reader);
+  // Bestiary: split per source under bestiary/index.json, each with a `monster`
+  // array. Loaded so creature references in spell/item text can open a statblock.
+  catalog.entries.monster = readIndexed(reader, 'bestiary', 'monster');
 
   for (const category of Object.keys(catalog.entries) as (keyof typeof catalog.entries)[]) {
     catalog.counts[category] = catalog.entries[category].length;

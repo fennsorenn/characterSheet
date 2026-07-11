@@ -1,16 +1,27 @@
 <script lang="ts">
-  import { detail, closeDetail, openDetail } from '../stores/detail.js';
+  import { detail, closeDetail, openDetail, setDetailSpellLevel, pinCreature } from '../stores/detail.js';
   import { catalogLookup } from '../stores/catalog.js';
+  import { casterSummonParams } from '../stores/character.js';
   import { detailContent, detailDocument } from '../render/detail.js';
+  import { buildStatblock, type StatblockParams } from '../render/statblock.js';
+  import Statblock from './Statblock.svelte';
 
-  const WIDTH = 360;
-  const content = $derived($detail ? detailContent($detail.kind, $detail.entry) : null);
+  const isCreature = $derived($detail?.kind === 'creature');
+  const WIDTH = $derived(isCreature ? 420 : 360);
+
+  // Spell/item content (unchanged); creature content is a resolved statblock.
+  const content = $derived(
+    $detail && !isCreature ? detailContent($detail.kind as 'spell' | 'item', $detail.entry) : null
+  );
+  const params = $derived<StatblockParams>({ ...$casterSummonParams, spellLevel: $detail?.spellLevel });
+  const sb = $derived($detail && isCreature ? buildStatblock($detail.entry, params) : null);
+  const title = $derived(isCreature ? sb?.name ?? '' : content?.title ?? '');
+  // Effective summon level (chosen or the creature's minimum), for the control + pin.
+  const level = $derived($detail?.spellLevel ?? sb?.summonMin);
 
   let pos = $state<{ x: number; y: number }>({ x: 0, y: 0 });
   let wasOpen = false;
 
-  // Reposition only on a fresh open (closed → open), beside the anchor so the
-  // list that opened it isn't covered; keep position when the content changes.
   $effect(() => {
     const d = $detail;
     if (d && !wasOpen) pos = place(d.anchor);
@@ -21,12 +32,12 @@
     const vw = window.innerWidth;
     const vh = window.innerHeight;
     const h = Math.min(vh * 0.7, 520);
-    if (!anchor) return { x: vw - WIDTH - 24, y: vh - h - 24 }; // bottom-right default
+    if (!anchor) return { x: vw - WIDTH - 24, y: vh - h - 24 };
     const right = anchor.x + anchor.width;
     let x: number;
-    if (vw - right >= WIDTH + 24) x = right + 12; // room on the right of the list
-    else if (anchor.x >= WIDTH + 24) x = anchor.x - WIDTH - 12; // else to its left
-    else x = vw - WIDTH - 12; // else pin to the right edge
+    if (vw - right >= WIDTH + 24) x = right + 12;
+    else if (anchor.x >= WIDTH + 24) x = anchor.x - WIDTH - 12;
+    else x = vw - WIDTH - 12;
     const y = Math.min(Math.max(anchor.y, 8), Math.max(8, vh - h - 8));
     return { x: Math.max(8, x), y };
   }
@@ -34,8 +45,7 @@
   // --- drag ---
   let drag: { dx: number; dy: number } | null = null;
   function down(e: PointerEvent) {
-    // Don't start a drag when pressing the header's buttons (close / pop-out).
-    if ((e.target as HTMLElement).closest('button')) return;
+    if ((e.target as HTMLElement).closest('button, input, select')) return;
     drag = { dx: e.clientX - pos.x, dy: e.clientY - pos.y };
     (e.currentTarget as Element).setPointerCapture(e.pointerId);
   }
@@ -61,7 +71,13 @@
     }
   }
 
-  // Clicking a {@spell …}/{@item …} reference inside the body opens that entry.
+  function pin() {
+    if (!$detail || !sb) return;
+    pinCreature($detail.entry, { ...params, spellLevel: level }, sb.hpValue ?? 0);
+    closeDetail();
+  }
+
+  // Clicking a {@spell}/{@item}/{@creature} reference in the body opens that entry.
   function onBodyClick(e: MouseEvent) {
     const a = (e.target as HTMLElement).closest('a.tag-ref') as HTMLElement | null;
     if (!a) return;
@@ -70,34 +86,60 @@
     const tag = a.dataset.tag || '';
     if (!name) return;
     e.preventDefault();
+    const creature = $catalogLookup.getCreatureByName(name);
     const spell = $catalogLookup.getSpellByName(name);
     const item = $catalogLookup.getItem(name, source ?? (spell ? String(spell.source) : ''));
-    if (/spell/.test(tag) && spell) openDetail('spell', spell, a);
+    if (/creature/.test(tag) && creature) openDetail('creature', creature, a);
+    else if (/spell/.test(tag) && spell) openDetail('spell', spell, a);
     else if (/item/.test(tag) && item) openDetail('item', item, a);
+    else if (creature) openDetail('creature', creature, a);
     else if (spell) openDetail('spell', spell, a);
     else if (item) openDetail('item', item, a);
   }
 </script>
 
-{#if content}
-  <div class="win" style="left:{pos.x}px; top:{pos.y}px; width:{WIDTH}px;" role="dialog" aria-label={content.title}>
+{#if $detail}
+  <div class="win" style="left:{pos.x}px; top:{pos.y}px; width:{WIDTH}px;" role="dialog" aria-label={title}>
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <header class="bar" onpointerdown={down} onpointermove={move} onpointerup={up}>
-      <span class="title">{content.title}</span>
-      <button class="ic" title="Open in a new window" aria-label="Pop out" onclick={popOut}>⧉</button>
+      <span class="title">{title}</span>
+      {#if isCreature}
+        <button class="ic" title="Pin to the tracker dock" aria-label="Pin" onclick={pin}>📌</button>
+      {:else}
+        <button class="ic" title="Open in a new window" aria-label="Pop out" onclick={popOut}>⧉</button>
+      {/if}
       <button class="ic" title="Close" aria-label="Close" onclick={closeDetail}>×</button>
     </header>
-    <div class="body">
-      <p class="sub">{content.subtitle}</p>
-      {#if content.meta.length}
-        <div class="meta">
-          {#each content.meta as m}<p><span class="k">{m.label}</span> {m.value}</p>{/each}
-        </div>
+
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div class="body" onclick={onBodyClick}>
+      {#if isCreature && sb}
+        <p class="sub">{sb.meta}</p>
+        {#if sb.summonMin != null}
+          <label class="lvl">
+            Summon level
+            <input
+              type="number"
+              min={sb.summonMin}
+              max="9"
+              value={level}
+              onchange={(e) => setDetailSpellLevel(Number((e.target as HTMLInputElement).value) || sb.summonMin!)}
+            />
+          </label>
+        {/if}
+        <Statblock {sb} />
+        <p class="src">{sb.source}</p>
+      {:else if content}
+        <p class="sub">{content.subtitle}</p>
+        {#if content.meta.length}
+          <div class="meta">
+            {#each content.meta as m}<p><span class="k">{m.label}</span> {m.value}</p>{/each}
+          </div>
+        {/if}
+        <div class="desc">{@html content.html}</div>
+        <p class="src">{content.source}</p>
       {/if}
-      <!-- svelte-ignore a11y_click_events_have_key_events -->
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div class="desc" onclick={onBodyClick}>{@html content.html}</div>
-      <p class="src">{content.source}</p>
     </div>
   </div>
 {/if}
@@ -113,6 +155,7 @@
     display: flex;
     flex-direction: column;
     max-height: 70vh;
+    max-width: calc(100vw - 16px);
   }
   .bar {
     display: flex;
@@ -129,6 +172,8 @@
   .ic:hover { color: var(--accent); }
   .body { overflow: auto; padding: 0.6rem 0.85rem 0.85rem; font-size: 0.85rem; }
   .sub { font-style: italic; color: var(--muted); margin: 0 0 0.5rem; }
+  .lvl { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; color: var(--muted); margin-bottom: 0.5rem; }
+  .lvl input { width: 3.5rem; font: inherit; padding: 0.1rem 0.3rem; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--fg); }
   .meta { border-left: 2px solid var(--line); padding-left: 0.5rem; margin-bottom: 0.5rem; }
   .meta p { margin: 0.1rem 0; }
   .meta .k { font-size: 0.7rem; text-transform: uppercase; color: var(--muted); margin-right: 0.25rem; }

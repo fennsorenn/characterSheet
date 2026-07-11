@@ -18,7 +18,8 @@ export type Category =
   | 'condition'
   | 'action'
   | 'optionalfeature'
-  | 'class';
+  | 'class'
+  | 'monster';
 
 export const CATEGORIES: Category[] = [
   'spell',
@@ -29,7 +30,8 @@ export const CATEGORIES: Category[] = [
   'condition',
   'action',
   'optionalfeature',
-  'class'
+  'class',
+  'monster'
 ];
 
 /** Every catalog entry is at least name + source; the rest is category-specific. */

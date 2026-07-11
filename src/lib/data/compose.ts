@@ -18,8 +18,9 @@ export function composeCatalog(base: Catalog, overlays: Overlay[]): Catalog {
   const entries = {} as Record<Category, typeof base.entries[Category]>;
   const counts = {} as Record<Category, number>;
   for (const c of CATEGORIES) {
-    entries[c] = [...base.entries[c]];
-    for (const o of overlays) entries[c].push(...o.entries[c]);
+    // Guard against catalogs cached before a category existed (e.g. `monster`).
+    entries[c] = [...(base.entries[c] ?? [])];
+    for (const o of overlays) entries[c].push(...(o.entries[c] ?? []));
     counts[c] = entries[c].length;
   }
 

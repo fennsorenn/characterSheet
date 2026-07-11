@@ -114,6 +114,18 @@ export const graph = derived([store, catalogLookup, grantPool], ([$c, $lookup, $
   buildGraph($c, $lookup, $grants)
 );
 
+/**
+ * Caster context for resolving summon-creature statblocks (Summon Celestial, …):
+ * the live spell attack bonus / save DC / proficiency and the character's class
+ * levels. Fed to `buildStatblock` so a summon's AC/HP/attacks fill in correctly.
+ */
+export const casterSummonParams = derived([store, graph], ([$c, $g]) => ({
+  spellAttack: $g.has('spell.attack') ? $g.get('spell.attack') : undefined,
+  spellDc: $g.has('spell.dc') ? $g.get('spell.dc') : undefined,
+  profBonus: $g.has('prof.bonus') ? $g.get('prof.bonus') : undefined,
+  classLevels: Object.fromEntries($c.classes.map((cl) => [cl.name.toLowerCase(), cl.level]))
+}));
+
 /** Spell slots computed from class levels (multiclass table + Warlock pact). */
 export const computedSlots = derived([store, catalogState], ([$c, $cat]) =>
   $cat.catalog ? spellSlotInfo($c, $cat.catalog) : { slots: [0, 0, 0, 0, 0, 0, 0, 0, 0], pact: null }
