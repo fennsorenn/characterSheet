@@ -52,7 +52,10 @@ export const BLOCK_META: Record<string, BlockMeta> = {
   },
   spellSlots: {
     label: 'Spell Slots',
-    variants: [{ key: 'full', label: 'Full', verbosity: 'full' }],
+    variants: [
+      { key: 'full', label: 'Full (one level per row)', verbosity: 'full' },
+      { key: 'grid', label: 'Compact grid (levels side by side)', verbosity: 'compact' }
+    ],
     defaultVariant: 'full',
     defaultSize: 'wide'
   },

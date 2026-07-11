@@ -18,6 +18,8 @@
   const maxOf = (l: number) => (auto ? $computedSlots.slots[l - 1] : $character.spellSlots[l - 1].max);
   const active = $derived(LEVELS.filter((l) => maxOf(l) > 0));
   const pact = $derived($computedSlots.pact);
+  // Compact grid: levels flow side-by-side instead of one row each.
+  const grid = $derived(variant === 'grid');
 </script>
 
 <section class="block" data-variant={variant}>
@@ -43,6 +45,28 @@
 
   {#if active.length === 0 && !pact}
     <p class="empty">{auto ? 'No spell slots at this level.' : 'Set a slot count above to start tracking.'}</p>
+  {:else if grid}
+    <div class="grid">
+      {#each active as l}
+        {@const max = maxOf(l)}
+        {@const expended = Math.min($character.spellSlots[l - 1].expended, max)}
+        <div class="cell">
+          <span class="glvl">{l}</span>
+          <span data-volatile="frequent" data-print-pips>
+            <PipTracker {max} used={expended} onSet={(u) => setSlotExpended(l, u)} />
+          </span>
+        </div>
+      {/each}
+      {#if pact}
+        {@const used = Math.min($character.pactSlotsExpended, pact.count)}
+        <div class="cell pact" title="Pact Magic (level {pact.level})">
+          <span class="glvl">P<small>{pact.level}</small></span>
+          <span data-volatile="frequent" data-print-pips>
+            <PipTracker max={pact.count} {used} onSet={(u) => setPactExpended(u)} />
+          </span>
+        </div>
+      {/if}
+    </div>
   {:else}
     <ul>
       {#each active as l}
@@ -83,4 +107,16 @@
   li.pact .lvl { color: var(--accent); }
   .lvl { min-width: 4.5rem; font-weight: 600; }
   .lvl small { font-weight: 400; color: var(--muted); }
+
+  /* Compact grid: each level is a small cell flowing left-to-right and wrapping,
+     turning the tall one-row-per-level list into a short, wide strip. */
+  .grid { display: flex; flex-wrap: wrap; gap: 0.4rem 0.7rem; }
+  .grid .cell {
+    display: flex; flex-direction: column; align-items: center; gap: 0.2rem;
+    padding: 0.15rem 0.35rem; border: 1px solid var(--line); border-radius: 6px;
+  }
+  .grid .glvl { font-size: 0.72rem; font-weight: 700; color: var(--muted); line-height: 1; }
+  .grid .glvl small { font-weight: 400; }
+  .grid .cell.pact { border-color: var(--accent); }
+  .grid .cell.pact .glvl { color: var(--accent); }
 </style>
