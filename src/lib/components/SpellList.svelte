@@ -60,19 +60,23 @@
   });
 
   const rows = $derived.by((): Row[] => {
-    const manualKeys = new Set(
-      $character.spells.map((s) => `${s.name}|${s.source}`.toLowerCase())
-    );
+    const spellKey = (name: string, source: string) => `${name}|${source}`.toLowerCase();
+    // A grant takes precedence over a matching manual entry: the manual row is
+    // shown as granted (⚡, doesn't count against limits) rather than duplicated,
+    // so a spell you added manually and also picked via a feature (e.g. Magic
+    // Initiate) reflects the grant. Keep its `index` so it stays removable.
+    const grantBy = new Map(granted.map((g) => [spellKey(g.name, g.source), g.grantedBy]));
+    const manualKeys = new Set($character.spells.map((s) => spellKey(s.name, s.source)));
     const base = [
       ...$character.spells.map((s, index) => ({
         index,
         name: s.name,
         source: s.source,
         status: spellStatus(s),
-        grantedBy: s.grantedBy
+        grantedBy: s.grantedBy ?? grantBy.get(spellKey(s.name, s.source))
       })),
       ...granted
-        .filter((g) => !manualKeys.has(`${g.name}|${g.source}`.toLowerCase()))
+        .filter((g) => !manualKeys.has(spellKey(g.name, g.source)))
         .map((g) => ({
           index: null,
           name: g.name,
