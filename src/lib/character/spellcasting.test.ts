@@ -11,6 +11,8 @@ function catalog(): Catalog {
     { name: 'Wizard', source: 'PHB', spellcastingAbility: 'int', cantripProgression: [3, 3, 3, 4, 4], preparedSpells: '<$level$> + <$int_mod$>', spellsKnownProgressionFixed: [6, 2, 2, 2, 2] },
     { name: 'Paladin', source: 'PHB', spellcastingAbility: 'cha', preparedSpells: '<$level$> / 2 + <$cha_mod$>' },
     { name: 'Bard', source: 'PHB', spellcastingAbility: 'cha', cantripProgression: [2, 2, 2, 3, 3], spellsKnownProgression: [4, 5, 6, 7, 8] },
+    // 2024 Cleric: a fixed preparedSpellsProgression array instead of a formula.
+    { name: 'Cleric', source: 'XPHB', spellcastingAbility: 'wis', cantripProgression: [3, 3, 3, 4, 4], preparedSpellsProgression: [4, 5, 6, 7, 9] },
     { name: 'Fighter', source: 'PHB' }
   ] as never;
   return c;
@@ -43,6 +45,14 @@ describe('casterClasses', () => {
       'Bard:known:2:6', // cantrips[3]=2, known[3]=6
       'Paladin:prepared:null:7' // no cantrips, floor(6/2)=3 + 4
     ]); // Fighter excluded (no spellcasting)
+  });
+
+  it('reads a 2024 prepared caster limit from preparedSpellsProgression', () => {
+    const c = createCharacter({ classes: [{ name: 'Cleric', source: 'XPHB', level: 5 }] });
+    const [cleric] = casterClasses(c, catalog(), mod, 3);
+    expect(cleric.kind).toBe('prepared');
+    expect(cleric.cantrips).toBe(4); // cantripProgression[5]
+    expect(cleric.spells).toBe(9); // preparedSpellsProgression[5] = 9 (not null)
   });
 
   it('gives a Wizard a prepared limit and a summed spellbook total', () => {

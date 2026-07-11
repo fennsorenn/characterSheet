@@ -127,8 +127,13 @@ export function casterClasses(
     let kind: CasterKind;
     let spells: number | null;
     if (typeof c.preparedSpells === 'string') {
+      // 2014: a formula string, e.g. "<$level$> + <$wis_mod$>".
       kind = 'prepared';
       spells = evalPreparedFormula(c.preparedSpells, cls.level, abilityMod, profBonus);
+    } else if (Array.isArray(c.preparedSpellsProgression)) {
+      // 2024: a fixed per-level prepared-count array (no ability-mod formula).
+      kind = 'prepared';
+      spells = atLevel(c.preparedSpellsProgression as number[], cls.level);
     } else if (Array.isArray(c.spellsKnownProgression)) {
       kind = 'known';
       spells = atLevel(c.spellsKnownProgression as number[], cls.level);
