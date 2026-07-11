@@ -116,6 +116,8 @@ export const setVariant = (id: string, variant: string) =>
 export const cycleSize = (id: string) => onActive((l) => ops.cycleSize(l, id));
 export const setSize = (id: string, size: BlockSize) => onActive((l) => ops.setSize(l, id, size));
 export const toggleStack = (id: string) => onActive((l) => ops.toggleStack(l, id));
+export const setHeight = (id: string, height: number | undefined) =>
+  onActive((l) => ops.setHeight(l, id, height));
 
 /** Reset the active layout's blocks to the tuned default arrangement (keeps its name). */
 export const resetLayout = () =>
@@ -144,5 +146,6 @@ export const screenController: LayoutController = {
   setVariant,
   cycleSize,
   setSize,
-  toggleStack
+  toggleStack,
+  setHeight
 };

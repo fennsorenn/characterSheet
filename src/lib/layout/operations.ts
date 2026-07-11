@@ -67,6 +67,16 @@ export function cycleSize(layout: SheetLayout, id: string): SheetLayout {
   });
 }
 
+/** Set (or clear, with undefined) a scrollable list block's pixel height cap. */
+export function setHeight(layout: SheetLayout, id: string, height: number | undefined): SheetLayout {
+  return mapBlock(layout, id, (b) => {
+    const next = { ...b };
+    if (height && height > 0) next.height = Math.round(height);
+    else delete next.height;
+    return next;
+  });
+}
+
 /**
  * Toggle whether a block is stacked below the previous one (a split cell). The
  * first block can never stack (there is nothing above it), so toggling it is a

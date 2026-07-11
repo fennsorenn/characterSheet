@@ -8,6 +8,7 @@ import {
   setSize,
   cycleSize,
   toggleStack,
+  setHeight,
   makeBlock
 } from './operations.js';
 import { defaultLayout } from './defaultLayout.js';
@@ -94,6 +95,16 @@ describe('layout operations', () => {
     // The first block can't stack (nothing above it).
     const first = l.blocks[0].id;
     expect(toggleStack(l, first).blocks[0].stack).toBe(false);
+  });
+
+  it('sets and clears a scrollable block height', () => {
+    const l = defaultLayout();
+    const id = l.blocks[0].id;
+    expect(setHeight(l, id, 320.6).blocks[0].height).toBe(321); // rounded
+    // Zero / undefined clears the cap.
+    const withH = setHeight(l, id, 300);
+    expect(setHeight(withH, id, undefined).blocks[0].height).toBeUndefined();
+    expect(setHeight(withH, id, 0).blocks[0].height).toBeUndefined();
   });
 
   it('does not mutate the input layout', () => {

@@ -50,7 +50,8 @@ export const printController: LayoutController = {
   setVariant: (id, variant) => upd((l) => ops.setVariant(l, id, variant)),
   cycleSize: (id) => upd((l) => ops.cycleSize(l, id)),
   setSize: (id, size) => upd((l) => ops.setSize(l, id, size)),
-  toggleStack: (id) => upd((l) => ops.toggleStack(l, id))
+  toggleStack: (id) => upd((l) => ops.toggleStack(l, id)),
+  setHeight: (id, height) => upd((l) => ops.setHeight(l, id, height))
 };
 
 export const togglePrintEdit = () => printEditMode.update((v) => !v);

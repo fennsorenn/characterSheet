@@ -13,8 +13,19 @@
   import NumberField from './NumberField.svelte';
   import Icon from './Icon.svelte';
   import QuickAdd from './QuickAdd.svelte';
+  import { scrollStyle, resizePersist } from './scrollCell.js';
 
-  let { variant = 'full' }: { variant?: string } = $props();
+  let {
+    variant = 'full',
+    height = undefined,
+    editing = false,
+    onResize = undefined
+  }: {
+    variant?: string;
+    height?: number;
+    editing?: boolean;
+    onResize?: (h: number) => void;
+  } = $props();
 
   // Inline rename: which row is being edited and its working text.
   let editingIndex = $state<number | null>(null);
@@ -75,6 +86,11 @@
   {#if $character.inventory.length === 0}
     <p class="empty">Nothing yet — add items with quick add below. Equip armor to see AC update.</p>
   {:else}
+    <div
+      class="listscroll"
+      style={scrollStyle(editing, height)}
+      use:resizePersist={{ editing, height, onResize }}
+    >
     <ul>
       {#each $character.inventory as item, i (item.name + item.source)}
         {@const note = effectNote(item.name, item.source)}
@@ -115,6 +131,7 @@
         </li>
       {/each}
     </ul>
+    </div>
   {/if}
   <QuickAdd kind="item" />
 </section>
