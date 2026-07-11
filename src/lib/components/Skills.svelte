@@ -70,8 +70,11 @@
     border-color: var(--accent);
     box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--accent);
   }
-  .name { flex: 1; }
+  .name { flex: 1; min-width: 0; }
   .abil { font-size: 0.65rem; text-transform: uppercase; color: var(--muted); }
   .val { font-weight: 600; min-width: 2ch; text-align: right; }
+  /* Collapse to a single column when the cell is narrow (not just the viewport),
+     so a narrow-width Skills block never crams two columns into a thin cell. */
+  @container cell (max-width: 360px) { ul { columns: 1; } }
   @media (max-width: 520px) { ul { columns: 1; } }
 </style>

@@ -48,7 +48,9 @@ export const printController: LayoutController = {
   moveBlock: (id, dir) => upd((l) => ops.moveBlock(l, id, dir)),
   reorderBlock: (from, to) => upd((l) => ops.reorderBlock(l, from, to)),
   setVariant: (id, variant) => upd((l) => ops.setVariant(l, id, variant)),
-  cycleSize: (id) => upd((l) => ops.cycleSize(l, id))
+  cycleSize: (id) => upd((l) => ops.cycleSize(l, id)),
+  setSize: (id, size) => upd((l) => ops.setSize(l, id, size)),
+  toggleStack: (id) => upd((l) => ops.toggleStack(l, id))
 };
 
 export const togglePrintEdit = () => printEditMode.update((v) => !v);

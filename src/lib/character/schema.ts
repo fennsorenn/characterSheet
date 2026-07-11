@@ -41,6 +41,8 @@ export interface InventoryItem extends CatalogRef {
   attuned?: boolean;
   /** Whether the character is proficient with this weapon (defaults true). */
   proficient?: boolean;
+  /** User-chosen display name overriding the catalog name (rename). */
+  label?: string;
 }
 
 /** Max items a character can be attuned to at once (5e). */

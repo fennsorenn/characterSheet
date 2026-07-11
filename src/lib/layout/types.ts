@@ -24,6 +24,12 @@ export interface BlockInstance {
   /** Chosen variant key within the type, e.g. 'compact'. */
   variant: string;
   size: BlockSize;
+  /**
+   * When true, this block is stacked *below* the preceding block inside the same
+   * grid cell (a "split cell") instead of occupying its own cell. The lead block
+   * of the stack decides the cell's width. Ignored on the first block of a row.
+   */
+  stack?: boolean;
 }
 
 export interface SheetLayout {

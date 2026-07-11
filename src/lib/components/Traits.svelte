@@ -83,10 +83,10 @@
   .block { border: 1px solid var(--line); border-radius: 8px; padding: 0.75rem 1rem; }
   h3 { margin: 0 0 0.6rem; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
   .empty { color: var(--muted); font-size: 0.85rem; margin: 0; }
-  .row { display: flex; gap: 0.6rem; align-items: baseline; padding: 0.22rem 0; border-bottom: 1px solid var(--line); }
+  .row { display: flex; flex-wrap: wrap; gap: 0.3rem 0.6rem; align-items: baseline; padding: 0.22rem 0; border-bottom: 1px solid var(--line); }
   .row:last-child { border-bottom: none; }
   .k { font-size: 0.68rem; text-transform: uppercase; color: var(--muted); min-width: 8.5rem; flex: none; }
-  .chips { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+  .chips { display: flex; flex-wrap: wrap; gap: 0.3rem; min-width: 0; }
   .chip { font-size: 0.75rem; padding: 0.05rem 0.45rem; border: 1px solid var(--line); border-radius: 999px; background: color-mix(in srgb, var(--accent) 8%, transparent); }
   .choice { display: inline-flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
   .choice.pending .cl { color: var(--accent); font-weight: 600; }

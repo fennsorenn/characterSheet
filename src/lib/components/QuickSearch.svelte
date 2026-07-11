@@ -14,6 +14,14 @@
     else if (hit.category === 'spell') addSpell(ref);
   }
 
+  // Add the typed text verbatim as a custom (off-catalog / homebrew) entry.
+  function addCustom(as: 'item' | 'spell') {
+    const name = query.trim();
+    if (!name) return;
+    if (as === 'item') addInventoryItem({ name, source: 'Custom' });
+    else addSpell({ name, source: 'Custom' });
+  }
+
   // Demonstrates context-aware quick import: type to find items/spells/etc.
   let query = $state('');
   let category = $state<Category | 'all'>('all');
@@ -71,6 +79,17 @@
         {:else}
           <li class="empty">No matches</li>
         {/each}
+        {#if category === 'item' || category === 'spell' || category === 'all'}
+          <li class="verbatim">
+            <span class="hint">Not in the catalog?</span>
+            {#if category === 'item' || category === 'all'}
+              <button class="add" onclick={() => addCustom('item')}>+ Add “{query.trim()}” as item</button>
+            {/if}
+            {#if category === 'spell' || category === 'all'}
+              <button class="add" onclick={() => addCustom('spell')}>+ Add “{query.trim()}” as spell</button>
+            {/if}
+          </li>
+        {/if}
       </ul>
     {/if}
   </section>
@@ -129,4 +148,14 @@
   .src { grid-area: src; color: var(--muted); font-size: 0.8rem; }
   .desc { grid-area: desc; color: var(--muted); font-size: 0.85rem; }
   .empty { color: var(--muted); }
+  .results li.verbatim {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    grid-template-columns: none;
+    grid-template-areas: none;
+  }
+  .verbatim .hint { color: var(--muted); font-size: 0.8rem; }
+  .verbatim .add { grid-area: auto; }
 </style>

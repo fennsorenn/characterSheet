@@ -7,6 +7,7 @@ import {
   setVariant,
   setSize,
   cycleSize,
+  toggleStack,
   makeBlock
 } from './operations.js';
 import { defaultLayout } from './defaultLayout.js';
@@ -82,6 +83,17 @@ describe('layout operations', () => {
     expect(setSize(l, id, 'full').blocks[0].size).toBe('full');
     // wide -> full -> narrow
     expect(cycleSize(l, id).blocks[0].size).toBe('full');
+  });
+
+  it('toggles stacking on a block, but never on the first one', () => {
+    const l = defaultLayout();
+    const second = l.blocks[1].id;
+    expect(toggleStack(l, second).blocks[1].stack).toBe(true);
+    // Toggling again clears it.
+    expect(toggleStack(toggleStack(l, second), second).blocks[1].stack).toBe(false);
+    // The first block can't stack (nothing above it).
+    const first = l.blocks[0].id;
+    expect(toggleStack(l, first).blocks[0].stack).toBe(false);
   });
 
   it('does not mutate the input layout', () => {

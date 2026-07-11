@@ -67,6 +67,17 @@ export function cycleSize(layout: SheetLayout, id: string): SheetLayout {
   });
 }
 
+/**
+ * Toggle whether a block is stacked below the previous one (a split cell). The
+ * first block can never stack (there is nothing above it), so toggling it is a
+ * no-op that just clears any stray flag.
+ */
+export function toggleStack(layout: SheetLayout, id: string): SheetLayout {
+  const i = layout.blocks.findIndex((b) => b.id === id);
+  if (i <= 0) return mapBlock(layout, id, (b) => ({ ...b, stack: false }));
+  return mapBlock(layout, id, (b) => ({ ...b, stack: !b.stack }));
+}
+
 function mapBlock(
   layout: SheetLayout,
   id: string,
