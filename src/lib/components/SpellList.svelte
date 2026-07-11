@@ -244,7 +244,7 @@
         <li class:granted={r.grantedBy}>
           <div class="top">
             {#if r.grantedBy}
-              <span class="status gicon" title={`Granted by ${r.grantedBy} — always available, doesn't count`}>⚡</span>
+              <span class="status gicon" title={`Granted by ${r.grantedBy} — always available, doesn't count`}><Icon name="lightning" /></span>
             {:else if r.index !== null}
               <button
                 class="status prep"

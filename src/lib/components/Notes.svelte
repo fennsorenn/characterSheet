@@ -2,6 +2,7 @@
   import { untrack } from 'svelte';
   import { character, addNoteDoc, addNoteFolder, deleteNote, renameNote, saveNoteContent } from '../stores/character.js';
   import { isNoteFolder, type NoteDoc, type NoteFolder, type NoteNode } from '../character/index.js';
+  import Icon from './Icon.svelte';
   // Milkdown (Crepe) is heavy (ProseMirror); it's loaded lazily in the editor
   // effect below so the main bundle stays light until a note is opened.
   type CrepeInstance = import('@milkdown/crepe').Crepe;
@@ -194,7 +195,7 @@
       <li class="node-item">
         {#if isNoteFolder(node)}
           <div class="node-row folder-row">
-            <span class="node-icon">📁</span>
+            <span class="node-icon"><Icon name="folder" /></span>
             {#if renamingId === node.id}
               <input
                 class="rename-input"
@@ -226,7 +227,7 @@
           </div>
         {:else}
           <div class="node-row doc-row" class:active={activeId === node.id}>
-            <span class="node-icon">📄</span>
+            <span class="node-icon"><Icon name="scroll" /></span>
             {#if renamingId === node.id}
               <input
                 class="rename-input"
@@ -271,7 +272,7 @@
 <div class="notes-block" data-variant={variant}>
   <!-- Tab bar -->
   <div class="tab-bar">
-    <button class="tree-btn" onclick={() => { treeOpen = !treeOpen; }} title="Open notes tree">📂 Notes</button>
+    <button class="tree-btn" onclick={() => { treeOpen = !treeOpen; }} title="Open notes tree"><Icon name="folder" /> Notes</button>
     <div class="tabs">
       {#each openIds as id (id)}
         {@const doc = findDoc(notes, id)}

@@ -16,7 +16,7 @@ hammer-nails, swap-bag.
 
 **Delapouite** — cape, gloves, bracer, belt-armor, ring, sparkles,
 flanged-mace, sickle, flail, wood-club, sling, steak, coins-pile,
-star-formation.
+star-formation, open-folder.
 
 Spell schools & damage types (**Lorc**, except star-formation above) —
 magic-shield, magic-gate, third-eye, charm, fireball, domino-mask, grim-reaper,

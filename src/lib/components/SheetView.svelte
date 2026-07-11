@@ -15,6 +15,7 @@
   import FeatPicker from './FeatPicker.svelte';
   import DetailWindow from './DetailWindow.svelte';
   import DiceRoller from './DiceRoller.svelte';
+  import Icon from './Icon.svelte';
 
   // Where "← Back" returns: the owning overview.
   let { backTo = '/local' }: { backTo?: string } = $props();
@@ -28,7 +29,7 @@
       <h1>{$character.name}</h1>
     </div>
     <div class="actions">
-      <button class="data-toggle" title="Dice roller" onclick={() => diceOpen.update((o) => !o)}>🎲 Dice</button>
+      <button class="data-toggle" title="Dice roller" onclick={() => diceOpen.update((o) => !o)}><Icon name="dice" /> Dice</button>
       <button class="data-toggle" onclick={openPrint}>Print / PDF</button>
       <button class="data-toggle" onclick={() => (showData = !showData)}>
         {$catalogState.catalog ? 'Data ✓' : 'Load data'}

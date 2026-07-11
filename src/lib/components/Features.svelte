@@ -34,6 +34,7 @@
   import { parseTaggedString, renderToHtml } from '../render/tags.js';
   import AsiEditor from './AsiEditor.svelte';
   import GrantChoiceEditor from './GrantChoiceEditor.svelte';
+  import Icon from './Icon.svelte';
 
   let { variant = 'full' }: { variant?: string } = $props();
 
@@ -167,8 +168,8 @@
         <span class="ctag">{t}<button class="x" onclick={() => removeFeatureTag(metaKey(f), t)}>×</button></span>
       {/each}
       <span class="spacer"></span>
-      <button class="mini" title="Add tag" onclick={() => addTag(f)}>🏷</button>
-      <button class="mini" title={hideable ? 'Hide' : 'Unhide'} onclick={() => setFeatureHidden(metaKey(f), hideable)}>{hideable ? '🛇' : '👁'}</button>
+      <button class="mini" title="Add tag" onclick={() => addTag(f)}>#</button>
+      <button class="mini" title={hideable ? 'Hide' : 'Unhide'} onclick={() => setFeatureHidden(metaKey(f), hideable)}><Icon name={hideable ? 'invisible' : 'vision'} /></button>
       <button class="mini" onclick={() => toggleExpand(f)}>{expanded.has(featKey(f)) ? '▾' : '▸'}</button>
     </div>
 

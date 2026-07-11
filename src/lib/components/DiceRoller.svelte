@@ -81,7 +81,7 @@
   <div class="roller" style="left:{pos.x}px; top:{pos.y}px; width:{WIDTH}px;" role="dialog" aria-label="Dice roller">
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <header class="bar" onpointerdown={down} onpointermove={move} onpointerup={up}>
-      <span class="title">🎲 Dice</span>
+      <span class="title"><Icon name="dice" /> Dice</span>
       <div class="modes">
         <button class:on={$diceMode === 'disadv'} title="Disadvantage" onclick={() => diceMode.set('disadv')}>−</button>
         <button class:on={$diceMode === 'normal'} title="Normal" onclick={() => diceMode.set('normal')}>•</button>
