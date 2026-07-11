@@ -17,6 +17,7 @@
   import { iconForItem, iconForSchool, spellTags } from '../../character/index.js';
   import { openVariantPicker } from '../../stores/variantPicker.js';
   import Icon from '../Icon.svelte';
+  import UiIcon from '../UiIcon.svelte';
 
   const RESULT_LIMIT = 250;
   const ADDABLE = new Set<Category>(['item', 'spell', 'feat', 'race', 'background', 'class']);
@@ -87,7 +88,7 @@
         </button>
       {/each}
     </div>
-    <button class="close" onclick={closeBrowse}>Close ✕</button>
+    <button class="close" onclick={closeBrowse}>Close <UiIcon name="close" size="0.85em" /></button>
   </header>
 
   <div class="body">

@@ -6,6 +6,11 @@ The icons in `src/lib/components/icons.generated.ts` are sourced from
 to `currentColor` and had their backgrounds stripped; no other modifications
 were made.
 
+The basic-UI icons in `src/lib/components/uiIcons.generated.ts` are from
+[Lucide](https://lucide.dev/) ([ISC License](https://github.com/lucide-icons/lucide/blob/main/LICENSE)):
+close, check, chevron-down, chevron-right, pencil, arrow-up, arrow-down, star.
+Only the inner path markup is vendored; the SVG shell is supplied at render time.
+
 Icons used, by author:
 
 **Lorc** — visored-helm, spectacles, gem-pendant, breastplate, leather-boot,

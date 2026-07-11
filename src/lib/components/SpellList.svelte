@@ -16,6 +16,7 @@
     type SpellTag
   } from '../character/index.js';
   import Icon from './Icon.svelte';
+  import UiIcon from './UiIcon.svelte';
   import QuickAdd from './QuickAdd.svelte';
   import { scrollStyle, resizePersist } from './scrollCell.js';
 
@@ -221,14 +222,14 @@
               {/if}
             </span>
           {/each}
-          {#if counts.favorite}<span title="Favorites — kept handy for swapping">★{counts.favorite}</span>{/if}
+          {#if counts.favorite}<span title="Favorites — kept handy for swapping"><UiIcon name="star" filled size="0.8em" />{counts.favorite}</span>{/if}
           {#if counts.granted}<span title="Granted by items/features — don't count, can't swap">{counts.granted} granted</span>{/if}
         </span>
       {:else}
         <span class="counts">
           <span title="Currently prepared">{counts.prepared} prep</span>
           <span title="Leveled spells in your spellbook">· {counts.spellbook} book</span>
-          <span title="Favorites">· ★{counts.favorite}</span>
+          <span title="Favorites">· <UiIcon name="star" filled size="0.8em" />{counts.favorite}</span>
           {#if counts.granted}<span title="Granted by items/features">· {counts.granted} granted</span>{/if}
         </span>
       {/if}
@@ -272,13 +273,13 @@
                 class:on={r.status === 'prepared'}
                 title="Prepared"
                 onclick={() => setSpellStatus(r.index!, r.status === 'prepared' ? 'known' : 'prepared')}
-              >✓</button>
+              ><UiIcon name="check" /></button>
               <button
                 class="status fav"
                 class:on={r.status === 'favorite'}
                 title="Favorite — keep handy"
                 onclick={() => setSpellStatus(r.index!, r.status === 'favorite' ? 'known' : 'favorite')}
-              >★</button>
+              ><UiIcon name="star" filled={r.status === 'favorite'} /></button>
             {/if}
             <button class="name" title="Show details" onclick={(e) => openSpellDetail(r, e.currentTarget)}>{r.name}</button>
             <span class="lvl">{r.level}</span>
@@ -297,7 +298,7 @@
                 title={r.grantedBy ? 'Unmark granted' : 'Mark as granted by a feature/item'}
                 onclick={() => setSpellGranted(r.index!, r.grantedBy ? undefined : 'Feature')}
               >⚑</button>
-              <button class="rm" aria-label="Remove" onclick={() => removeSpell(r.index!)}>×</button>
+              <button class="rm" aria-label="Remove" onclick={() => removeSpell(r.index!)}><UiIcon name="close" size="0.85em" /></button>
             {/if}
           </div>
           {#if r.grantedBy && r.index !== null}

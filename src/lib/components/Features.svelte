@@ -36,6 +36,7 @@
   import AsiEditor from './AsiEditor.svelte';
   import GrantChoiceEditor from './GrantChoiceEditor.svelte';
   import Icon from './Icon.svelte';
+  import UiIcon from './UiIcon.svelte';
   import { scrollStyle, resizePersist } from './scrollCell.js';
 
   let {
@@ -187,12 +188,12 @@
       {#if f.subtitle}<span class="sub">{f.subtitle}</span>{/if}
       {#if pending > 0}<span class="pbadge" title="{pending} choice{pending === 1 ? '' : 's'} to make">{pending}</span>{/if}
       {#each customTags(f) as t}
-        <span class="ctag">{t}<button class="x" onclick={() => removeFeatureTag(metaKey(f), t)}>×</button></span>
+        <span class="ctag">{t}<button class="x" title="Remove tag" onclick={() => removeFeatureTag(metaKey(f), t)}><UiIcon name="close" size="0.8em" /></button></span>
       {/each}
       <span class="spacer"></span>
       <button class="mini" title="Add tag" onclick={() => addTag(f)}>#</button>
       <button class="mini" title={hideable ? 'Hide' : 'Unhide'} onclick={() => setFeatureHidden(metaKey(f), hideable)}><Icon name={hideable ? 'invisible' : 'vision'} /></button>
-      <button class="mini" onclick={() => toggleExpand(f)}>{expanded.has(featKey(f)) ? '▾' : '▸'}</button>
+      <button class="mini" title={expanded.has(featKey(f)) ? 'Collapse' : 'Expand'} onclick={() => toggleExpand(f)}><UiIcon name={expanded.has(featKey(f)) ? 'chevron-down' : 'chevron-right'} /></button>
     </div>
 
     {#if optionsFor(f).length > 0 || spellsFor(f).length > 0 || isAsi(f) || grantFieldsFor(f).length > 0}
@@ -214,7 +215,7 @@
             {#if feat}
               <span class="pill picked">
                 <button class="pname" title="Change" onclick={() => openFeatPicker({ key: asiKey(f), label: `${f.name}: choose a feat` })}>{feat.name}</button>
-                <button class="x" onclick={() => setFeatChoice(asiKey(f), undefined)}>×</button>
+                <button class="x" aria-label="Clear" onclick={() => setFeatChoice(asiKey(f), undefined)}><UiIcon name="close" size="0.85em" /></button>
               </span>
             {:else}
               <button class="pill empty" onclick={() => openFeatPicker({ key: asiKey(f), label: `${f.name}: choose a feat` })}>+ choose feat</button>
@@ -233,7 +234,7 @@
           {#if picked}
             <span class="pill picked">
               <button class="pname" title="Change" onclick={() => openSpellPicker(field)}>{picked.name}</button>
-              <button class="x" onclick={() => setSpellChoice(field.key, undefined)}>×</button>
+              <button class="x" aria-label="Clear" onclick={() => setSpellChoice(field.key, undefined)}><UiIcon name="close" size="0.85em" /></button>
             </span>
           {:else}
             <button class="pill empty" title={field.label} onclick={() => openSpellPicker(field)}>+ choose spell</button>
@@ -262,7 +263,7 @@
         {#if picked}
           <span class="pill picked">
             <button class="pname" title="Change" onclick={() => openOptionalPicker({ key: slotKey(p, i), types: p.featureType, label: `Choose ${slotNoun(p)}` })}>{picked.name}</button>
-            <button class="x" onclick={() => setOptionalChoice(slotKey(p, i), undefined)}>×</button>
+            <button class="x" aria-label="Clear" onclick={() => setOptionalChoice(slotKey(p, i), undefined)}><UiIcon name="close" size="0.85em" /></button>
           </span>
         {:else}
           <button class="pill empty" onclick={() => openOptionalPicker({ key: slotKey(p, i), types: p.featureType, label: `Choose ${slotNoun(p)}` })}>+ choose {slotNoun(p)}</button>
@@ -277,7 +278,7 @@
       {/if}
     {/each}
     {#if p.count > 0 && Object.keys($character.optionalChoices).some((k) => k.startsWith(`${p.key}|`))}
-      <button class="mini detail" onclick={() => { const next = new Set(expanded); next.has(ekey) ? next.delete(ekey) : next.add(ekey); expanded = next; }}>{expanded.has(ekey) ? '▾ hide' : '▸ details'}</button>
+      <button class="mini detail" onclick={() => { const next = new Set(expanded); next.has(ekey) ? next.delete(ekey) : next.add(ekey); expanded = next; }}><UiIcon name={expanded.has(ekey) ? 'chevron-down' : 'chevron-right'} /> {expanded.has(ekey) ? 'hide' : 'details'}</button>
     {/if}
   </li>
 {/snippet}
@@ -293,7 +294,7 @@
       <span class="k">Race</span>
       {#if $character.race}
         <span class="v">{$character.race.name}</span>
-        <button class="x" onclick={() => setRace(undefined)} aria-label="Clear race">×</button>
+        <button class="x" onclick={() => setRace(undefined)} aria-label="Clear race"><UiIcon name="close" size="0.85em" /></button>
       {:else}
         <button class="choose" onclick={() => openBrowse('race')}>Choose…</button>
       {/if}
@@ -302,7 +303,7 @@
       <span class="k">Background</span>
       {#if $character.background}
         <span class="v">{$character.background.name}</span>
-        <button class="x" onclick={() => setBackground(undefined)} aria-label="Clear background">×</button>
+        <button class="x" onclick={() => setBackground(undefined)} aria-label="Clear background"><UiIcon name="close" size="0.85em" /></button>
       {:else}
         <button class="choose" onclick={() => openBrowse('background')}>Choose…</button>
       {/if}
@@ -332,7 +333,7 @@
               <option value={String(sc.shortName ?? sc.name)}>{sc.name}</option>
             {/each}
           </select>
-          <button class="x" title="Remove class" onclick={() => removeClass(i)}>×</button>
+          <button class="x" title="Remove class" onclick={() => removeClass(i)}><UiIcon name="close" size="0.85em" /></button>
         </span>
       {/each}
       <button class="choose" onclick={() => openBrowse('class')}>+ Class</button>
@@ -340,7 +341,7 @@
     <div class="line feats">
       <span class="k">Feats</span>
       {#each $character.feats as f, i}
-        <span class="ctag">{f.name}<button class="x" onclick={() => removeFeat(i)}>×</button></span>
+        <span class="ctag">{f.name}<button class="x" aria-label="Remove feat" onclick={() => removeFeat(i)}><UiIcon name="close" size="0.8em" /></button></span>
       {/each}
       <button class="choose" onclick={() => openBrowse('feat')}>+ Feat</button>
     </div>
@@ -369,7 +370,7 @@
 
       {#if hidden.length > 0}
         <button class="hidetoggle" onclick={() => (showHidden = !showHidden)}>
-          {showHidden ? '▾' : '▸'} Hidden / applied ({hidden.length})
+          <UiIcon name={showHidden ? 'chevron-down' : 'chevron-right'} /> Hidden / applied ({hidden.length})
         </button>
         {#if showHidden}
           <ul class="features hiddenlist">
@@ -382,7 +383,7 @@
 
   {#if variants.length > 0}
     <button class="hidetoggle" onclick={() => (showVariants = !showVariants)}>
-      {showVariants ? '▾' : '▸'} Optional variants ({variants.length})
+      <UiIcon name={showVariants ? 'chevron-down' : 'chevron-right'} /> Optional variants ({variants.length})
     </button>
     {#if showVariants}
       <ul class="features variantlist">
@@ -442,7 +443,7 @@
   .fname { font-weight: 600; background: none; border: none; color: var(--fg); cursor: pointer; padding: 0; font: inherit; }
   .sub { font-size: 0.72rem; color: var(--muted); }
   .spacer { flex: 1; }
-  .mini { background: none; border: none; cursor: pointer; font-size: 0.85rem; opacity: 0.7; padding: 0 0.1rem; }
+  .mini { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.85rem; opacity: 0.7; padding: 0 0.1rem; }
   .mini:hover { opacity: 1; }
   .choices { display: flex; flex-wrap: wrap; gap: 0.3rem; padding: 0.15rem 0 0.25rem 0.2rem; }
   .opt { font-size: 0.74rem; }

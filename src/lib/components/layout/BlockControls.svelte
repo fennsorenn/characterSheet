@@ -2,6 +2,7 @@
   import { blockMeta } from '../../layout/blocks.js';
   import { getLayoutController } from '../../layout/controller.js';
   import { BLOCK_SIZES, type BlockInstance, type BlockSize } from '../../layout/types.js';
+  import UiIcon from '../UiIcon.svelte';
 
   // The edit-mode toolbar shown on each block: change variant, resize, split,
   // reorder, or remove. Drag handle lives here too (the parent cell is draggable).
@@ -48,9 +49,9 @@
     title={block.stack ? 'Unstack into its own cell' : 'Stack below the block above (split cell)'}
     onclick={() => ctrl.toggleStack(block.id)}
   >⊟</button>
-  <button title="Move up" onclick={() => ctrl.moveBlock(block.id, -1)}>↑</button>
-  <button title="Move down" onclick={() => ctrl.moveBlock(block.id, 1)}>↓</button>
-  <button class="rm" title="Remove" onclick={() => ctrl.removeBlock(block.id)}>✕</button>
+  <button title="Move up" aria-label="Move up" onclick={() => ctrl.moveBlock(block.id, -1)}><UiIcon name="arrow-up" size="0.85em" /></button>
+  <button title="Move down" aria-label="Move down" onclick={() => ctrl.moveBlock(block.id, 1)}><UiIcon name="arrow-down" size="0.85em" /></button>
+  <button class="rm" title="Remove" aria-label="Remove" onclick={() => ctrl.removeBlock(block.id)}><UiIcon name="close" size="0.85em" /></button>
 </div>
 
 <style>

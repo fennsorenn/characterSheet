@@ -3,6 +3,7 @@
   import { character, addNoteDoc, addNoteFolder, deleteNote, renameNote, saveNoteContent } from '../stores/character.js';
   import { isNoteFolder, type NoteDoc, type NoteFolder, type NoteNode } from '../character/index.js';
   import Icon from './Icon.svelte';
+  import UiIcon from './UiIcon.svelte';
   // Milkdown (Crepe) is heavy (ProseMirror); it's loaded lazily in the editor
   // effect below so the main bundle stays light until a note is opened.
   type CrepeInstance = import('@milkdown/crepe').Crepe;
@@ -172,7 +173,7 @@
     <div class="tree-modal" onclick={(e) => e.stopPropagation()} role="dialog" tabindex="-1" aria-label="Notes tree">
       <div class="tree-head">
         <span>Notes</span>
-        <button class="close-btn" onclick={() => { treeOpen = false; }} aria-label="Close tree">✕</button>
+        <button class="close-btn" onclick={() => { treeOpen = false; }} aria-label="Close tree"><UiIcon name="close" /></button>
       </div>
       <div class="tree-body">
         {@render nodeList(notes)}
@@ -210,8 +211,8 @@
               <span class="node-name" ondblclick={() => startRename(node.id, node.name)}>{node.name}</span>
             {/if}
             <span class="node-acts">
-              <button class="act-btn" title="Rename" onclick={() => startRename(node.id, node.name)}>✎</button>
-              <button class="act-btn del" title="Delete" onclick={() => confirmDelete(node.id, node.name)}>✕</button>
+              <button class="act-btn" title="Rename" onclick={() => startRename(node.id, node.name)}><UiIcon name="pencil" size="0.85em" /></button>
+              <button class="act-btn del" title="Delete" onclick={() => confirmDelete(node.id, node.name)}><UiIcon name="close" size="0.85em" /></button>
             </span>
           </div>
           <div class="folder-children">
@@ -240,8 +241,8 @@
               <button class="node-name-btn" onclick={() => openDoc(node.id)}>{node.name}</button>
             {/if}
             <span class="node-acts">
-              <button class="act-btn" title="Rename" onclick={() => startRename(node.id, node.name)}>✎</button>
-              <button class="act-btn del" title="Delete" onclick={() => confirmDelete(node.id, node.name)}>✕</button>
+              <button class="act-btn" title="Rename" onclick={() => startRename(node.id, node.name)}><UiIcon name="pencil" size="0.85em" /></button>
+              <button class="act-btn del" title="Delete" onclick={() => confirmDelete(node.id, node.name)}><UiIcon name="close" size="0.85em" /></button>
             </span>
           </div>
         {/if}
@@ -290,7 +291,7 @@
               aria-label="Close tab"
               onclick={(e) => { e.stopPropagation(); closeTab(id); }}
               onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); closeTab(id); } }}
-            >✕</span>
+            ><UiIcon name="close" size="0.8em" /></span>
           </button>
         {/if}
       {/each}

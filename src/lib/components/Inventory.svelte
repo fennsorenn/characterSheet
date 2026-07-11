@@ -12,6 +12,7 @@
   import { ATTUNEMENT_LIMIT, iconForItem, iconLabel } from '../character/index.js';
   import NumberField from './NumberField.svelte';
   import Icon from './Icon.svelte';
+  import UiIcon from './UiIcon.svelte';
   import QuickAdd from './QuickAdd.svelte';
   import { scrollStyle, resizePersist } from './scrollCell.js';
 
@@ -114,7 +115,7 @@
             />
           {:else}
             <button class="name" class:equipped={item.equipped} title="Show details" onclick={(e) => openItemDetail(item.name, item.source, e.currentTarget)}>{item.label ?? item.name}</button>
-            <button class="edit" title="Rename item" aria-label="Rename item" onclick={() => startRename(i, item.label ?? item.name)}>✎</button>
+            <button class="edit" title="Rename item" aria-label="Rename item" onclick={() => startRename(i, item.label ?? item.name)}><UiIcon name="pencil" size="0.85em" /></button>
           {/if}
           {#if needsAttune(item.name, item.source)}
             <button
@@ -123,7 +124,7 @@
               disabled={!item.attuned && attunedCount >= ATTUNEMENT_LIMIT}
               title={item.attuned ? 'Attuned' : 'Attune'}
               onclick={() => toggleAttuned(i)}
-            >★</button>
+            ><UiIcon name="star" filled={item.attuned} size="0.9em" /></button>
           {/if}
           <span class="src">{item.source}</span>
           {#if note}<span class="note">{note}</span>{/if}

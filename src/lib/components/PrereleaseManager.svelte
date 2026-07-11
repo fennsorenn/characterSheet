@@ -12,6 +12,7 @@
     type RepoConfig,
     type RepoSource
   } from '../data/index.js';
+  import UiIcon from './UiIcon.svelte';
 
   // Selected repo coordinates (a preset by default, editable for custom repos).
   let owner = $state(REPO_PRESETS[0].owner);
@@ -102,7 +103,7 @@
         <li>
           <span class="name">{o.label}</span>
           <span class="tag">{o.sourceId}</span>
-          <button class="remove" onclick={() => removeOverlay(o.sourceId)} title="Remove">✕</button>
+          <button class="remove" onclick={() => removeOverlay(o.sourceId)} title="Remove" aria-label="Remove"><UiIcon name="close" size="0.85em" /></button>
         </li>
       {/each}
     </ul>

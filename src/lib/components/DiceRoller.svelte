@@ -10,6 +10,7 @@
   } from '../stores/dice.js';
   import { partDetail, type RollGroup, type RollPart } from '../dice/dice.js';
   import Icon from './Icon.svelte';
+  import UiIcon from './UiIcon.svelte';
 
   const WIDTH = 300;
   const DICE = [20, 12, 10, 8, 6, 4, 100];
@@ -109,7 +110,7 @@
     {/if}
 
     {#if older.length}
-      <button class="logtoggle" onclick={() => (showLog = !showLog)}>{showLog ? '▾' : '▸'} Log ({older.length})</button>
+      <button class="logtoggle" onclick={() => (showLog = !showLog)}><UiIcon name={showLog ? 'chevron-down' : 'chevron-right'} /> Log ({older.length})</button>
       {#if showLog}
         <ul class="log">
           {#each older as g (g.id)}
