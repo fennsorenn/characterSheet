@@ -1,9 +1,9 @@
 export type { Catalog, Category, NamedEntry, DataReader } from './catalog.js';
 export { CATEGORIES, emptyCatalog } from './catalog.js';
 export { parseCatalog } from './parse.js';
-export { expandVariants } from './variants.js';
+export { expandVariants, variantsForBase, hasVariants, isVariant } from './variants.js';
 export { readerFromZip, readerFromFiles } from './zip.js';
-export { SearchIndex, type SearchHit, type SearchOptions } from './search.js';
+export { SearchIndex, tokenMatch, type SearchHit, type SearchOptions } from './search.js';
 export { saveCatalog, loadCachedCatalog, clearCachedCatalogs } from './cache.js';
 export { composeCatalog } from './compose.js';
 export {

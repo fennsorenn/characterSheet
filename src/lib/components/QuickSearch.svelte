@@ -1,9 +1,10 @@
 <script lang="ts">
-  import { searchIndex } from '../stores/catalog.js';
+  import { searchIndex, catalogState } from '../stores/catalog.js';
   import { addInventoryItem, addSpell } from '../stores/character.js';
   import { openBrowse } from '../stores/browse.js';
+  import { openVariantPicker } from '../stores/variantPicker.js';
   import { parseTaggedString, renderToText } from '../render/tags.js';
-  import type { Category, SearchHit } from '../data/index.js';
+  import { hasVariants, type Category, type SearchHit } from '../data/index.js';
 
   // Items/spells can be added straight to the character from a hit.
   const ADDABLE: Partial<Record<Category, string>> = { item: 'inventory', spell: 'spellbook' };
@@ -66,6 +67,15 @@
                 + Add
               </button>
             {/if}
+            {#if hit.category === 'item' && $catalogState.catalog && hasVariants($catalogState.catalog.entries.item, hit.entry.name, String(hit.entry.source))}
+              <button
+                class="variant"
+                title="Add a magic variant of {hit.entry.name}"
+                onclick={() => openVariantPicker({ name: hit.entry.name, source: String(hit.entry.source) })}
+              >
+                Variant…
+              </button>
+            {/if}
             <span class="desc">{snippet(hit.entry)}</span>
           </li>
         {:else}
@@ -100,8 +110,8 @@
   .results { list-style: none; padding: 0; margin: 0.5rem 0 0; }
   .results li {
     display: grid;
-    grid-template-columns: 6rem 1fr auto auto;
-    grid-template-areas: 'cat name src add' 'cat desc desc desc';
+    grid-template-columns: 6rem 1fr auto auto auto;
+    grid-template-areas: 'cat name src variant add' 'cat desc desc desc desc';
     gap: 0.1rem 0.6rem;
     padding: 0.5rem 0.4rem;
     border-bottom: 1px solid var(--line);
@@ -118,6 +128,18 @@
     cursor: pointer;
   }
   .add:hover { background: var(--accent); color: #fff; }
+  .variant {
+    grid-area: variant;
+    font-size: 0.75rem;
+    padding: 0.15rem 0.45rem;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--muted);
+    border-radius: 5px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .variant:hover { border-color: var(--accent); color: var(--accent); }
   .cat {
     grid-area: cat;
     font-size: 0.7rem;

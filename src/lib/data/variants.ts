@@ -73,10 +73,14 @@ function buildVariant(base: NamedEntry, variant: MagicVariant): NamedEntry {
   const merged: Record<string, unknown> = { ...base, ...rest };
   merged.name = `${namePrefix}${base.name}${nameSuffix}`;
   merged.source = variant.inherits.source ?? base.source;
-  // Record provenance so the UI can show "variant of <base>".
+  // Record provenance so the UI can show "variant of <base>", and mark it as a
+  // generated variant so the search index can skip it (it stays in the catalog
+  // so an equipped variant still resolves its mechanical effects) while the
+  // "Add variant" picker surfaces it on demand.
   merged._baseName = base.name;
   merged._baseSource = base.source;
   merged._variantName = variant.name;
+  merged._isVariant = true;
   return substitute(merged, merged) as NamedEntry;
 }
 
@@ -96,4 +100,41 @@ export function expandVariants(
     }
   }
   return out;
+}
+
+/** True for a generated magic-item variant (as opposed to a base/premade item). */
+export function isVariant(entry: NamedEntry): boolean {
+  return entry._isVariant === true;
+}
+
+/**
+ * All generated variants of a given base item, for the "Add variant" picker.
+ * Matches on the provenance recorded by {@link buildVariant} (`_baseName` /
+ * `_baseSource`), case-insensitively.
+ */
+export function variantsForBase(
+  items: NamedEntry[],
+  baseName: string,
+  baseSource: string
+): NamedEntry[] {
+  const n = baseName.toLowerCase();
+  const s = baseSource.toLowerCase();
+  return items.filter(
+    (e) =>
+      e._isVariant === true &&
+      String(e._baseName ?? '').toLowerCase() === n &&
+      String(e._baseSource ?? '').toLowerCase() === s
+  );
+}
+
+/** True if this base item has at least one generated variant available. */
+export function hasVariants(items: NamedEntry[], baseName: string, baseSource: string): boolean {
+  const n = baseName.toLowerCase();
+  const s = baseSource.toLowerCase();
+  return items.some(
+    (e) =>
+      e._isVariant === true &&
+      String(e._baseName ?? '').toLowerCase() === n &&
+      String(e._baseSource ?? '').toLowerCase() === s
+  );
 }

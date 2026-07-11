@@ -9,11 +9,13 @@
     filterEntries,
     facetOptions,
     itemTypeLabel,
+    hasVariants,
     type Category,
     type NamedEntry,
     type Selection
   } from '../../data/index.js';
   import { iconForItem, iconForSchool, spellTags } from '../../character/index.js';
+  import { openVariantPicker } from '../../stores/variantPicker.js';
   import Icon from '../Icon.svelte';
 
   const RESULT_LIMIT = 250;
@@ -149,6 +151,15 @@
             {#if ADDABLE.has(category)}
               <button class="add" class:done={added.has(key(e))} onclick={() => add(e)}>
                 {added.has(key(e)) ? (ADD_VERB[category] ?? '✓ Added') : '+ Add'}
+              </button>
+            {/if}
+            {#if category === 'item' && catalog && hasVariants(catalog.entries.item, e.name, String(e.source))}
+              <button
+                class="add variant"
+                title="Add a magic variant of {e.name}"
+                onclick={() => openVariantPicker({ name: e.name, source: String(e.source) })}
+              >
+                Variant…
               </button>
             {/if}
           </li>

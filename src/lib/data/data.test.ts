@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { expandVariants } from './variants.js';
+import { expandVariants, variantsForBase, hasVariants } from './variants.js';
 import { parseCatalog } from './parse.js';
-import { SearchIndex } from './search.js';
+import { SearchIndex, tokenMatch } from './search.js';
 import { readerFromFiles } from './zip.js';
 import { strToU8 } from 'fflate';
 import type { DataReader, NamedEntry } from './catalog.js';
@@ -135,5 +135,61 @@ describe('SearchIndex', () => {
 
   it('returns nothing for an empty query', () => {
     expect(index.search('')).toEqual([]);
+  });
+
+  it('matches multi-token queries in any order, ranked below contiguous matches', () => {
+    catalog.entries.item = [{ name: 'Chain Mail', source: 'PHB' }, { name: 'Chain Shirt', source: 'PHB' }];
+    const idx = new SearchIndex(catalog);
+    // Out-of-order tokens still find it.
+    expect(idx.search('mail chain', { categories: ['item'] }).map((h) => h.entry.name)).toContain(
+      'Chain Mail'
+    );
+    // Contiguous 'chain mail' ranks Chain Mail first over the token-only Chain Shirt miss.
+    const inOrder = idx.search('chain mail', { categories: ['item'] });
+    expect(inOrder[0].entry.name).toBe('Chain Mail');
+  });
+
+  it('excludes generated variants from the index but keeps real items', () => {
+    catalog.entries.item = [
+      { name: 'Scale Mail', source: 'PHB' },
+      { name: '+1 Scale Mail', source: 'PHB', _isVariant: true, _baseName: 'Scale Mail', _baseSource: 'PHB' }
+    ];
+    const idx = new SearchIndex(catalog);
+    const names = idx.search('scale mail', { categories: ['item'] }).map((h) => h.entry.name);
+    expect(names).toContain('Scale Mail');
+    expect(names).not.toContain('+1 Scale Mail');
+  });
+});
+
+describe('variantsForBase / hasVariants', () => {
+  const items = [
+    { name: 'Scale Mail', source: 'PHB' },
+    { name: '+1 Scale Mail', source: 'PHB', _isVariant: true, _baseName: 'Scale Mail', _baseSource: 'PHB' },
+    { name: '+2 Scale Mail', source: 'PHB', _isVariant: true, _baseName: 'Scale Mail', _baseSource: 'PHB' },
+    { name: '+1 Longsword', source: 'PHB', _isVariant: true, _baseName: 'Longsword', _baseSource: 'PHB' }
+  ];
+
+  it('returns only variants of the given base, case-insensitively', () => {
+    expect(variantsForBase(items, 'scale mail', 'phb').map((v) => v.name).sort()).toEqual([
+      '+1 Scale Mail',
+      '+2 Scale Mail'
+    ]);
+  });
+
+  it('hasVariants reflects availability', () => {
+    expect(hasVariants(items, 'Scale Mail', 'PHB')).toBe(true);
+    expect(hasVariants(items, 'Shield', 'PHB')).toBe(false);
+  });
+});
+
+describe('tokenMatch', () => {
+  it('matches all tokens in any order', () => {
+    expect(tokenMatch('Chain Mail', 'mail chain')).toBe(true);
+    expect(tokenMatch('Chain Mail', 'chain')).toBe(true);
+    expect(tokenMatch('Chain Mail', 'mail plate')).toBe(false);
+  });
+
+  it('empty query matches everything', () => {
+    expect(tokenMatch('Anything', '')).toBe(true);
   });
 });
