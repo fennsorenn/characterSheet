@@ -252,7 +252,8 @@ export function createCharacter(partial: Partial<Character> = {}): Character {
     optionalChoices: partial.optionalChoices ?? {},
     featChoices: partial.featChoices ?? {},
     featureMeta: partial.featureMeta ?? {},
-    variantChoices: partial.variantChoices ?? {}
+    variantChoices: partial.variantChoices ?? {},
+    notes: partial.notes
   };
 }
 
