@@ -30,6 +30,12 @@ export interface BlockInstance {
    * of the stack decides the cell's width. Ignored on the first block of a row.
    */
   stack?: boolean;
+  /**
+   * Optional pixel cap on the height of a scrollable list block (features,
+   * spells, inventory). When set, the list scrolls past this height; set by
+   * dragging the resize handle in edit mode. Ignored by non-list blocks.
+   */
+  height?: number;
 }
 
 export interface SheetLayout {

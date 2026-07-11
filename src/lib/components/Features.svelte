@@ -36,8 +36,19 @@
   import AsiEditor from './AsiEditor.svelte';
   import GrantChoiceEditor from './GrantChoiceEditor.svelte';
   import Icon from './Icon.svelte';
+  import { scrollStyle, resizePersist } from './scrollCell.js';
 
-  let { variant = 'full' }: { variant?: string } = $props();
+  let {
+    variant = 'full',
+    height = undefined,
+    editing = false,
+    onResize = undefined
+  }: {
+    variant?: string;
+    height?: number;
+    editing?: boolean;
+    onResize?: (h: number) => void;
+  } = $props();
 
   let expanded = $state<Set<string>>(new Set());
   let hiddenGroups = $state<Set<string>>(new Set()); // source tags filtered out
@@ -343,22 +354,30 @@
     </div>
   {/if}
 
-  {#if visible.length > 0 || visibleProgs.length > 0}
-    <ul class="features">
-      {#each visibleProgs as p (p.key)}{@render progressionRow(p)}{/each}
-      {#each visible as f (featKey(f))}{@render featureRow(f, true)}{/each}
-    </ul>
-  {/if}
+  {#if visible.length > 0 || visibleProgs.length > 0 || hidden.length > 0}
+    <div
+      class="listscroll"
+      style={scrollStyle(editing, height)}
+      use:resizePersist={{ editing, height, onResize }}
+    >
+      {#if visible.length > 0 || visibleProgs.length > 0}
+        <ul class="features">
+          {#each visibleProgs as p (p.key)}{@render progressionRow(p)}{/each}
+          {#each visible as f (featKey(f))}{@render featureRow(f, true)}{/each}
+        </ul>
+      {/if}
 
-  {#if hidden.length > 0}
-    <button class="hidetoggle" onclick={() => (showHidden = !showHidden)}>
-      {showHidden ? '▾' : '▸'} Hidden / applied ({hidden.length})
-    </button>
-    {#if showHidden}
-      <ul class="features hiddenlist">
-        {#each hidden as f (featKey(f))}{@render featureRow(f, false)}{/each}
-      </ul>
-    {/if}
+      {#if hidden.length > 0}
+        <button class="hidetoggle" onclick={() => (showHidden = !showHidden)}>
+          {showHidden ? '▾' : '▸'} Hidden / applied ({hidden.length})
+        </button>
+        {#if showHidden}
+          <ul class="features hiddenlist">
+            {#each hidden as f (featKey(f))}{@render featureRow(f, false)}{/each}
+          </ul>
+        {/if}
+      {/if}
+    </div>
   {/if}
 
   {#if variants.length > 0}

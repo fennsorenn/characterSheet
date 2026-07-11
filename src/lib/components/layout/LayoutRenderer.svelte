@@ -50,7 +50,12 @@
           {/if}
           <div class="body">
             {#if Block}
-              <Block variant={block.variant} />
+              <Block
+                variant={block.variant}
+                height={block.height}
+                editing={$editMode}
+                onResize={(h) => ctrl.setHeight(block.id, h)}
+              />
             {:else}
               <p class="missing">Unknown block: {block.type}</p>
             {/if}

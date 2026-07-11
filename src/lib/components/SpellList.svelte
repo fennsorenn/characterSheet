@@ -17,8 +17,19 @@
   } from '../character/index.js';
   import Icon from './Icon.svelte';
   import QuickAdd from './QuickAdd.svelte';
+  import { scrollStyle, resizePersist } from './scrollCell.js';
 
-  let { variant = 'full' }: { variant?: string } = $props();
+  let {
+    variant = 'full',
+    height = undefined,
+    editing = false,
+    onResize = undefined
+  }: {
+    variant?: string;
+    height?: number;
+    editing?: boolean;
+    onResize?: (h: number) => void;
+  } = $props();
 
   let selectedTags = $state<Set<string>>(new Set());
   let statusFilter = $state<'all' | 'prepared' | 'favorite' | 'known' | 'granted'>('all');
@@ -244,6 +255,11 @@
       </div>
     {/if}
 
+    <div
+      class="listscroll"
+      style={scrollStyle(editing, height)}
+      use:resizePersist={{ editing, height, onResize }}
+    >
     <ul>
       {#each shown as r (r.name + r.source)}
         <li class:granted={r.grantedBy}>
@@ -302,6 +318,7 @@
         <li class="empty">No spells match.</li>
       {/each}
     </ul>
+    </div>
   {/if}
   <QuickAdd kind="spell" />
 </section>

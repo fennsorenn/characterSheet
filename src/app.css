@@ -58,6 +58,23 @@ body {
 .print-pages .cell.size-full { grid-column: 1 / -1 !important; }
 .print-pages .block { break-inside: avoid; }
 
+/* Scrollable list blocks (features/spells/inventory) cap their height on screen
+   so a long list scrolls instead of stretching the page. On paper that cap must
+   never apply — the printed sheet shows every row. */
+.print-pages .listscroll {
+  max-height: none !important;
+  height: auto !important;
+  overflow: visible !important;
+  resize: none !important;
+}
+
+/* While editing the layout, hint that a list region can be dragged taller/shorter. */
+.grid.editing .listscroll {
+  outline: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
 /* Value redaction by prefill level. visibility keeps the labelled box so the
    field can be filled in by hand. Spell-slot pips (data-print-pips) are an
    exception: instead of being hidden, they stay on the page as empty circles

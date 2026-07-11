@@ -20,6 +20,8 @@ export interface LayoutController {
   setSize(id: string, size: BlockSize): void;
   /** Toggle stacking this block below the previous one (split cell). */
   toggleStack(id: string): void;
+  /** Set a scrollable list block's pixel height cap (undefined clears it). */
+  setHeight(id: string, height: number | undefined): void;
 }
 
 const KEY = Symbol('layout-controller');

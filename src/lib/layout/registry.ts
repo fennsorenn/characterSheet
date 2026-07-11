@@ -21,7 +21,13 @@ import Notes from '../components/Notes.svelte';
  * metadata (blocks.ts) so the layout logic never imports UI. Every block
  * component accepts a `variant` prop and renders the matching verbosity.
  */
-export type BlockComponent = Component<{ variant?: string }>;
+export type BlockComponent = Component<{
+  variant?: string;
+  /** Scrollable list blocks: the persisted height cap and edit/resize wiring. */
+  height?: number;
+  editing?: boolean;
+  onResize?: (h: number) => void;
+}>;
 
 const COMPONENTS: Record<string, BlockComponent> = {
   abilityScores: AbilityScores as BlockComponent,
