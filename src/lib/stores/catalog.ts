@@ -125,11 +125,16 @@ export function importUrl(url: string) {
 /** Restore a previously cached base catalog and overlays on startup, if present. */
 export async function restoreCached() {
   const [base, overlays] = await Promise.all([loadCachedCatalog(), loadOverlays()]);
+  // Ignore a catalog cached before a category shipped (the bestiary lives only in
+  // freshly-parsed data): its `entries.monster` is absent, so creature references
+  // could never resolve. Dropping it prompts a one-time re-import that includes
+  // the bestiary. Freshly-parsed catalogs always set the key (to [] at minimum).
+  const usableBase = base && base.entries?.monster !== undefined ? base : null;
   state.update((s) => ({
     ...s,
-    base: base ?? s.base,
+    base: usableBase ?? s.base,
     overlays: overlays.length ? overlays : s.overlays,
-    stage: base ? 'done' : s.stage
+    stage: usableBase ? 'done' : s.stage
   }));
 }
 

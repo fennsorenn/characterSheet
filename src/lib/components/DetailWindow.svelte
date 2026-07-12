@@ -1,6 +1,6 @@
 <script lang="ts">
   import { detail, closeDetail, openDetail, setDetailSpellLevel, pinCreature } from '../stores/detail.js';
-  import { catalogLookup } from '../stores/catalog.js';
+  import { catalogLookup, catalogState } from '../stores/catalog.js';
   import { casterSummonParams } from '../stores/character.js';
   import { detailContent, detailDocument } from '../render/detail.js';
   import { buildStatblock, type StatblockParams } from '../render/statblock.js';
@@ -21,10 +21,12 @@
 
   let pos = $state<{ x: number; y: number }>({ x: 0, y: 0 });
   let wasOpen = false;
+  // A note shown in-window when a reference can't be resolved (e.g. no bestiary).
+  let notice = $state('');
 
   $effect(() => {
     const d = $detail;
-    if (d && !wasOpen) pos = place(d.anchor);
+    if (d && !wasOpen) { pos = place(d.anchor); notice = ''; }
     wasOpen = !!d;
   });
 
@@ -86,7 +88,8 @@
     const tag = a.dataset.tag || '';
     if (!name) return;
     e.preventDefault();
-    const creature = $catalogLookup.getCreatureByName(name);
+    notice = '';
+    const creature = $catalogLookup.getCreature(name, source ?? '') ?? $catalogLookup.getCreatureByName(name);
     const spell = $catalogLookup.getSpellByName(name);
     const item = $catalogLookup.getItem(name, source ?? (spell ? String(spell.source) : ''));
     if (/creature/.test(tag) && creature) openDetail('creature', creature, a);
@@ -95,6 +98,12 @@
     else if (creature) openDetail('creature', creature, a);
     else if (spell) openDetail('spell', spell, a);
     else if (item) openDetail('item', item, a);
+    else if (/creature/.test(tag)) {
+      // No match — most often the bestiary just isn't loaded in this dataset.
+      notice = ($catalogState.catalog?.counts.monster ?? 0) === 0
+        ? `Creature data isn't loaded — re-import your 5etools data (with the bestiary) to view “${name}”.`
+        : `Couldn't find “${name}” in the loaded data.`;
+    }
   }
 </script>
 
@@ -114,6 +123,7 @@
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div class="body" onclick={onBodyClick}>
+      {#if notice}<p class="notice">{notice}</p>{/if}
       {#if isCreature && sb}
         <p class="sub">{sb.meta}</p>
         {#if sb.summonMin != null}
@@ -172,6 +182,7 @@
   .ic:hover { color: var(--accent); }
   .body { overflow: auto; padding: 0.6rem 0.85rem 0.85rem; font-size: 0.85rem; }
   .sub { font-style: italic; color: var(--muted); margin: 0 0 0.5rem; }
+  .notice { margin: 0 0 0.6rem; padding: 0.4rem 0.5rem; border: 1px solid var(--accent); border-radius: 6px; background: var(--field-hover); color: var(--accent); font-size: 0.8rem; }
   .lvl { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; color: var(--muted); margin-bottom: 0.5rem; }
   .lvl input { width: 3.5rem; font: inherit; padding: 0.1rem 0.3rem; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--fg); }
   .meta { border-left: 2px solid var(--line); padding-left: 0.5rem; margin-bottom: 0.5rem; }
