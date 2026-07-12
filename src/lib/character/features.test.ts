@@ -67,6 +67,26 @@ describe('resolveFeatures', () => {
     expect(byGroup('Feat')).toEqual(['Magic Initiate']);
   });
 
+  it('resolves a class feature to the right edition when two share a name', () => {
+    // PHB and XPHB Cleric both define "Divine Intervention" at level 10 with
+    // different content; the ref carries the source in segment 3 (empty = inherit).
+    const c = emptyCatalog('test');
+    c.entries.class = [
+      { name: 'Cleric', source: 'PHB', classFeatures: ['Divine Intervention|Cleric||10'] },
+      { name: 'Cleric', source: 'XPHB', classFeatures: ['Divine Intervention|Cleric|XPHB|10'] }
+    ] as never;
+    c.classData.classFeature = [
+      { name: 'Divine Intervention', source: 'PHB', className: 'Cleric', classSource: 'PHB', level: 10, entries: ['2014 version.'] },
+      { name: 'Divine Intervention', source: 'XPHB', className: 'Cleric', classSource: 'XPHB', level: 10, entries: ['2024 version.'] }
+    ] as never;
+    const phb = resolveFeatures(createCharacter({ classes: [{ name: 'Cleric', source: 'PHB', level: 10 }] }), c)
+      .find((f) => f.name === 'Divine Intervention');
+    const xphb = resolveFeatures(createCharacter({ classes: [{ name: 'Cleric', source: 'XPHB', level: 10 }] }), c)
+      .find((f) => f.name === 'Divine Intervention');
+    expect(phb?.entries).toEqual(['2014 version.']);
+    expect(xphb?.entries).toEqual(['2024 version.']);
+  });
+
   it('includes header-nested subclass features not in the explicit ref list', () => {
     // A Cleric domain whose level-1 abilities (Domain Spells, bonus feature) are
     // separate subclassFeature entries linked by shortName+source, NOT listed in

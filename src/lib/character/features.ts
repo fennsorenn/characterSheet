@@ -39,8 +39,10 @@ const findRef = (list: NamedEntry[], ref: { name: string; source: string }) =>
   list.find((e) => lc(e.name) === lc(ref.name) && lc(String(e.source)) === lc(ref.source));
 
 function parseClassFeatureRef(ref: string) {
-  const [name = '', className = '', , level = '0'] = ref.split('|');
-  return { name, className, level: Number(level) || 0 };
+  // "Name|ClassName|ClassSource|Level" — an empty ClassSource means "inherit the
+  // class's own source" (e.g. PHB vs XPHB Cleric share a feature name).
+  const [name = '', className = '', classSource = '', level = '0'] = ref.split('|');
+  return { name, className, classSource, level: Number(level) || 0 };
 }
 function parseSubclassFeatureRef(ref: string) {
   const p = ref.split('|');
@@ -120,8 +122,10 @@ export function resolveFeatures(character: Character, catalog: Catalog): Feature
     if (f) out.push({ group: 'Feat', name: f.name, source: String(f.source), entries: arrEntries(f) });
   }
 
+  // Key by source too, so a class feature that exists in multiple editions
+  // (e.g. PHB vs XPHB Cleric's "Divine Intervention") resolves to the right one.
   const cfIndex = indexBy(catalog.classData.classFeature, (e) =>
-    lc(`${e.name}|${e.className}|${e.level}`)
+    lc(`${e.name}|${e.className}|${e.classSource ?? e.source}|${e.level}`)
   );
 
   for (const cls of character.classes) {
@@ -131,7 +135,9 @@ export function resolveFeatures(character: Character, catalog: Catalog): Feature
       if (!refStr) continue;
       const p = parseClassFeatureRef(refStr);
       if (p.level > cls.level) continue;
-      const feat = cfIndex.get(lc(`${p.name}|${p.className}|${p.level}`));
+      // Empty ref source inherits the class's own source.
+      const src = p.classSource || String(cls.source);
+      const feat = cfIndex.get(lc(`${p.name}|${p.className}|${src}|${p.level}`));
       if (feat) {
         out.push({
           group: 'Class',
