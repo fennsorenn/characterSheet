@@ -49,7 +49,8 @@ describe('createCharacter round-trip', () => {
     featChoices: { 'slot|k': { name: 'Tough', source: 'PHB' } },
     featureMeta: { 'Feature|PHB': { hidden: true } },
     variantChoices: { 'blessed strikes|uacfv|8': true },
-    notes
+    notes,
+    noteTabs: { open: ['d1', 'd2'], active: 'd2' }
   };
 
   it('preserves every populated field', () => {

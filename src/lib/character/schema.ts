@@ -178,6 +178,8 @@ export interface Character {
   variantChoices: Record<string, boolean>;
   /** Notes: a tree of folders and markdown documents. */
   notes?: NoteNode[];
+  /** Open note tabs + active tab, so the notes view is restored on reload. */
+  noteTabs?: { open: string[]; active: string | null };
 }
 
 export interface FeatureMeta {
@@ -253,7 +255,8 @@ export function createCharacter(partial: Partial<Character> = {}): Character {
     featChoices: partial.featChoices ?? {},
     featureMeta: partial.featureMeta ?? {},
     variantChoices: partial.variantChoices ?? {},
-    notes: partial.notes
+    notes: partial.notes,
+    noteTabs: partial.noteTabs
   };
 }
 

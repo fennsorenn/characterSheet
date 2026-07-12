@@ -796,6 +796,11 @@ export function setNotes(notes: NoteNode[]) {
   update((c) => ({ ...c, notes }));
 }
 
+/** Persist the open note tabs + active tab, so the view restores on reload. */
+export function setNoteTabs(open: string[], active: string | null) {
+  update((c) => ({ ...c, noteTabs: { open, active } }));
+}
+
 /** Create a new document (at root or inside a folder). */
 export function addNoteDoc(parentId: string | null, name: string): string {
   const id = noteId();

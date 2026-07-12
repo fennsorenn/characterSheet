@@ -1,6 +1,6 @@
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { character, addNoteDoc, addNoteFolder, deleteNote, renameNote, saveNoteContent } from '../stores/character.js';
+  import { character, addNoteDoc, addNoteFolder, deleteNote, renameNote, saveNoteContent, setNoteTabs } from '../stores/character.js';
   import { isNoteFolder, type NoteDoc, type NoteFolder, type NoteNode } from '../character/index.js';
   import Icon from './Icon.svelte';
   import UiIcon from './UiIcon.svelte';
@@ -42,6 +42,36 @@
   const notes = $derived($character.notes ?? []);
 
   const activeDoc = $derived(activeId ? findDoc(notes, activeId) : null);
+
+  // Restore the open tabs + active tab from the character when it loads (or when
+  // switching characters), dropping tabs whose note no longer exists. Keyed on
+  // the character id so it re-seeds once per character, not on every edit.
+  let seededFor: string | null = null;
+  $effect(() => {
+    const c = $character;
+    if (c.id === seededFor) return;
+    seededFor = c.id;
+    const stored = untrack(() => c.noteTabs);
+    const tree = untrack(() => c.notes ?? []);
+    const exists = (id: string) => !!findDoc(tree, id);
+    const open = (stored?.open ?? []).filter(exists);
+    openIds = open;
+    activeId = stored?.active && exists(stored.active) ? stored.active : (open[0] ?? null);
+  });
+
+  // Persist tab changes back to the character (skip the initial seed and no-ops).
+  $effect(() => {
+    const open = openIds;
+    const active = activeId;
+    untrack(() => {
+      if ($character.id !== seededFor) return; // not seeded yet for this character
+      const cur = $character.noteTabs;
+      if (cur && cur.active === active && cur.open.length === open.length && cur.open.every((v, i) => v === open[i])) {
+        return; // unchanged — avoid a redundant store write
+      }
+      setNoteTabs(open, active);
+    });
+  });
 
   function openDoc(id: string) {
     if (!openIds.includes(id)) openIds = [...openIds, id];
