@@ -87,7 +87,7 @@
     const roll = (e.target as HTMLElement).closest('.tag-roll') as HTMLElement | null;
     if (roll?.dataset.roll) {
       e.preventDefault();
-      rollExpr(roll.dataset.roll);
+      rollExpr(roll.dataset.roll, roll.dataset.label);
       return;
     }
     const a = (e.target as HTMLElement).closest('a.tag-ref') as HTMLElement | null;

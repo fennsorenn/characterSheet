@@ -254,9 +254,12 @@ function nodeToHtml(node: RenderNode): string {
     }
     case 'roll': {
       const formula = escapeAttr(partTexts[0] ?? '');
-      // `title` surfaces the underlying formula on hover; `data-roll` drives the
-      // click-to-roll handlers in the detail window / statblock dock.
-      return `<span class="tag-roll" data-roll="${formula}" title="Roll ${formula}">${display}</span>`;
+      // An optional third part carries a symbolic label (e.g. "2d6 + 2 + Spell
+      // Level (5)") without changing the visible dice string; falls back to the
+      // display text. `data-roll` is the numeric formula the roller evaluates;
+      // `data-label` titles the log entry; `title` surfaces it on hover.
+      const label = escapeAttr(partTexts[2] || nodeToText(node));
+      return `<span class="tag-roll" data-roll="${formula}" data-label="${label}" title="Roll ${label}">${display}</span>`;
     }
     case 'format':
       return wrapFormat(node.tag, renderToHtml(node.parts[0] ?? []));

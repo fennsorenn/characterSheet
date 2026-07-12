@@ -3,11 +3,19 @@ import { applySummonParams, resolveSpecial, buildStatblock } from './statblock.j
 import type { NamedEntry } from '../data/catalog.js';
 
 describe('summon parameter substitution', () => {
-  it('replaces the caster/level tokens from real TCE data', () => {
+  it('replaces the caster/level tokens from real TCE data with labelled rolls', () => {
     const p = { spellLevel: 6, spellAttack: 7, spellDc: 15, profBonus: 3 };
-    expect(applySummonParams('{@atk rw} {@hitYourSpellAttack} to hit', p)).toBe('{@atk rw} {@hit 7} to hit');
-    expect(applySummonParams('{@damage 2d6 + 2 + summonSpellLevel} radiant', p)).toBe('{@damage 2d6 + 2 + 6} radiant');
-    expect(applySummonParams('{@dice 2d8 + summonSpellLevel}', p)).toBe('{@dice 2d8 + 6}');
+    // To-hit becomes a clickable d20 roll: numeric formula | display | label.
+    expect(applySummonParams('{@atk rw} {@hitYourSpellAttack} to hit', p)).toBe(
+      '{@atk rw} {@dice d20+7|+7|d20 + Your Spell Attack (+7)} to hit'
+    );
+    // Damage keeps the numeric value visible; the label is the third part.
+    expect(applySummonParams('{@damage 2d6 + 2 + summonSpellLevel} radiant', p)).toBe(
+      '{@damage 2d6 + 2 + 6||2d6 + 2 + Spell Level (6)} radiant'
+    );
+    expect(applySummonParams('{@dice 2d8 + summonSpellLevel}', p)).toBe(
+      '{@dice 2d8 + 6||2d8 + Spell Level (6)}'
+    );
   });
 
   it('falls back to prose when no caster context is given', () => {
@@ -67,8 +75,11 @@ describe('buildStatblock (Celestial Spirit)', () => {
     expect(sb.abilities.find((a) => a.key === 'STR')?.mod).toBe(3);
     expect(sb.summonMin).toBe(5);
     const bow = sb.groups.flatMap((g) => g.items).find((i) => i.name === 'Radiant Bow');
-    expect(bow?.html).toContain('+8'); // spell attack substituted and @hit-rendered
-    expect(bow?.html).toContain('2d6 + 2 + 7'); // summonSpellLevel substituted
+    expect(bow?.html).toContain('+8'); // spell attack shown as the visible to-hit
+    expect(bow?.html).toContain('2d6 + 2 + 7'); // damage stays numeric in the body
+    // Symbolic labels ride along for the roller title.
+    expect(bow?.html).toContain('d20 + Your Spell Attack (+8)');
+    expect(bow?.html).toContain('2d6 + 2 + Spell Level (7)');
   });
 
   it('defaults the spell level to the creature minimum', () => {

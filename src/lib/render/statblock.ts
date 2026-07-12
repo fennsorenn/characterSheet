@@ -75,20 +75,39 @@ const ALIGN: Record<string, string> = {
 
 const abilMod = (score: number) => Math.floor((score - 10) / 2);
 
-/** Replace summon tokens in one entry string, given the parameter context. */
+/**
+ * Replace summon tokens in one entry string. Rolls keep their numeric formula as
+ * the visible/evaluated value but gain a symbolic third part (label) so the dice
+ * roller titles them by their source, e.g. "d20 + Your Spell Attack (+8)" and
+ * "2d6 + 2 + Spell Level (5)".
+ */
 export function applySummonParams(text: string, p: StatblockParams): string {
   let out = text;
-  // {@hitYourSpellAttack} → {@hit N} (reuses the existing @hit renderer), else prose.
-  out = out.replace(/\{@hitYourSpellAttack\}/g, () =>
-    p.spellAttack != null ? `{@hit ${p.spellAttack}}` : 'your spell attack modifier'
-  );
+
+  // To-hit → a clickable d20 roll labelled with its source (else prose).
+  out = out.replace(/\{@hitYourSpellAttack\}/g, () => {
+    if (p.spellAttack == null) return 'your spell attack modifier';
+    const disp = `${p.spellAttack >= 0 ? '+' : ''}${p.spellAttack}`;
+    return `{@dice d20${disp}|${disp}|d20 + Your Spell Attack (${disp})}`;
+  });
+
   out = out.replace(/\{@dcYourSpellSave\}/g, () =>
     p.spellDc != null ? `{@dc ${p.spellDc}}` : 'your spell save DC'
   );
-  // Bare `summonSpellLevel` inside {@damage …}/{@dice …} formulas → the number.
-  out = out.replace(/\bsummonSpellLevel\b/g, () =>
-    p.spellLevel != null ? String(p.spellLevel) : "the spell's level"
-  );
+
+  // Damage/dice formulas that scale with the spell level: numeric form stays the
+  // visible/rolled value; the labelled form becomes the tag's third part.
+  if (p.spellLevel != null) {
+    const lvl = p.spellLevel;
+    out = out.replace(/\{@(damage|dice)\s+([^}|]*\bsummonSpellLevel\b[^}|]*)\}/g, (_m, tag, formula) => {
+      const numeric = formula.replace(/\bsummonSpellLevel\b/g, String(lvl));
+      const label = formula.replace(/\bsummonSpellLevel\b/g, `Spell Level (${lvl})`);
+      return `{@${tag} ${numeric}||${label}}`;
+    });
+  }
+
+  // Any remaining bare token (prose, or when there's no level context).
+  out = out.replace(/\bsummonSpellLevel\b/g, p.spellLevel != null ? String(p.spellLevel) : "the spell's level");
   return out;
 }
 
