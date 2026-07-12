@@ -8,6 +8,7 @@ import { expandVariants } from './variants.js';
 import { annotateSpellClasses } from './spellSources.js';
 import { asNamedEntries } from './entries.js';
 import { flattenRaces } from './mergeRace.js';
+import { resolveMonsters } from './monsterCopy.js';
 
 /**
  * Build a {@link Catalog} from an unpacked data tree.
@@ -53,7 +54,9 @@ export function parseCatalog(reader: DataReader, version: string): Catalog {
   catalog.entries.item = readItems(reader);
   // Bestiary: split per source under bestiary/index.json, each with a `monster`
   // array. Loaded so creature references in spell/item text can open a statblock.
-  catalog.entries.monster = readIndexed(reader, 'bestiary', 'monster');
+  // `_copy` inheritance and `_versions` are resolved so copied/variant creatures
+  // render with full stats.
+  catalog.entries.monster = resolveMonsters(readIndexed(reader, 'bestiary', 'monster'));
 
   for (const category of Object.keys(catalog.entries) as (keyof typeof catalog.entries)[]) {
     catalog.counts[category] = catalog.entries[category].length;
