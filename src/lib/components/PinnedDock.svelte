@@ -11,6 +11,7 @@
   import { catalogLookup } from '../stores/catalog.js';
   import { buildStatblock } from '../render/statblock.js';
   import Statblock from './Statblock.svelte';
+  import UiIcon from './UiIcon.svelte';
 
   // Creatures pinned from a statblock dock here at the bottom of the viewport,
   // each with an HP pool and (where present) legendary-action / recharge trackers.
@@ -48,8 +49,8 @@
       {@const open = expanded.has(c.id)}
       <div class="card" class:open>
         <header class="chead">
-          <button class="expand" title={open ? 'Collapse' : 'Expand statblock'} onclick={() => toggleExpand(c.id)}>
-            {open ? '▾' : '▸'}
+          <button class="expand" title={open ? 'Collapse' : 'Expand statblock'} aria-label={open ? 'Collapse' : 'Expand statblock'} onclick={() => toggleExpand(c.id)}>
+            <UiIcon name={open ? 'chevron-down' : 'chevron-right'} size="0.9em" />
           </button>
           <span class="cname">{sb.name}</span>
           <button class="unpin" title="Unpin" aria-label="Unpin" onclick={() => unpinCreature(c.id)}>×</button>

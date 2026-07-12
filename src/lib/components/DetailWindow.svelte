@@ -5,6 +5,7 @@
   import { detailContent, detailDocument } from '../render/detail.js';
   import { buildStatblock, type StatblockParams } from '../render/statblock.js';
   import Statblock from './Statblock.svelte';
+  import UiIcon from './UiIcon.svelte';
 
   const isCreature = $derived($detail?.kind === 'creature');
   const WIDTH = $derived(isCreature ? 420 : 360);
@@ -113,7 +114,7 @@
     <header class="bar" onpointerdown={down} onpointermove={move} onpointerup={up}>
       <span class="title">{title}</span>
       {#if isCreature}
-        <button class="ic" title="Pin to the tracker dock" aria-label="Pin" onclick={pin}>📌</button>
+        <button class="ic" title="Pin to the tracker dock" aria-label="Pin" onclick={pin}><UiIcon name="pin" size="0.95em" /></button>
       {:else}
         <button class="ic" title="Open in a new window" aria-label="Pop out" onclick={popOut}>⧉</button>
       {/if}
