@@ -71,9 +71,9 @@ describe('casterClasses', () => {
 });
 
 describe('assignSpellCounts', () => {
-  const cleric: CasterClass = { name: 'Cleric', source: 'PHB', level: 5, ability: 'wis', kind: 'prepared', cantrips: 4, spells: 8, book: null };
-  const wizard: CasterClass = { name: 'Wizard', source: 'PHB', level: 5, ability: 'int', kind: 'prepared', cantrips: 4, spells: 8, book: 14 };
-  const bard: CasterClass = { name: 'Bard', source: 'PHB', level: 5, ability: 'cha', kind: 'known', cantrips: 3, spells: 8, book: null };
+  const cleric: CasterClass = { key: 'cleric|phb', name: 'Cleric', source: 'PHB', level: 5, ability: 'wis', kind: 'prepared', cantrips: 4, spells: 8, book: null };
+  const wizard: CasterClass = { key: 'wizard|phb', name: 'Wizard', source: 'PHB', level: 5, ability: 'int', kind: 'prepared', cantrips: 4, spells: 8, book: 14 };
+  const bard: CasterClass = { key: 'bard|phb', name: 'Bard', source: 'PHB', level: 5, ability: 'cha', kind: 'known', cantrips: 3, spells: 8, book: null };
 
   it('counts prepared spells per class and frees a prepared caster’s unprepared spells', () => {
     const counts = assignSpellCounts(
@@ -86,6 +86,23 @@ describe('assignSpellCounts', () => {
       ]
     );
     expect(counts[0]).toMatchObject({ cantripsUsed: 1, spellsUsed: 2 });
+  });
+
+  it('keeps two same-name classes (PHB + XPHB Cleric) as separate keyed buckets', () => {
+    const phb: CasterClass = { ...cleric, key: 'cleric|phb', source: 'PHB', spells: 5 };
+    const xphb: CasterClass = { ...cleric, key: 'cleric|xphb', source: 'XPHB', spells: 9 };
+    const counts = assignSpellCounts(
+      [phb, xphb],
+      [
+        { level: 1, classes: ['Cleric'], prepared: true },
+        { level: 2, classes: ['Cleric'], prepared: true }
+      ]
+    );
+    // Two distinct rows (unique keys), not one merged 'Cleric' bucket.
+    expect(counts).toHaveLength(2);
+    expect(new Set(counts.map((c) => c.key)).size).toBe(2);
+    // Both prepared spells assigned; total across the two Clerics is 2 (no double-count).
+    expect(counts.reduce((n, c) => n + c.spellsUsed, 0)).toBe(2);
   });
 
   it('assigns a dual-list prepared spell to the class with more open slots', () => {

@@ -28,6 +28,8 @@ import { ABILITIES, type Ability } from './abilities.js';
 export type CasterKind = 'prepared' | 'known';
 
 export interface CasterClass {
+  /** Unique per class instance (`name|source`) — distinguishes e.g. PHB vs XPHB Cleric. */
+  key: string;
   name: string;
   source: string;
   level: number;
@@ -48,6 +50,8 @@ export interface CasterClass {
 
 /** Per-class spell counts vs limits, after assignment. */
 export interface ClassSpellCount {
+  /** Unique per class instance (`name|source`), for stable keying. */
+  key: string;
   name: string;
   kind: CasterKind;
   cantripsUsed: number;
@@ -142,6 +146,7 @@ export function casterClasses(
       spells = null;
     }
     out.push({
+      key: `${c.name}|${c.source}`.toLowerCase(),
       name: c.name,
       source: String(c.source),
       level: cls.level,
@@ -163,21 +168,24 @@ interface SpellRef {
 
 /** Greedily assign each spell to one class and tally per-class usage vs limits. */
 export function assignSpellCounts(casters: CasterClass[], spells: SpellRef[]): ClassSpellCount[] {
-  const cantripUsed = new Map<string, number>(casters.map((c) => [c.name, 0]));
-  const spellUsed = new Map<string, number>(casters.map((c) => [c.name, 0]));
+  // Tally maps are keyed by each caster's unique `key` (name|source), not name,
+  // so two same-name classes (e.g. PHB + XPHB Cleric) get separate buckets.
+  const cantripUsed = new Map<string, number>(casters.map((c) => [c.key, 0]));
+  const spellUsed = new Map<string, number>(casters.map((c) => [c.key, 0]));
   // Spellbook tally: leveled spells assigned to a book class regardless of
   // prepared status. A leveled spell counts toward a book class whenever it can
   // only be cast/recorded by book classes (e.g. a Wizard-only spell), even if it
   // doesn't consume a prepared slot.
-  const bookUsed = new Map<string, number>(casters.map((c) => [c.name, 0]));
+  const bookUsed = new Map<string, number>(casters.map((c) => [c.key, 0]));
 
+  // Spell class lists reference class *names*, so fit-matching stays name-based.
   const fits = (s: SpellRef, name: string) =>
     s.classes.length === 0 || s.classes.some((cn) => lc(cn) === lc(name));
   // Pick the fitting candidate with the most remaining room in `used` vs limit.
   const mostRoom = (cands: CasterClass[], used: Map<string, number>, limitOf: (c: CasterClass) => number | null) =>
     cands.reduce((best, c) => {
-      const room = (limitOf(c) ?? Infinity) - (used.get(c.name) ?? 0);
-      const bestRoom = best ? (limitOf(best) ?? Infinity) - (used.get(best.name) ?? 0) : -Infinity;
+      const room = (limitOf(c) ?? Infinity) - (used.get(c.key) ?? 0);
+      const bestRoom = best ? (limitOf(best) ?? Infinity) - (used.get(best.key) ?? 0) : -Infinity;
       return room > bestRoom ? c : best;
     }, undefined as CasterClass | undefined);
 
@@ -189,7 +197,7 @@ export function assignSpellCounts(casters: CasterClass[], spells: SpellRef[]): C
   for (const s of spells.filter((s) => s.level === 0).sort(byConstraint)) {
     const cands = casters.filter((c) => c.cantrips != null && fits(s, c.name));
     const pick = mostRoom(cands, cantripUsed, (c) => c.cantrips);
-    if (pick) cantripUsed.set(pick.name, (cantripUsed.get(pick.name) ?? 0) + 1);
+    if (pick) cantripUsed.set(pick.key, (cantripUsed.get(pick.key) ?? 0) + 1);
   }
 
   // Leveled spells: prepared spells must occupy a slot; an unprepared spell a
@@ -203,7 +211,7 @@ export function assignSpellCounts(casters: CasterClass[], spells: SpellRef[]): C
     if (s.prepared) pool = prepared.length ? prepared : known;
     else pool = prepared.length ? [] : known; // known by a prepared caster → free
     const pick = mostRoom(pool, spellUsed, (c) => c.spells);
-    if (pick) spellUsed.set(pick.name, (spellUsed.get(pick.name) ?? 0) + 1);
+    if (pick) spellUsed.set(pick.key, (spellUsed.get(pick.key) ?? 0) + 1);
 
     // Spellbook: any leveled spell that fits a book class is recorded in it,
     // regardless of prepared status. Prefer the book class the prepared slot
@@ -212,18 +220,19 @@ export function assignSpellCounts(casters: CasterClass[], spells: SpellRef[]): C
     if (bookCands.length) {
       const bookPick =
         pick && pick.book != null ? pick : mostRoom(bookCands, bookUsed, (c) => c.book);
-      if (bookPick) bookUsed.set(bookPick.name, (bookUsed.get(bookPick.name) ?? 0) + 1);
+      if (bookPick) bookUsed.set(bookPick.key, (bookUsed.get(bookPick.key) ?? 0) + 1);
     }
   }
 
   return casters.map((c) => ({
+    key: c.key,
     name: c.name,
     kind: c.kind,
-    cantripsUsed: cantripUsed.get(c.name) ?? 0,
+    cantripsUsed: cantripUsed.get(c.key) ?? 0,
     cantripLimit: c.cantrips,
-    spellsUsed: spellUsed.get(c.name) ?? 0,
+    spellsUsed: spellUsed.get(c.key) ?? 0,
     spellLimit: c.spells,
-    bookUsed: bookUsed.get(c.name) ?? 0,
+    bookUsed: bookUsed.get(c.key) ?? 0,
     bookLimit: c.book
   }));
 }

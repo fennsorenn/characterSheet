@@ -208,7 +208,7 @@
     {#if $character.spells.length > 0 || granted.length > 0}
       {#if classCounts.length > 0}
         <span class="counts byclass">
-          {#each classCounts as cc (cc.name)}
+          {#each classCounts as cc (cc.key)}
             <span class="clsgrp">
               {#if classCounts.length > 1}<span class="clsname">{cc.name}</span>{/if}
               {#if cc.cantripLimit != null}
