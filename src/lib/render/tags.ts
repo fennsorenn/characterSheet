@@ -254,7 +254,9 @@ function nodeToHtml(node: RenderNode): string {
     }
     case 'roll': {
       const formula = escapeAttr(partTexts[0] ?? '');
-      return `<span class="tag-roll" data-roll="${formula}">${display}</span>`;
+      // `title` surfaces the underlying formula on hover; `data-roll` drives the
+      // click-to-roll handlers in the detail window / statblock dock.
+      return `<span class="tag-roll" data-roll="${formula}" title="Roll ${formula}">${display}</span>`;
     }
     case 'format':
       return wrapFormat(node.tag, renderToHtml(node.parts[0] ?? []));

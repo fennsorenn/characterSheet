@@ -2,6 +2,7 @@
   import { detail, closeDetail, openDetail, setDetailSpellLevel, pinCreature } from '../stores/detail.js';
   import { catalogLookup, catalogState } from '../stores/catalog.js';
   import { casterSummonParams } from '../stores/character.js';
+  import { rollExpr } from '../stores/dice.js';
   import { detailContent, detailDocument } from '../render/detail.js';
   import { buildStatblock, type StatblockParams } from '../render/statblock.js';
   import Statblock from './Statblock.svelte';
@@ -80,8 +81,15 @@
     closeDetail();
   }
 
-  // Clicking a {@spell}/{@item}/{@creature} reference in the body opens that entry.
+  // Clicking a {@spell}/{@item}/{@creature} reference opens that entry; clicking a
+  // {@damage}/{@dice} roll sends it to the dice roller.
   function onBodyClick(e: MouseEvent) {
+    const roll = (e.target as HTMLElement).closest('.tag-roll') as HTMLElement | null;
+    if (roll?.dataset.roll) {
+      e.preventDefault();
+      rollExpr(roll.dataset.roll);
+      return;
+    }
     const a = (e.target as HTMLElement).closest('a.tag-ref') as HTMLElement | null;
     if (!a) return;
     const name = a.dataset.name;
@@ -194,5 +202,6 @@
   .desc :global(table) { border-collapse: collapse; font-size: 0.8rem; margin: 0.4rem 0; }
   .desc :global(th), .desc :global(td) { border: 1px solid var(--line); padding: 0.15rem 0.4rem; text-align: left; }
   .desc :global(a.tag-ref) { color: var(--accent); cursor: pointer; text-decoration: underline dotted; }
+  .desc :global(.tag-roll) { color: var(--accent); cursor: pointer; text-decoration: underline dotted; }
   .src { font-size: 0.7rem; color: var(--muted); text-align: right; margin: 0.5rem 0 0; }
 </style>

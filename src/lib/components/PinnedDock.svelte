@@ -9,6 +9,7 @@
     openDetail
   } from '../stores/detail.js';
   import { catalogLookup } from '../stores/catalog.js';
+  import { rollExpr } from '../stores/dice.js';
   import { buildStatblock } from '../render/statblock.js';
   import Statblock from './Statblock.svelte';
   import UiIcon from './UiIcon.svelte';
@@ -29,8 +30,14 @@
     if (amt) damagePinned(id, sign * amt);
   }
 
-  // Clicking a reference inside an expanded statblock opens its detail window.
+  // Inside an expanded statblock: roll {@damage}/{@dice}, or open a reference.
   function onRefClick(e: MouseEvent) {
+    const roll = (e.target as HTMLElement).closest('.tag-roll') as HTMLElement | null;
+    if (roll?.dataset.roll) {
+      e.preventDefault();
+      rollExpr(roll.dataset.roll);
+      return;
+    }
     const a = (e.target as HTMLElement).closest('a.tag-ref') as HTMLElement | null;
     if (!a?.dataset.name) return;
     e.preventDefault();
@@ -52,7 +59,8 @@
           <button class="expand" title={open ? 'Collapse' : 'Expand statblock'} aria-label={open ? 'Collapse' : 'Expand statblock'} onclick={() => toggleExpand(c.id)}>
             <UiIcon name={open ? 'chevron-down' : 'chevron-right'} size="0.9em" />
           </button>
-          <span class="cname">{sb.name}</span>
+          <button class="cname" title="Expand statblock" onclick={() => toggleExpand(c.id)}>{sb.name}</button>
+          {#if sb.acValue != null}<span class="ac" title={sb.ac}>AC {sb.acValue}</span>{/if}
           <button class="unpin" title="Unpin" aria-label="Unpin" onclick={() => unpinCreature(c.id)}>×</button>
         </header>
 
@@ -166,7 +174,9 @@
   .card.open { width: 21rem; max-height: 60vh; overflow: auto; }
   .chead { display: flex; align-items: center; gap: 0.3rem; }
   .expand { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.8rem; padding: 0; }
-  .cname { flex: 1; font-weight: 700; color: var(--accent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cname { flex: 1; min-width: 0; text-align: left; font: inherit; font-weight: 700; color: var(--accent); background: none; border: none; padding: 0; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cname:hover { text-decoration: underline; }
+  .ac { flex: none; font-size: 0.72rem; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 0.3rem; }
   .unpin { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1rem; line-height: 1; }
   .unpin:hover { color: var(--accent); }
   .hp { display: flex; align-items: center; gap: 0.3rem; margin-top: 0.3rem; }

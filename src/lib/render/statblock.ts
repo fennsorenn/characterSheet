@@ -47,6 +47,8 @@ export interface Statblock {
   /** "Large celestial, unaligned". */
   meta: string;
   ac: string;
+  /** Leading effective AC number (for the compact dock view). */
+  acValue: number | null;
   hp: string;
   hpValue: number | null;
   speed: string;
@@ -259,6 +261,8 @@ export function buildStatblock(entry: NamedEntry, params: StatblockParams = {}):
     return { key: k.toUpperCase(), score, mod: abilMod(score) };
   });
 
+  const ac = acText(entry, p);
+  const acLead = parseInt(ac, 10);
   const hp = hpParts(entry, p);
   const groups: StatblockGroup[] = [];
   const addGroup = (title: string, list: unknown) => {
@@ -287,7 +291,8 @@ export function buildStatblock(entry: NamedEntry, params: StatblockParams = {}):
   return {
     name: entry.name,
     meta: metaLine(entry),
-    ac: acText(entry, p),
+    ac,
+    acValue: Number.isNaN(acLead) ? null : acLead,
     hp: hp.text,
     hpValue: hp.value,
     speed: speedText(entry),
