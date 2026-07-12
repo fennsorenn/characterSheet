@@ -59,6 +59,8 @@ export const catalogLookup = derived(composed, ($c) => {
   const feats = new Map<string, NamedEntry>();
   const spells = new Map<string, NamedEntry>();
   const spellsByName = new Map<string, NamedEntry>();
+  const creatures = new Map<string, NamedEntry>();
+  const creaturesByName = new Map<string, NamedEntry>();
   if ($c) {
     for (const item of $c.entries.item) items.set(itemKey(item.name, item.source), item);
     for (const feat of $c.entries.feat) feats.set(itemKey(feat.name, feat.source), feat);
@@ -67,12 +69,19 @@ export const catalogLookup = derived(composed, ($c) => {
       const n = spell.name.toLowerCase();
       if (!spellsByName.has(n)) spellsByName.set(n, spell); // first wins
     }
+    for (const m of $c.entries.monster ?? []) {
+      creatures.set(itemKey(m.name, m.source), m);
+      const n = m.name.toLowerCase();
+      if (!creaturesByName.has(n)) creaturesByName.set(n, m); // first wins
+    }
   }
   return {
     getItem: (name: string, source: string) => items.get(itemKey(name, source)),
     getFeat: (name: string, source: string) => feats.get(itemKey(name, source)),
     getSpell: (name: string, source: string) => spells.get(itemKey(name, source)),
-    getSpellByName: (name: string) => spellsByName.get(name.toLowerCase())
+    getSpellByName: (name: string) => spellsByName.get(name.toLowerCase()),
+    getCreature: (name: string, source: string) => creatures.get(itemKey(name, source)),
+    getCreatureByName: (name: string) => creaturesByName.get(name.toLowerCase())
   };
 });
 
@@ -116,11 +125,16 @@ export function importUrl(url: string) {
 /** Restore a previously cached base catalog and overlays on startup, if present. */
 export async function restoreCached() {
   const [base, overlays] = await Promise.all([loadCachedCatalog(), loadOverlays()]);
+  // Ignore a catalog cached before a category shipped (the bestiary lives only in
+  // freshly-parsed data): its `entries.monster` is absent, so creature references
+  // could never resolve. Dropping it prompts a one-time re-import that includes
+  // the bestiary. Freshly-parsed catalogs always set the key (to [] at minimum).
+  const usableBase = base && base.entries?.monster !== undefined ? base : null;
   state.update((s) => ({
     ...s,
-    base: base ?? s.base,
+    base: usableBase ?? s.base,
     overlays: overlays.length ? overlays : s.overlays,
-    stage: base ? 'done' : s.stage
+    stage: usableBase ? 'done' : s.stage
   }));
 }
 

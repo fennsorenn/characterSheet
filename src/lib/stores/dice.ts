@@ -38,13 +38,18 @@ export function rollOneDie(faces: number) {
   return record(`d${faces}`, [rollTerms([{ count: 1, faces }], 0, `d${faces}`)]);
 }
 
-/** Roll a free-form expression like "2d6+3". */
-export function rollExpr(expr: string) {
+/**
+ * Roll a free-form expression like "2d6+3". `title` overrides the log label
+ * (e.g. a symbolic breakdown "2d6 + 2 + Spell Level (5)") while the math still
+ * runs on `expr`.
+ */
+export function rollExpr(expr: string, title?: string) {
   const trimmed = expr.trim();
   if (!trimmed) return;
   const { terms } = parseDice(trimmed);
   if (!terms.length) return;
-  return record(trimmed, [rollExpression(trimmed, trimmed)]);
+  const label = title?.trim() || trimmed;
+  return record(label, [rollExpression(trimmed, label)]);
 }
 
 export function clearLog() {

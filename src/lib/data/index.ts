@@ -1,6 +1,7 @@
 export type { Catalog, Category, NamedEntry, DataReader } from './catalog.js';
 export { CATEGORIES, emptyCatalog } from './catalog.js';
 export { parseCatalog } from './parse.js';
+export { resolveMonsters } from './monsterCopy.js';
 export { expandVariants, variantsForBase, hasVariants, isVariant } from './variants.js';
 export { readerFromZip, readerFromFiles } from './zip.js';
 export { SearchIndex, tokenMatch, type SearchHit, type SearchOptions } from './search.js';

@@ -32,6 +32,9 @@ export class SearchIndex {
 
   constructor(catalog: Catalog) {
     for (const category of Object.keys(catalog.entries) as Category[]) {
+      // Creatures are reached via references, not quick import; keeping the whole
+      // bestiary out of the index avoids burying item/spell hits under monsters.
+      if (category === 'monster') continue;
       for (const entry of catalog.entries[category]) {
         // Generated magic-item variants (+1 X, X of Fire Resistance, …) stay in
         // the catalog so an equipped one resolves its effects, but are excluded
