@@ -62,6 +62,7 @@ export {
 } from './equipment.js';
 export { iconForItem, slotIcon, iconForSchool, iconForDamageType, iconLabel } from './itemIcons.js';
 export { spellTags, conditionIcon, type SpellTag } from './spellTags.js';
+export { spellMaterial, displayedMaterial, type SpellMaterial } from './spellMaterials.js';
 export {
   attachedSpellNames,
   grantedSpellsFromItems,

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { searchIndex } from '../stores/catalog.js';
   import { addInventoryItem, addSpell } from '../stores/character.js';
+  import { openBrowse } from '../stores/browse.js';
   import type { Category, SearchHit } from '../data/index.js';
 
   // A compact quick-import bar for the bottom of a specific list (Inventory /
@@ -46,12 +47,22 @@
 </script>
 
 <div class="quickadd">
-  <input
-    placeholder={`Quick add ${NOUN[kind]}…`}
-    bind:value={query}
-    onfocus={() => (open = true)}
-    onkeydown={onKeydown}
-  />
+  <div class="row">
+    <input
+      placeholder={`Quick add ${NOUN[kind]}…`}
+      bind:value={query}
+      onfocus={() => (open = true)}
+      onkeydown={onKeydown}
+    />
+    <button
+      type="button"
+      class="full"
+      title={`Open the full ${NOUN[kind]} search & filters`}
+      onclick={() => openBrowse(CATEGORY[kind])}
+    >
+      Full search…
+    </button>
+  </div>
   {#if open && query.trim()}
     <ul class="menu">
       {#each hits as hit (hit.entry.name + hit.entry.source)}
@@ -73,8 +84,10 @@
 
 <style>
   .quickadd { position: relative; margin-top: 0.6rem; }
+  .row { display: flex; gap: 0.4rem; }
   .quickadd input {
-    width: 100%;
+    flex: 1;
+    min-width: 0;
     box-sizing: border-box;
     font: inherit;
     font-size: 0.82rem;
@@ -85,6 +98,19 @@
     color: var(--fg);
   }
   .quickadd input:focus { outline: none; border-color: var(--accent); }
+  .full {
+    flex: none;
+    font: inherit;
+    font-size: 0.78rem;
+    padding: 0.35rem 0.6rem;
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--accent);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .full:hover { background: var(--accent); color: #fff; }
   .menu {
     list-style: none;
     margin: 0.25rem 0 0;

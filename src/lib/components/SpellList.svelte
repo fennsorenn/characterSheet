@@ -13,8 +13,11 @@
     choiceGrantedSpells,
     casterClasses,
     assignSpellCounts,
-    type SpellTag
+    displayedMaterial,
+    type SpellTag,
+    type SpellMaterial
   } from '../character/index.js';
+  import { settings, setSpellMaterialDisplay, type SpellMaterialDisplay } from '../stores/settings.js';
   import Icon from './Icon.svelte';
   import UiIcon from './UiIcon.svelte';
   import QuickAdd from './QuickAdd.svelte';
@@ -46,6 +49,7 @@
     tags: SpellTag[];
     classes_: string[]; // base classes whose list includes this spell
     dmg: { dice: string; isAttack: boolean; type: string } | null;
+    material: SpellMaterial | null;
   }
 
   // Pull the base damage dice + whether it's a spell attack from the spell text.
@@ -104,7 +108,15 @@
         const levelNum = entry && typeof entry.level === 'number' ? entry.level : 99;
         const level = levelNum === 99 ? '' : levelNum === 0 ? 'cantrip' : `lvl ${levelNum}`;
         const classes_ = (entry?._classes as string[] | undefined) ?? [];
-        return { ...r, level, levelNum, tags: entry ? spellTags(entry) : [], classes_, dmg: spellDamageInfo(entry) };
+        return {
+          ...r,
+          level,
+          levelNum,
+          tags: entry ? spellTags(entry) : [],
+          classes_,
+          dmg: spellDamageInfo(entry),
+          material: displayedMaterial(entry, $settings.spellMaterialDisplay)
+        };
       })
       .sort(
         (a, b) =>
@@ -188,6 +200,10 @@
     if (entry) openDetail('spell', entry, el.closest('.cell') ?? el);
   }
 
+  // Whole-gp values show plain; fractional (cp/sp) keep up to two decimals.
+  const formatGp = (n: number) =>
+    Number.isInteger(n) ? n.toLocaleString('en-US') : n.toLocaleString('en-US', { maximumFractionDigits: 2 });
+
   function toggleTag(id: string) {
     const next = new Set(selectedTags);
     next.has(id) ? next.delete(id) : next.add(id);
@@ -199,6 +215,12 @@
     ['prepared', 'Prepared'],
     ['favorite', 'Favorites'],
     ['granted', 'Granted']
+  ];
+
+  const MATERIAL_MODES: [SpellMaterialDisplay, string, string][] = [
+    ['off', 'Off', 'Hide material components'],
+    ['always', 'Cost', 'Show material components that have a gp cost'],
+    ['consumed', 'Consumed', 'Show only costly materials the spell consumes']
   ];
 </script>
 
@@ -243,6 +265,17 @@
       {#each STATUS_FILTERS as [val, label]}
         <button class:on={statusFilter === val} onclick={() => (statusFilter = val)}>{label}</button>
       {/each}
+      <span class="materials" title="Show costly material components in the list">
+        <span class="mlabel">Materials</span>
+        {#each MATERIAL_MODES as [mode, label, hint]}
+          <button
+            class="mbtn"
+            class:on={$settings.spellMaterialDisplay === mode}
+            title={hint}
+            onclick={() => setSpellMaterialDisplay(mode)}
+          >{label}</button>
+        {/each}
+      </span>
     </div>
 
     {#if allTags.length > 0}
@@ -314,6 +347,13 @@
               {#each r.tags as t (t.id)}<span class="tag" title={t.label}><Icon name={t.icon} /></span>{/each}
             </div>
           {/if}
+          {#if r.material}
+            <div class="material" title={r.material.text}>
+              <span class="gp">{formatGp(r.material.costGp)} gp</span>
+              {#if r.material.text}<span class="mtext">{r.material.text}</span>{/if}
+              {#if r.material.consumed}<span class="consumed">consumed</span>{/if}
+            </div>
+          {/if}
         </li>
       {:else}
         <li class="empty">No spells match.</li>
@@ -338,9 +378,13 @@
   .counts .book { color: var(--muted); font-style: italic; }
   .empty { color: var(--muted); font-size: 0.85rem; margin: 0; }
 
-  .statusfilter { display: flex; gap: 0.3rem; margin-bottom: 0.4rem; }
-  .statusfilter button { font: inherit; font-size: 0.72rem; padding: 0.15rem 0.5rem; border: 1px solid var(--line); background: var(--bg); color: var(--muted); border-radius: 999px; cursor: pointer; }
-  .statusfilter button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .statusfilter { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; margin-bottom: 0.4rem; }
+  .statusfilter > button { font: inherit; font-size: 0.72rem; padding: 0.15rem 0.5rem; border: 1px solid var(--line); background: var(--bg); color: var(--muted); border-radius: 999px; cursor: pointer; }
+  .statusfilter > button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .materials { display: inline-flex; align-items: center; gap: 0.25rem; margin-left: auto; }
+  .materials .mlabel { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); }
+  .mbtn { font: inherit; font-size: 0.7rem; padding: 0.12rem 0.4rem; border: 1px solid var(--line); background: var(--bg); color: var(--muted); border-radius: 999px; cursor: pointer; }
+  .mbtn.on { background: var(--accent); border-color: var(--accent); color: #fff; }
 
   .tagfilter { display: flex; flex-wrap: wrap; gap: 0.2rem; align-items: center; padding-bottom: 0.4rem; margin-bottom: 0.4rem; border-bottom: 1px solid var(--line); }
   .ftag { display: inline-flex; align-items: center; justify-content: center; width: 1.4rem; height: 1.4rem; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); color: var(--muted); cursor: pointer; }
@@ -369,4 +413,8 @@
   .gsource { margin: 0.2rem 0 0 1.7rem; width: calc(100% - 1.7rem); font: inherit; font-size: 0.75rem; padding: 0.15rem 0.3rem; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--fg); }
   .tags { display: flex; flex-wrap: wrap; gap: 0.18rem; margin: 0.15rem 0 0 1.7rem; color: var(--muted); }
   .tag :global(.icon) { width: 0.8rem; height: 0.8rem; }
+  .material { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.3rem 0.4rem; margin: 0.2rem 0 0 1.7rem; font-size: 0.72rem; color: var(--muted); }
+  .material .gp { font-weight: 700; color: var(--accent); white-space: nowrap; }
+  .material .mtext { min-width: 0; overflow-wrap: anywhere; }
+  .material .consumed { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.03em; padding: 0.02rem 0.3rem; border: 1px solid var(--line); border-radius: 999px; color: var(--fg); white-space: nowrap; }
 </style>

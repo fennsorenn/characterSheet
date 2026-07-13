@@ -10,12 +10,15 @@
     facetOptions,
     itemTypeLabel,
     hasVariants,
+    dedupeBySource,
     type Category,
     type NamedEntry,
     type Selection
   } from '../../data/index.js';
   import { iconForItem, iconForSchool, spellTags } from '../../character/index.js';
   import { openVariantPicker } from '../../stores/variantPicker.js';
+  import { openDetail, type DetailKind } from '../../stores/detail.js';
+  import { settings } from '../../stores/settings.js';
   import Icon from '../Icon.svelte';
   import UiIcon from '../UiIcon.svelte';
 
@@ -32,7 +35,9 @@
   const categories = $derived(
     CATEGORIES.filter((c) => (catalog?.counts[c] ?? 0) > 0)
   );
-  const entries = $derived<NamedEntry[]>(catalog ? catalog.entries[category] : []);
+  const entries = $derived<NamedEntry[]>(
+    catalog ? dedupeBySource(catalog.entries[category], $settings.primarySource) : []
+  );
   const facets = $derived(facetsFor(category));
   const filtered = $derived(filterEntries(entries, name, facets, selected));
   const options = $derived(facetOptions(entries, name, facets, selected));
@@ -71,6 +76,17 @@
     else if (category === 'background') setBackground(ref);
     else if (category === 'class') addClass({ ...ref, hitDie: (e.hd as { faces?: number } | undefined)?.faces });
     added = new Set(added).add(key(e));
+  }
+
+  // Categories with an in-page detail window; clicking such a row opens it.
+  const DETAIL_KIND: Partial<Record<Category, DetailKind>> = {
+    spell: 'spell',
+    item: 'item',
+    monster: 'creature'
+  };
+  function openInfo(e: NamedEntry, el: Element) {
+    const kind = DETAIL_KIND[category];
+    if (kind) openDetail(kind, e, el.closest('li') ?? el);
   }
 
   // Per-category row helpers.
@@ -130,7 +146,14 @@
             {:else if category === 'spell'}
               <span class="ic"><Icon name={iconForSchool(e.school)} /></span>
             {/if}
-            <div class="info">
+            <button
+              type="button"
+              class="info"
+              class:clickable={DETAIL_KIND[category]}
+              disabled={!DETAIL_KIND[category]}
+              title={DETAIL_KIND[category] ? `Show ${e.name}` : undefined}
+              onclick={(ev) => openInfo(e, ev.currentTarget)}
+            >
               <span class="nm">{e.name}</span>
               <span class="meta">
                 {#if category === 'item'}
@@ -148,7 +171,7 @@
                   {/each}
                 </span>
               {/if}
-            </div>
+            </button>
             {#if ADDABLE.has(category)}
               <button class="add" class:done={added.has(key(e))} onclick={() => add(e)}>
                 {added.has(key(e)) ? (ADD_VERB[category] ?? '✓ Added') : '+ Add'}
@@ -199,7 +222,10 @@
   li { display: flex; align-items: center; gap: 0.6rem; padding: 0.4rem 0.2rem; border-bottom: 1px solid var(--line); }
   .ic { color: var(--muted); flex: none; display: inline-flex; }
   .ic :global(.icon) { width: 1.2rem; height: 1.2rem; }
-  .info { flex: 1; min-width: 0; }
+  .info { flex: 1; min-width: 0; display: block; text-align: left; font: inherit; color: var(--fg); background: none; border: none; padding: 0; }
+  .info.clickable { cursor: pointer; }
+  .info.clickable:hover .nm { color: var(--accent); text-decoration: underline; }
+  .info:disabled { color: var(--fg); }
   .nm { font-weight: 600; }
   .meta { display: block; font-size: 0.75rem; color: var(--muted); text-transform: capitalize; }
   .tags { display: inline-flex; flex-wrap: wrap; gap: 0.15rem; margin-top: 0.1rem; color: var(--muted); }

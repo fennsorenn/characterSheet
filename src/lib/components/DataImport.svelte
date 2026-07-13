@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { catalogState, importFile, importUrl, resetCatalog } from '../stores/catalog.js';
+  import { catalogState, catalogSources, importFile, importUrl, resetCatalog } from '../stores/catalog.js';
+  import { settings, setPrimarySource } from '../stores/settings.js';
   import { CATEGORIES } from '../data/index.js';
   import PrereleaseManager from './PrereleaseManager.svelte';
 
@@ -39,6 +40,24 @@
       </ul>
       <button onclick={resetCatalog}>Load different data</button>
     </div>
+
+    <label class="primary">
+      <span class="plabel">Primary source</span>
+      <select
+        value={$settings.primarySource ?? ''}
+        onchange={(e) => setPrimarySource((e.target as HTMLSelectElement).value || null)}
+      >
+        <option value="">None — show all sources</option>
+        {#each $catalogSources as src}
+          <option value={src}>{src}</option>
+        {/each}
+      </select>
+      <span class="phint">
+        Hides duplicates from other sources when the same-named entry exists here
+        (e.g. the XPHB mace hides the PHB mace) — across search, browse and pickers.
+      </span>
+    </label>
+
     <hr class="sep" />
     <PrereleaseManager />
   {:else}
@@ -117,4 +136,15 @@
   .status { color: var(--muted); }
   .status.error { color: var(--accent); }
   .sep { border: none; border-top: 1px solid var(--line); margin: 1rem 0; }
+  .primary { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.6rem; margin-top: 0.9rem; }
+  .primary .plabel { font-size: 0.85rem; font-weight: 600; }
+  .primary select {
+    padding: 0.35rem 0.5rem;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--fg);
+    font: inherit;
+  }
+  .primary .phint { flex-basis: 100%; font-size: 0.78rem; color: var(--muted); }
 </style>

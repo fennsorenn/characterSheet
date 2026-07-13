@@ -3,7 +3,8 @@
   import { setSpellChoice } from '../stores/character.js';
   import { spellPicker, closeSpellPicker } from '../stores/spellPicker.js';
   import { spellMatchesChoice, iconForSchool } from '../character/index.js';
-  import type { NamedEntry } from '../data/index.js';
+  import { dedupeBySource, type NamedEntry } from '../data/index.js';
+  import { settings } from '../stores/settings.js';
   import Icon from './Icon.svelte';
 
   let query = $state('');
@@ -13,7 +14,7 @@
     const cat = $catalogState.catalog;
     if (!cat || !target) return [];
     const q = query.trim().toLowerCase();
-    return cat.entries.spell
+    return dedupeBySource(cat.entries.spell, $settings.primarySource)
       .filter((s) => spellMatchesChoice(s, target.filter))
       .filter((s) => !q || s.name.toLowerCase().includes(q))
       .sort((a, b) => a.name.localeCompare(b.name))

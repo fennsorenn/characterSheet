@@ -2,7 +2,8 @@
   import { catalogState } from '../stores/catalog.js';
   import { addInventoryItem } from '../stores/character.js';
   import { variantPicker, closeVariantPicker } from '../stores/variantPicker.js';
-  import { variantsForBase, tokenMatch, type NamedEntry } from '../data/index.js';
+  import { variantsForBase, tokenMatch, dedupeBySource, type NamedEntry } from '../data/index.js';
+  import { settings } from '../stores/settings.js';
 
   let query = $state('');
   let added = $state<Set<string>>(new Set());
@@ -19,7 +20,7 @@
   const variants = $derived.by((): NamedEntry[] => {
     const cat = $catalogState.catalog;
     if (!cat || !target) return [];
-    return variantsForBase(cat.entries.item, target.name, target.source)
+    return dedupeBySource(variantsForBase(cat.entries.item, target.name, target.source), $settings.primarySource)
       .filter((v) => tokenMatch(v.name, query))
       .sort((a, b) => a.name.localeCompare(b.name));
   });

@@ -3,7 +3,8 @@
   import { character, setOptionalChoice } from '../stores/character.js';
   import { optionalPicker, closeOptionalPicker } from '../stores/optionalPicker.js';
   import { optionalFeaturesOfType } from '../character/index.js';
-  import type { NamedEntry } from '../data/index.js';
+  import { dedupeBySource, type NamedEntry } from '../data/index.js';
+  import { settings } from '../stores/settings.js';
 
   let query = $state('');
 
@@ -22,7 +23,7 @@
     const cat = $catalogState.catalog;
     if (!cat || !target) return [];
     const q = query.trim().toLowerCase();
-    return optionalFeaturesOfType(cat, target.types)
+    return dedupeBySource(optionalFeaturesOfType(cat, target.types), $settings.primarySource)
       .filter((o) => !taken.has(o.name.toLowerCase()))
       .filter((o) => !q || o.name.toLowerCase().includes(q))
       .sort((a, b) => a.name.localeCompare(b.name));

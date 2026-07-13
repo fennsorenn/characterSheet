@@ -2,7 +2,8 @@
   import { catalogState } from '../stores/catalog.js';
   import { character, setFeatChoice } from '../stores/character.js';
   import { featPicker, closeFeatPicker } from '../stores/featPicker.js';
-  import type { NamedEntry } from '../data/index.js';
+  import { dedupeBySource, type NamedEntry } from '../data/index.js';
+  import { settings } from '../stores/settings.js';
 
   let query = $state('');
 
@@ -22,7 +23,7 @@
     const cat = $catalogState.catalog;
     if (!cat || !target) return [];
     const q = query.trim().toLowerCase();
-    return cat.entries.feat
+    return dedupeBySource(cat.entries.feat, $settings.primarySource)
       .filter((f) => !taken.has(f.name.toLowerCase()))
       .filter((f) => !q || f.name.toLowerCase().includes(q))
       .sort((a, b) => a.name.localeCompare(b.name));

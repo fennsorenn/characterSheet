@@ -1,4 +1,5 @@
 import type { Catalog, Category, NamedEntry } from './catalog.js';
+import { dedupeBySource } from './dedupe.js';
 
 /**
  * Lightweight search index for context-aware quick import (items, spells, …).
@@ -30,12 +31,15 @@ export interface SearchOptions {
 export class SearchIndex {
   private readonly items: IndexedEntry[] = [];
 
-  constructor(catalog: Catalog) {
+  constructor(catalog: Catalog, primarySource: string | null = null) {
     for (const category of Object.keys(catalog.entries) as Category[]) {
       // Creatures are reached via references, not quick import; keeping the whole
       // bestiary out of the index avoids burying item/spell hits under monsters.
       if (category === 'monster') continue;
-      for (const entry of catalog.entries[category]) {
+      // Collapse cross-source duplicates in favour of the primary source, so a
+      // hidden 2014 duplicate never surfaces in quick add / quick search.
+      const entries = dedupeBySource(catalog.entries[category], primarySource);
+      for (const entry of entries) {
         // Generated magic-item variants (+1 X, X of Fire Resistance, …) stay in
         // the catalog so an equipped one resolves its effects, but are excluded
         // from search to avoid flooding results — they're added via the

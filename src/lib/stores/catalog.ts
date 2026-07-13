@@ -1,4 +1,5 @@
 import { writable, derived } from 'svelte/store';
+import { settings } from './settings.js';
 import {
   loadFromFile,
   loadFromUrl,
@@ -44,8 +45,26 @@ const composed = derived(state, ($s) =>
   $s.base ? composeCatalog($s.base, $s.overlays) : null
 );
 
-/** Search index rebuilt whenever the composed catalog changes. */
-export const searchIndex = derived(composed, ($c) => ($c ? new SearchIndex($c) : null));
+/**
+ * Search index, rebuilt whenever the composed catalog or the primary source
+ * changes so quick add / quick search honour the duplicate-hiding preference.
+ */
+export const searchIndex = derived([composed, settings], ([$c, $settings]) =>
+  $c ? new SearchIndex($c, $settings.primarySource) : null
+);
+
+/** Distinct sources present across the loaded catalog, sorted for a picker. */
+export const catalogSources = derived(composed, ($c) => {
+  if (!$c) return [] as string[];
+  const seen = new Set<string>();
+  for (const category of Object.keys($c.entries) as (keyof typeof $c.entries)[]) {
+    for (const entry of $c.entries[category]) {
+      const src = String(entry.source);
+      if (src) seen.add(src);
+    }
+  }
+  return [...seen].sort((a, b) => a.localeCompare(b));
+});
 
 const itemKey = (name: string, source: string) =>
   `${name.toLowerCase()}|${source.toLowerCase()}`;
