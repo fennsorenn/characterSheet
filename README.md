@@ -61,6 +61,25 @@ in this repo.
   note itself. They live on the character document, since what they say is
   usually a fact about that character's build or gear.
 
+## CI & deployment
+
+`.github/workflows/ci.yml` type-checks, unit-tests and builds every push and
+pull request. The browser suite runs in the same job, but only where a dataset
+is available: the repo ships without 5e content, so the step is a no-op unless
+an `E2E_DATA_ZIP` repository secret points at a data zip.
+
+Deployment is pull-based. A systemd timer on the server follows the **`deploy`**
+branch and rebuilds when it moves, so pushing there ships it:
+
+```sh
+git push origin main:deploy
+```
+
+Nothing pushes to the server — no webhook, no runner, and no credentials to it
+held by GitHub. A commit that fails to build never displaces the running site,
+and one that builds but comes up unhealthy is rolled back automatically. Setup
+and operating notes are in [`deploy/README.md`](deploy/README.md).
+
 ### Planned phases
 
 1. Data pipeline (user-supplied), inline-tag renderer, IndexedDB cache, quick import

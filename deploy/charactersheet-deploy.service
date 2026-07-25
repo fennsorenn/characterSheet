@@ -1,0 +1,19 @@
+[Unit]
+Description=Deploy the character sheet from its deploy branch
+Documentation=https://github.com/fennsorenn/charactersheet/blob/main/deploy/README.md
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+# Overridable knobs live here; see deploy/README.md.
+EnvironmentFile=-/etc/default/charactersheet-deploy
+Environment=CS_DEPLOY_DIR=/srv/charactersheet
+WorkingDirectory=/srv/charactersheet
+ExecStart=/srv/charactersheet/deploy/update.sh
+# A build from cold can take a few minutes; don't shoot it halfway through.
+TimeoutStartSec=30min
+
+[Install]
+WantedBy=multi-user.target
