@@ -2,6 +2,7 @@
   import { character, graph, grantPool, setItemProficient } from '../stores/character.js';
   import { catalogLookup } from '../stores/catalog.js';
   import { openDetail } from '../stores/detail.js';
+  import { openCustomEntry } from '../stores/customEntry.js';
   import {
     weaponAttacks,
     weaponProficiencySet,
@@ -38,8 +39,13 @@
 
   function openWeaponDetail(idx: number, el: Element) {
     const inv = $character.inventory[idx];
-    const entry = inv && $catalogLookup.getItem(inv.name, inv.source);
-    if (entry) openDetail('item', entry, el.closest('.cell') ?? el);
+    if (!inv) return;
+    const anchor = el.closest('.cell') ?? el;
+    const entry = $catalogLookup.getItem(inv.name, inv.source);
+    // Same rule as the inventory row: your own description wins, then the
+    // catalog, then an empty one to write for a custom weapon.
+    if (entry && !inv.description) openDetail('item', entry, anchor);
+    else openCustomEntry('item', inv.name, inv.source, anchor);
   }
 
   /** Roll the attack d20 (adv/disadv per the roller's mode) and its damage together. */

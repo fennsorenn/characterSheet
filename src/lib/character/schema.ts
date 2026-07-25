@@ -44,6 +44,12 @@ export interface InventoryItem extends CatalogRef {
   proficient?: boolean;
   /** User-chosen display name overriding the catalog name (rename). */
   label?: string;
+  /**
+   * The player's own description. Custom entries have no catalog text behind
+   * them, so this is the only place their rules can live; it is written in the
+   * item's window and shown there in place of catalog content.
+   */
+  description?: string;
 }
 
 /** Max items a character can be attuned to at once (5e). */
@@ -59,6 +65,8 @@ export interface SpellRef extends CatalogRef {
   grantedBy?: string;
   /** @deprecated legacy flag, migrated to `status` on read. */
   prepared?: boolean;
+  /** The player's own description — see {@link InventoryItem.description}. */
+  description?: string;
 }
 
 /** Effective status, migrating the legacy `prepared` flag. */

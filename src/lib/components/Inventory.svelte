@@ -9,6 +9,7 @@
   } from '../stores/character.js';
   import { catalogLookup } from '../stores/catalog.js';
   import { openDetail } from '../stores/detail.js';
+  import { openCustomEntry } from '../stores/customEntry.js';
   import { ATTUNEMENT_LIMIT, iconForItem, iconLabel } from '../character/index.js';
   import NumberField from './NumberField.svelte';
   import Reminders from './Reminders.svelte';
@@ -51,11 +52,21 @@
   const needsAttune = (name: string, source: string) =>
     !!$catalogLookup.getItem(name, source)?.reqAttune;
 
-  function openItemDetail(name: string, source: string, el: Element) {
-    const entry = $catalogLookup.getItem(name, source);
-    // Anchor to the whole block so the window opens beside the list, not over it.
-    if (entry) openDetail('item', entry, el.closest('.cell') ?? el);
+  /**
+   * Open what there is to read about an item. A description you wrote wins, so
+   * your own text is never hidden behind catalog content; failing that the
+   * catalog entry; and for anything the catalog doesn't know — a custom item —
+   * an empty description to write.
+   */
+  function openItemDetail(item: { name: string; source: string; description?: string }, el: Element) {
+    const anchor = el.closest('.cell') ?? el;
+    const entry = $catalogLookup.getItem(item.name, item.source);
+    if (entry && !item.description) openDetail('item', entry, anchor);
+    else openCustomEntry('item', item.name, item.source, anchor);
   }
+
+  const readable = (item: { name: string; source: string; description?: string }) =>
+    !!item.description || !!$catalogLookup.getItem(item.name, item.source);
 
   // Icon for an item — uses the catalog entry's type/dmgType when available,
   // otherwise resolves from the name alone.
@@ -117,7 +128,12 @@
               onblur={commitRename}
             />
           {:else}
-            <button class="name" class:equipped={item.equipped} title="Show details" onclick={(e) => openItemDetail(item.name, item.source, e.currentTarget)}>{item.label ?? item.name}</button>
+            <button
+              class="name"
+              class:equipped={item.equipped}
+              title={readable(item) ? 'Show details' : 'Describe this item'}
+              onclick={(e) => openItemDetail(item, e.currentTarget)}
+            >{item.label ?? item.name}</button>
             <button class="edit" title="Rename item" aria-label="Rename item" onclick={() => startRename(i, item.label ?? item.name)}><UiIcon name="pencil" size="0.85em" /></button>
           {/if}
           {#if needsAttune(item.name, item.source)}

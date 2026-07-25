@@ -46,6 +46,11 @@ in this repo.
   and the sheet follows the viewport as it resizes. Signed in, your own
   templates sync to the server (last-write-wins on `updatedAt`) so they follow
   you between devices; signed out they live in localStorage.
+- **Custom entries** — an item or spell added by typing a name has no catalog
+  text behind it, so its window holds a description you write instead, stored on
+  the character. A description you have written always wins over catalog content,
+  so your own text is never hidden; clearing it hands the entry back to the
+  catalog.
 - **`src/lib/character/reminders.ts`** — short notes pinned to an exact spot on
   the sheet ("disadv. in armor" under Stealth). A reminder names an *anchor* —
   a skill, save, ability, attack, item, spell, or a whole block — rather than a

@@ -602,6 +602,33 @@ export function renameInventoryItem(index: number, label: string) {
   }));
 }
 
+/**
+ * Set (or clear, when blank) the player's own description of an inventory item.
+ * Custom entries have no catalog text, so this is where their rules live.
+ */
+export function setItemDescription(index: number, description: string) {
+  update((c) => ({
+    ...c,
+    inventory: c.inventory.map((i, n) => (n === index ? withDescription(i, description) : i))
+  }));
+}
+
+/** Set (or clear, when blank) the player's own description of a spell. */
+export function setSpellDescription(index: number, description: string) {
+  update((c) => ({
+    ...c,
+    spells: c.spells.map((s, n) => (n === index ? withDescription(s, description) : s))
+  }));
+}
+
+/** Attach a description, dropping the field entirely when it is blank. */
+function withDescription<T extends { description?: string }>(entry: T, description: string): T {
+  const trimmed = description.trim();
+  if (trimmed) return { ...entry, description: trimmed };
+  const { description: _drop, ...rest } = entry;
+  return rest as T;
+}
+
 /** Toggle attunement, refusing to exceed the attunement limit. */
 export function toggleAttuned(index: number) {
   update((c) => {
