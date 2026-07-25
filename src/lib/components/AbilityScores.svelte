@@ -56,7 +56,7 @@
             {:else if persistentOnly(abil)}
               <div class="persistent-full" title={`Effective ${$abilityScores[abil]} (base ${$character.abilities[abil]})`}>
                 <span class="persistent">{$abilityScores[abil]}</span>
-                <span class="base">base <NumberField value={$character.abilities[abil]} min={1} max={30} onchange={(v) => setAbilityScore(abil, v)} width="3ch" /></span>
+                <span class="base">base <NumberField value={$character.abilities[abil]} min={1} max={30} onchange={(v) => setAbilityScore(abil, v)} /></span>
               </div>
             {:else}
               <NumberField

@@ -30,7 +30,7 @@
     {override.effective}
     <span class="badge" aria-label={override.source}><Icon name={override.icon} /></span>
   </span>
-  <span class="base">base <NumberField value={override.base} min={1} max={30} onchange={(v) => setAbilityScore(abil, v)} width="3ch" /></span>
+  <span class="base">base <NumberField value={override.base} min={1} max={30} onchange={(v) => setAbilityScore(abil, v)} /></span>
 </div>
 
 <style>

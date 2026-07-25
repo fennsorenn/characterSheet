@@ -37,7 +37,7 @@
       {#each LEVELS as l}
         <label class="maxcell">
           <span>{l}</span>
-          <NumberField value={$character.spellSlots[l - 1].max} min={0} max={9} onchange={(v) => setSlotMax(l, v)} width="1.8ch" />
+          <NumberField value={$character.spellSlots[l - 1].max} min={0} max={9} onchange={(v) => setSlotMax(l, v)} digits={1} />
         </label>
       {/each}
     </div>

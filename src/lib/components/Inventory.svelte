@@ -101,7 +101,7 @@
             <input type="checkbox" checked={item.equipped} onchange={() => toggleEquipped(i)} />
           </label>
           <span class="qty">
-            <NumberField value={item.quantity} min={0} onchange={(v) => setItemQuantity(i, v)} />
+            <NumberField value={item.quantity} min={0} onchange={(v) => setItemQuantity(i, v)} digits={3} />
           </span>
           <span class="itemicon" title={iconLabel(ic)}><Icon name={ic} /></span>
           {#if editingIndex === i}

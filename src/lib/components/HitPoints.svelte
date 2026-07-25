@@ -15,14 +15,14 @@
   <div class="bar" data-volatile="frequent"><span style="width: {pct}%"></span></div>
   <div class="row" data-volatile="frequent">
     <span class="grp">
-      <NumberField value={$character.hp.current} min={0} onchange={(v) => setHp('current', v)} width="3.5ch" />
+      <NumberField value={$character.hp.current} min={0} onchange={(v) => setHp('current', v)} digits={3} />
       <span class="sep">/</span>
-      <NumberField value={$character.hp.max} min={0} onchange={(v) => setHp('max', v)} width="3.5ch" />
+      <NumberField value={$character.hp.max} min={0} onchange={(v) => setHp('max', v)} digits={3} />
       <span class="lbl">HP</span>
     </span>
     <span class="grp">
       <span class="lbl">Temp</span>
-      <NumberField value={$character.hp.temp} min={0} onchange={(v) => setHp('temp', v)} width="3ch" />
+      <NumberField value={$character.hp.temp} min={0} onchange={(v) => setHp('temp', v)} digits={3} />
     </span>
   </div>
   <p class="tip">Type <code>-5</code> in current HP to take 5 damage, <code>+8</code> to heal.</p>
