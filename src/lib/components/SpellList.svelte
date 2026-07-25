@@ -17,6 +17,8 @@
   } from '../character/index.js';
   import Icon from './Icon.svelte';
   import UiIcon from './UiIcon.svelte';
+  import Reminders from './Reminders.svelte';
+  import { anchors } from '../character/index.js';
   import QuickAdd from './QuickAdd.svelte';
   import { scrollStyle, resizePersist } from './scrollCell.js';
 
@@ -314,6 +316,7 @@
               {#each r.tags as t (t.id)}<span class="tag" title={t.label}><Icon name={t.icon} /></span>{/each}
             </div>
           {/if}
+          <Reminders anchor={anchors.spell(r)} />
         </li>
       {:else}
         <li class="empty">No spells match.</li>

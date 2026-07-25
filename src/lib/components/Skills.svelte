@@ -2,6 +2,8 @@
   import { SKILLS, SKILL_ABILITY, skillNodeId, setMembers, type ProficiencyLevel, type Skill } from '../character/index.js';
   import { character, grantPool, cycleSkillProficiency } from '../stores/character.js';
   import StatValue from './StatValue.svelte';
+  import Reminders from './Reminders.svelte';
+  import { anchors } from '../character/index.js';
 
   let { variant = 'full' }: { variant?: string } = $props();
   const titleCase = (s: string) => s.replace(/\b\w/g, (c) => c.toUpperCase());
@@ -35,6 +37,7 @@
     {#each shown as skill}
       {@const eff = effective(skill)}
       <li>
+        <div class="row">
         <button
           class="dot {eff.level}"
           aria-label="Cycle {skill} proficiency"
@@ -44,6 +47,8 @@
         <span class="name">{titleCase(skill)}</span>
         <span class="abil">{SKILL_ABILITY[skill]}</span>
         <span class="val"><StatValue node={skillNodeId(skill)} signed /></span>
+        </div>
+        <Reminders anchor={anchors.skill(skill)} />
       </li>
     {/each}
   </ul>
@@ -54,7 +59,8 @@
   h3 { margin: 0 0 0.6rem; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
   .empty { color: var(--muted); font-size: 0.85rem; margin: 0; }
   ul { list-style: none; margin: 0; padding: 0; columns: 2; column-gap: 1.5rem; }
-  li { display: flex; align-items: center; gap: 0.5rem; padding: 0.15rem 0; break-inside: avoid; }
+  li { padding: 0.15rem 0; break-inside: avoid; }
+  .row { display: flex; align-items: center; gap: 0.5rem; }
   .dot {
     width: 0.8rem;
     height: 0.8rem;

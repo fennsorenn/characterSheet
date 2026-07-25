@@ -3,6 +3,8 @@
   import { character, setAbilityScore, abilityOverrides, abilityScores } from '../stores/character.js';
   import { buffMode } from '../stores/ui.js';
   import NumberField from './NumberField.svelte';
+  import Reminders from './Reminders.svelte';
+  import { anchors } from '../character/index.js';
   import StatValue from './StatValue.svelte';
   import BuffField from './BuffField.svelte';
   import EffectiveScore from './EffectiveScore.svelte';
@@ -39,6 +41,7 @@
               onchange={(v) => setAbilityScore(abil, v)}
             />
           {/if}
+          <Reminders anchor={anchors.ability(abil)} />
         </div>
       {/each}
     </div>
@@ -67,6 +70,7 @@
               />
             {/if}
           </div>
+          <Reminders anchor={anchors.ability(abil)} />
         </div>
       {/each}
     </div>

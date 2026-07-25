@@ -1,4 +1,5 @@
 import { ABILITIES, type Ability, type ProficiencyLevel, type Skill } from './abilities.js';
+import type { Reminder } from './reminders.js';
 
 /**
  * The serializable character document.
@@ -180,6 +181,8 @@ export interface Character {
   notes?: NoteNode[];
   /** Open note tabs + active tab, so the notes view is restored on reload. */
   noteTabs?: { open: string[]; active: string | null };
+  /** Short notes pinned to exact spots on the sheet (see reminders.ts). */
+  reminders?: Reminder[];
   /**
    * This character's preferred layout template per screen-size category
    * (`{ mobile: <templateId>, … }`), overriding the library-wide preference.
@@ -263,6 +266,7 @@ export function createCharacter(partial: Partial<Character> = {}): Character {
     variantChoices: partial.variantChoices ?? {},
     notes: partial.notes,
     noteTabs: partial.noteTabs,
+    reminders: partial.reminders,
     layoutPrefs: partial.layoutPrefs
   };
 }

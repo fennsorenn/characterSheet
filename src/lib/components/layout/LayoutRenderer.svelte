@@ -1,8 +1,10 @@
 <script lang="ts">
   import { getLayoutController } from '../../layout/controller.js';
   import { componentFor } from '../../layout/registry.js';
+  import { anchors } from '../../character/index.js';
   import type { BlockInstance } from '../../layout/types.js';
   import BlockControls from './BlockControls.svelte';
+  import Reminders from '../Reminders.svelte';
 
   // Renders the controller's layout into a responsive grid. In edit mode each
   // block gets a control bar and becomes draggable for reordering. The grid maps
@@ -59,6 +61,8 @@
             {:else}
               <p class="missing">Unknown block: {block.type}</p>
             {/if}
+            <!-- Notes pinned to the block as a whole, under it wherever it sits. -->
+            <Reminders anchor={anchors.block(block.type)} what="block note" />
           </div>
         </div>
       {/each}
@@ -108,6 +112,10 @@
   }
 
   .block-wrap { min-width: 0; }
+  /* Block-level notes hang just under the block they annotate, indented to its
+     inner padding so they read as part of it rather than loose on the page. */
+  .body { display: flex; flex-direction: column; gap: 0.3rem; }
+  .body > :global(.reminders) { padding: 0 1rem; }
   .editing .block-wrap {
     border: 1px dashed var(--line);
     border-radius: 8px;

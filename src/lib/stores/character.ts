@@ -31,9 +31,14 @@ import {
   isNoteFolder,
   type ProficiencyLevel,
   type Resource,
+  type Reminder,
   type RestType,
   type Skill,
-  type SpellStatus
+  type SpellStatus,
+  addReminder as addReminderPure,
+  updateReminder as updateReminderPure,
+  removeReminder as removeReminderPure,
+  moveReminder as moveReminderPure
 } from '../character/index.js';
 import {
   classifyAbility,
@@ -320,6 +325,32 @@ export function setCharacterLayoutPref(category: string, id: string | undefined)
     else delete layoutPrefs[category];
     return { ...c, layoutPrefs: Object.keys(layoutPrefs).length ? layoutPrefs : undefined };
   });
+}
+
+// --- Reminders (short notes pinned to a row or block on the sheet) ---
+
+/** Pin a reminder at an anchor. Blank text is ignored. */
+export function addReminder(anchor: string, text: string) {
+  update((c) => withReminders(c, addReminderPure(c.reminders, anchor, text, crypto.randomUUID())));
+}
+
+/** Edit a reminder's text; blanking it deletes the reminder. */
+export function setReminderText(id: string, text: string) {
+  update((c) => withReminders(c, updateReminderPure(c.reminders, id, text)));
+}
+
+export function removeReminder(id: string) {
+  update((c) => withReminders(c, removeReminderPure(c.reminders, id)));
+}
+
+/** Reorder a reminder among the others pinned at the same anchor. */
+export function moveReminder(id: string, dir: -1 | 1) {
+  update((c) => withReminders(c, moveReminderPure(c.reminders, id, dir)));
+}
+
+/** Drop the field entirely when the last reminder goes, keeping documents lean. */
+function withReminders(c: Character, reminders: Reminder[]): Character {
+  return { ...c, reminders: reminders.length ? reminders : undefined };
 }
 
 /** Replace this character's template preferences wholesale (empty clears them). */

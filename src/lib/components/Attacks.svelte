@@ -11,6 +11,8 @@
     ABILITY_NAMES
   } from '../character/index.js';
   import StatValue from './StatValue.svelte';
+  import Reminders from './Reminders.svelte';
+  import { anchors } from '../character/index.js';
   import Icon from './Icon.svelte';
   import { get } from 'svelte/store';
   import { rollParts, diceMode } from '../stores/dice.js';
@@ -76,6 +78,7 @@
         {@const idx = Number(a.id.slice(1))}
         {@const wic = iconForItem({ name: a.name })}
         <li>
+          <div class="row">
           <span class="wicon" title={iconLabel(wic)}><Icon name={wic} /></span>
           <button class="name" title="Show details" onclick={(e) => openWeaponDetail(idx, e.currentTarget)}>{a.name}</button>
           <span class="hit" title="{ABILITY_NAMES[a.ability]} attack">
@@ -95,6 +98,8 @@
             onclick={() => setItemProficient(idx, !a.proficient)}
           >prof</button>
           <button class="roll" title="Roll attack + damage" aria-label="Roll {a.name}" onclick={() => rollAttack(a)}><Icon name="dice" /></button>
+          </div>
+          <Reminders anchor={anchors.attack(a.name)} />
         </li>
       {/each}
     </ul>
@@ -106,13 +111,12 @@
   h3 { margin: 0 0 0.6rem; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
   .empty { color: var(--muted); font-size: 0.85rem; margin: 0; }
   ul { list-style: none; margin: 0; padding: 0; }
-  li {
+  li { padding: 0.3rem 0; border-bottom: 1px solid var(--line); }
+  .row {
     display: grid;
     grid-template-columns: auto 1fr auto auto auto auto;
     align-items: center;
     gap: 0.6rem;
-    padding: 0.3rem 0;
-    border-bottom: 1px solid var(--line);
   }
   .wicon { color: var(--muted); display: inline-flex; }
   .wicon :global(.icon) { width: 1.05rem; height: 1.05rem; }
@@ -134,7 +138,7 @@
   .roll:hover { background: var(--accent); color: #fff; }
   /* In a narrow cell the fixed grid can't fit; wrap the stats under the name. */
   @container cell (max-width: 340px) {
-    li { display: flex; flex-wrap: wrap; gap: 0.35rem 0.6rem; }
+    .row { display: flex; flex-wrap: wrap; gap: 0.35rem 0.6rem; }
     .name { flex: 1 1 60%; white-space: normal; overflow-wrap: anywhere; }
   }
 </style>

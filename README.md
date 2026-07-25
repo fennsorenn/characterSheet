@@ -46,6 +46,12 @@ in this repo.
   and the sheet follows the viewport as it resizes. Signed in, your own
   templates sync to the server (last-write-wins on `updatedAt`) so they follow
   you between devices; signed out they live in localStorage.
+- **`src/lib/character/reminders.ts`** — short notes pinned to an exact spot on
+  the sheet ("disadv. in armor" under Stealth). A reminder names an *anchor* —
+  a skill, save, ability, attack, item, spell, or a whole block — rather than a
+  position, so it stays attached through a template switch or a reflow to one
+  column. They live on the character document, since what they say is usually a
+  fact about that character's build or gear.
 
 ### Planned phases
 

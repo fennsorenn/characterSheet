@@ -126,3 +126,14 @@ export {
   type FeatureResource
 } from './featureResources.js';
 export { labelForNode } from './labels.js';
+export {
+  anchors,
+  remindersAt,
+  addReminder,
+  updateReminder,
+  removeReminder,
+  moveReminder,
+  strandedReminders,
+  anchorLabel,
+  type Reminder
+} from './reminders.js';

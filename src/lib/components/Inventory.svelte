@@ -11,6 +11,8 @@
   import { openDetail } from '../stores/detail.js';
   import { ATTUNEMENT_LIMIT, iconForItem, iconLabel } from '../character/index.js';
   import NumberField from './NumberField.svelte';
+  import Reminders from './Reminders.svelte';
+  import { anchors } from '../character/index.js';
   import Icon from './Icon.svelte';
   import UiIcon from './UiIcon.svelte';
   import QuickAdd from './QuickAdd.svelte';
@@ -97,6 +99,7 @@
         {@const note = effectNote(item.name, item.source)}
         {@const ic = iconFor(item.name, item.source)}
         <li>
+          <div class="row">
           <label class="equip" title="Equipped">
             <input type="checkbox" checked={item.equipped} onchange={() => toggleEquipped(i)} />
           </label>
@@ -129,6 +132,8 @@
           <span class="src">{item.source}</span>
           {#if note}<span class="note">{note}</span>{/if}
           <button class="rm" aria-label="Remove" onclick={() => removeInventoryItem(i)}>×</button>
+          </div>
+          <Reminders anchor={anchors.item(item)} />
         </li>
       {/each}
     </ul>
@@ -153,7 +158,8 @@
   .attune:disabled { opacity: 0.35; cursor: not-allowed; }
   .empty { color: var(--muted); font-size: 0.85rem; margin: 0; }
   ul { list-style: none; margin: 0; padding: 0; }
-  li { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem 0.5rem; padding: 0.25rem 0; border-bottom: 1px solid var(--line); }
+  li { padding: 0.25rem 0; border-bottom: 1px solid var(--line); }
+  .row { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem 0.5rem; }
   .qty { width: 2.5ch; flex: none; }
   .itemicon { color: var(--muted); display: inline-flex; flex: none; }
   .itemicon :global(.icon) { width: 1.05rem; height: 1.05rem; }

@@ -22,6 +22,9 @@
   import { screenController } from '../stores/layout.js';
   import { screenCategory } from '../stores/screen.js';
   import { buffMode, toggleBuffMode } from '../stores/ui.js';
+  import { reminderMode, toggleReminderMode, stranded } from '../stores/reminders.js';
+  import { removeReminder } from '../stores/character.js';
+  import { anchorLabel } from '../character/index.js';
   import { setLayoutController } from '../layout/controller.js';
   import { BLOCK_META } from '../layout/blocks.js';
   import { SCREEN_LABELS } from '../layout/screen.js';
@@ -32,6 +35,7 @@
   const manualCount = $derived(
     $character.modifiers.filter((m) => m.source === MANUAL_SOURCE).length
   );
+  const reminderCount = $derived($character.reminders?.length ?? 0);
 
   // The renderer below edits the active screen template.
   setLayoutController(screenController);
@@ -95,6 +99,11 @@
       >
         {pinnedHere ? '★' : '☆'} {SCREEN_LABELS[$screenCategory]}
       </button>
+      <button
+        class:on={$reminderMode}
+        onclick={toggleReminderMode}
+        title="Pin short notes next to skills, items, spells or whole blocks"
+      >Reminders{reminderCount > 0 ? ` (${reminderCount})` : ''}</button>
       <button class:on={showTemplates} onclick={() => (showTemplates = !showTemplates)}>
         Templates…
       </button>
@@ -119,6 +128,32 @@
 
   {#if showTemplates}
     <TemplateManager onClose={() => (showTemplates = false)} />
+  {/if}
+
+  {#if $reminderMode}
+    <div class="buff-banner reminder-banner">
+      <span>
+        <strong>Reminders</strong> — pin a short note under any skill, save, ability, attack,
+        item, spell, or whole block. It stays with what it annotates, whatever template or
+        screen size the sheet is on.
+      </span>
+      <button onclick={toggleReminderMode}>Done</button>
+    </div>
+  {/if}
+
+  {#if $reminderMode && $stranded.length}
+    <div class="buff-banner reminder-banner stranded">
+      <span>
+        <strong>Not on this sheet</strong> — these are pinned to something the current
+        template doesn't show, or to an item or spell you no longer have:
+        {#each $stranded as r (r.id)}
+          <span class="orphan">
+            <em>{r.text}</em> <span class="at">at {anchorLabel(r.anchor)}</span>
+            <button class="drop" title="Delete reminder" onclick={() => removeReminder(r.id)}>✕</button>
+          </span>
+        {/each}
+      </span>
+    </div>
   {/if}
 
   {#if $buffMode}
@@ -255,5 +290,21 @@
     cursor: pointer;
   }
   .buff-banner button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .reminder-banner { border-color: var(--line); background: var(--field-hover); }
+  .reminder-banner button { border-color: var(--line); color: var(--fg); }
+  .stranded { align-items: flex-start; }
+  .orphan {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin: 0.1rem 0.3rem 0 0;
+    padding: 0.05rem 0.35rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--bg);
+  }
+  .orphan .at { color: var(--muted); font-size: 0.75rem; }
+  .drop { font: inherit; font-size: 0.75rem; padding: 0 0.15rem; border: none; background: none; color: var(--muted); cursor: pointer; }
+  .drop:hover { color: var(--accent); }
   .tip { color: var(--muted); font-size: 0.85rem; margin: 0.5rem 0 1rem; }
 </style>
