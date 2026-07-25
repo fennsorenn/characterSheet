@@ -1,0 +1,51 @@
+name: CI
+
+# Every push and pull request: type-check, unit tests, production build. The
+# browser suite runs too, but only where a dataset is available (see below).
+on:
+  push:
+  pull_request:
+
+# A branch that gets pushed twice in a minute only needs the newer run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Type-check
+        run: npm run check
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Production build
+        run: npm run build
+
+      # The app loads its 5etools dataset at runtime and the repo deliberately
+      # ships without it, so the browser suite needs one supplied. `npm run e2e`
+      # exits 0 when E2E_DATA_ZIP is unset — this step only pays for Playwright
+      # when there is actually a dataset to run against.
+      - name: End-to-end
+        env:
+          E2E_DATA_ZIP: ${{ secrets.E2E_DATA_ZIP }}
+        run: |
+          if [ -z "$E2E_DATA_ZIP" ]; then
+            echo "No E2E_DATA_ZIP secret set — skipping the browser suite."
+            exit 0
+          fi
+          npm i --no-save playwright
+          npx playwright install --with-deps chromium
+          npm run e2e

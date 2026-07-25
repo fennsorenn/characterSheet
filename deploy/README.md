@@ -24,6 +24,22 @@ machine needs no inbound port, no webhook receiver and no runner.
 Only one deploy runs at a time; a timer fire that lands during a long build
 steps aside and lets the next one pick the work up.
 
+## Activating CI
+
+The workflow lives here as [`ci.yml`](ci.yml) rather than in
+`.github/workflows/`, because the credentials this repo's Claude sessions push
+with deliberately lack GitHub's `workflow` scope — nothing automated can add or
+change a workflow file. Move it into place yourself, once:
+
+```sh
+mkdir -p .github/workflows && git mv deploy/ci.yml .github/workflows/ci.yml
+git commit -m "Activate CI" && git push
+```
+
+To let the browser suite run, add a repository secret `E2E_DATA_ZIP` pointing
+at a 5etools data zip (Settings → Secrets and variables → Actions). Without it
+that step prints a line and passes; the rest of the job runs either way.
+
 ## What is *not* automatic
 
 CI (`.github/workflows/ci.yml`) runs the type-check, unit tests, build and e2e
