@@ -1,6 +1,6 @@
 import { assert, seedCharacter } from '../harness.mjs';
 
-// Items and spells added by typing a name have no catalog text behind them, so
+// Items, spells and features added by hand have no catalog text behind them, so
 // their window holds a description you write yourself. Catalog entries still
 // show catalog content — unless you have written your own, which never gets
 // hidden behind it.
@@ -9,6 +9,7 @@ export default async function ({ page, baseUrl }) {
     page.locator('.block-wrap').filter({ has: page.locator('h3', { hasText: new RegExp(`^${title}$`) }) }).first();
   const doc = () => page.evaluate(() => JSON.parse(localStorage.getItem('cs.char.test')));
   const win = () => page.locator('.win[role=dialog]');
+  const feats = () => block('Features & Traits');
 
   await seedCharacter(page, baseUrl, {
     name: 'Test',
@@ -105,4 +106,64 @@ export default async function ({ page, baseUrl }) {
   await block('Spells').locator('li', { hasText: 'Magic Missile' }).first().locator('button.name').click();
   await win().waitFor();
   assert(/level|evocation|dart/i.test(await win().innerText()), 'and the catalog entry is back');
+
+  // --- Features: the same, for something the catalog has never heard of ---
+  await page.keyboard.press('Escape');
+  page.once('dialog', (d) => d.accept('Oath of the Long Road'));
+  await feats().locator('.line.custom button.choose').click();
+  await page.waitForTimeout(400);
+  assert((await doc()).customFeatures?.length === 1, 'the custom feature is on the character');
+
+  const own = feats().locator('li', { hasText: 'Oath of the Long Road' }).first();
+  // innerText is the rendered text, and the group tag is uppercased in CSS.
+  assert(/^custom$/i.test(await own.locator('.grp').innerText()), 'it lists in its own group');
+
+  await own.locator('button.describe').click();
+  await win().waitFor();
+  assert(/Feature · Custom/.test(await win().locator('.where').innerText()), 'the window says what it is');
+  await win().locator('.body').fill('Advantage on saves against exhaustion while travelling.');
+  await win().locator('.body').blur();
+  await page.waitForTimeout(350);
+  assert(
+    (await doc()).featureMeta['Oath of the Long Road|Custom']?.description?.startsWith('Advantage'),
+    'the description saves with the feature’s other overrides'
+  );
+  await page.keyboard.press('Escape');
+
+  await own.locator('button.fname').click();
+  await page.waitForTimeout(300);
+  assert(/Advantage on saves/.test(await own.locator('.fbody').innerText()), 'expanding shows your text');
+
+  // --- A catalog feature takes one too, and yours wins over the rules text ---
+  const known = feats().locator('li', { hasText: 'Arcane Recovery' }).first();
+  await known.locator('button.describe').click();
+  await win().waitFor();
+  await win().locator('.body').fill('House rule: also recovers one 6th-level slot.');
+  await win().locator('.body').blur();
+  await page.waitForTimeout(350);
+  await page.keyboard.press('Escape');
+  await known.locator('button.fname').click();
+  await page.waitForTimeout(300);
+  assert(/House rule/.test(await known.locator('.fbody').innerText()), 'your text replaces the catalog text');
+
+  // Clearing it hands the feature back to the catalog and drops the override.
+  await known.locator('button.describe').click();
+  await win().waitFor();
+  await win().locator('.body').fill('   ');
+  await win().locator('.body').blur();
+  await page.waitForTimeout(350);
+  await page.keyboard.press('Escape');
+  const restored = await known.locator('.fbody').innerText();
+  assert(!/House rule/.test(restored) && restored.length > 10, 'the catalog text is back');
+  assert(
+    (await doc()).featureMeta['Arcane Recovery|PHB'] === undefined,
+    'and the emptied override is dropped from the document'
+  );
+
+  // --- Removing a custom feature takes its description with it ---
+  await feats().locator('.line.custom .ctag .x').first().click();
+  await page.waitForTimeout(350);
+  const end = await doc();
+  assert(!end.customFeatures, 'the feature is gone');
+  assert(!end.featureMeta['Oath of the Long Road|Custom'], 'and so is its description');
 }

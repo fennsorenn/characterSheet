@@ -1,6 +1,6 @@
 import type { Catalog, NamedEntry } from '../data/catalog.js';
 import type { Character } from './schema.js';
-import { totalLevel, allFeatRefs } from './schema.js';
+import { totalLevel, allFeatRefs, CUSTOM_SOURCE } from './schema.js';
 import type { GrantedSpell, SpellByName } from './grantedSpells.js';
 
 /**
@@ -12,7 +12,7 @@ import type { GrantedSpell, SpellByName } from './grantedSpells.js';
  * feats are catalog entries. We gather everything up to the character's level.
  */
 
-export type FeatureGroup = 'Race' | 'Background' | 'Class' | 'Subclass' | 'Feat';
+export type FeatureGroup = 'Race' | 'Background' | 'Class' | 'Subclass' | 'Feat' | 'Custom';
 
 export interface Feature {
   group: FeatureGroup;
@@ -27,6 +27,35 @@ export interface Feature {
   variantKey?: string;
   /** For a variant: whether it is currently enabled by the character. */
   variantEnabled?: boolean;
+}
+
+/** Key into `featureMeta` for a feature's overrides — tags, hidden, description. */
+export function featureMetaKey(f: { name: string; source: string }): string {
+  return `${f.name}|${f.source}`;
+}
+
+/**
+ * The player's own features as ordinary {@link Feature}s, so the block can list,
+ * tag, hide and expand them like any other. They carry no entries: their text is
+ * the description in `featureMeta`, which is also what a catalog feature falls
+ * back to when the player has written one.
+ */
+export function customFeatures(character: Character): Feature[] {
+  return (character.customFeatures ?? []).map((f) => ({
+    group: 'Custom' as const,
+    name: f.name,
+    source: CUSTOM_SOURCE,
+    subtitle: f.subtitle,
+    entries: []
+  }));
+}
+
+/** A name no existing custom feature uses, since the key is `name|Custom`. */
+export function uniqueCustomFeatureName(character: Character, name: string): string {
+  const base = name.trim() || 'New feature';
+  const taken = new Set((character.customFeatures ?? []).map((f) => f.name.toLowerCase()));
+  if (!taken.has(base.toLowerCase())) return base;
+  for (let i = 2; ; i++) if (!taken.has(`${base} ${i}`.toLowerCase())) return `${base} ${i}`;
 }
 
 /** Stable key for a variant feature's on/off toggle. */

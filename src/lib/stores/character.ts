@@ -35,6 +35,9 @@ import {
   type RestType,
   type Skill,
   type SpellStatus,
+  uniqueCustomFeatureName,
+  featureMetaKey,
+  CUSTOM_SOURCE,
   addReminder as addReminderPure,
   updateReminder as updateReminderPure,
   setReminderDetail as setReminderDetailPure,
@@ -491,14 +494,46 @@ export function setOptionalChoice(key: string, ref: CatalogRef | undefined) {
 
 function mergeMeta(c: Character, key: string, patch: Partial<Character['featureMeta'][string]>): Character {
   const featureMeta = { ...c.featureMeta, [key]: { ...c.featureMeta[key], ...patch } };
-  // Drop empty meta entries.
+  // Drop empty meta entries, and any field that was cleared.
   const m = featureMeta[key];
-  if (!m.hidden && (!m.tags || m.tags.length === 0)) delete featureMeta[key];
+  if (m.description === undefined) delete m.description;
+  if (!m.hidden && !m.description && (!m.tags || m.tags.length === 0)) delete featureMeta[key];
   return { ...c, featureMeta };
 }
 
 export function setFeatureHidden(key: string, hidden: boolean) {
   update((c) => mergeMeta(c, key, { hidden }));
+}
+
+/**
+ * Set (or clear, when blank) the player's own description of a feature. Shown
+ * in place of the catalog text when the feature is expanded — and the only text
+ * a custom feature has.
+ */
+export function setFeatureDescription(key: string, description: string) {
+  update((c) => mergeMeta(c, key, { description: description.trim() || undefined }));
+}
+
+/** Add a feature the player wrote themselves, under a name no other one uses. */
+export function addCustomFeature(name: string) {
+  update((c) => ({
+    ...c,
+    customFeatures: [
+      ...(c.customFeatures ?? []),
+      { id: crypto.randomUUID(), name: uniqueCustomFeatureName(c, name) }
+    ]
+  }));
+}
+
+/** Remove a custom feature, and the overrides that were keyed to its name. */
+export function removeCustomFeature(id: string) {
+  update((c) => {
+    const gone = (c.customFeatures ?? []).find((f) => f.id === id);
+    const customFeatures = (c.customFeatures ?? []).filter((f) => f.id !== id);
+    const featureMeta = { ...c.featureMeta };
+    if (gone) delete featureMeta[featureMetaKey({ name: gone.name, source: CUSTOM_SOURCE })];
+    return { ...c, featureMeta, customFeatures: customFeatures.length ? customFeatures : undefined };
+  });
 }
 
 /** Enable/disable an optional class-feature variant (e.g. Blessed Strikes). */

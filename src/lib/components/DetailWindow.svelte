@@ -94,6 +94,9 @@
   }
 </script>
 
+<!-- Escape closes it, as it does every other overlay on the sheet. -->
+<svelte:window onkeydown={(e) => e.key === 'Escape' && $detail && closeDetail()} />
+
 {#if $detail}
   <div class="win" style="left:{pos.x}px; top:{pos.y}px; width:{WIDTH}px;" role="dialog" aria-label={title}>
     <!-- svelte-ignore a11y_no_static_element_interactions -->

@@ -127,6 +127,12 @@ export {
 } from './featureResources.js';
 export { labelForNode } from './labels.js';
 export {
+  customFeatures,
+  uniqueCustomFeatureName,
+  featureMetaKey
+} from './features.js';
+export { CUSTOM_SOURCE, type CustomFeature } from './schema.js';
+export {
   anchors,
   remindersAt,
   addReminder,
