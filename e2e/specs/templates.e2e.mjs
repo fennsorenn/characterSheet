@@ -13,20 +13,24 @@ export default async function ({ page, baseUrl }) {
   await page.click('.new button.primary');
   await page.waitForSelector('select.preset', { timeout: 10000 });
 
-  // A fresh library seeds one user-owned template — the four presets are only
-  // starting points now, not pinned entries.
-  assert((await options()).length === 1, 'a fresh library holds a single template');
+  // A fresh library seeds the shipped set: one template per screen size × play
+  // style, all user-owned (nothing pins or refreshes them).
+  const shipped = await options();
+  assert(shipped.length === 8, `a fresh library seeds eight templates; got ${shipped.length}`);
+  assert(shipped.includes('Desktop — Martial'), 'the shipped names are per size and style');
+  // …and it opens on the one preferred for this viewport.
+  assert((await activeName()) === 'Desktop — Martial', 'a desktop viewport opens the desktop template');
 
   // --- Create templates from starting points ---
   await page.click('.tools button:has-text("Templates…")');
   await page.waitForSelector('.manager');
-  for (const [name, starter] of [['Phone', 'compact'], ['Big Screen', 'caster']]) {
+  for (const [name, starter] of [['Phone', 'mobile-caster'], ['Big Screen', 'ultrawide-caster']]) {
     await page.fill('.manager .new input', name);
     await page.selectOption('.manager .new select', starter);
     await page.click('.manager .new button');
     await page.waitForTimeout(200);
   }
-  assert((await options()).length === 3, 'created templates join the library');
+  assert((await options()).length === shipped.length + 2, 'created templates join the library');
   assert((await activeName()) === 'Big Screen', 'a new template becomes active');
 
   // --- Preferred template per screen-size category ---
@@ -52,7 +56,7 @@ export default async function ({ page, baseUrl }) {
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForSelector('select.preset');
   await page.waitForTimeout(300);
-  assert((await options()).length === 3, 'templates survive a reload');
+  assert((await options()).length === shipped.length + 2, 'templates survive a reload');
   assert((await activeName()) === 'Phone', 'preferences survive a reload');
 
   // --- Sign up: the library is pushed to the server ---
@@ -65,7 +69,10 @@ export default async function ({ page, baseUrl }) {
   const stored = await page.evaluate(() =>
     fetch('/api/templates', { credentials: 'same-origin' }).then((r) => r.json())
   );
-  assert(stored.templates?.library?.layouts?.length === 3, 'the library reaches the server');
+  assert(
+    stored.templates?.library?.layouts?.length === shipped.length + 2,
+    'the library reaches the server'
+  );
 
   // --- Another device signs in and inherits templates *and* preferences ---
   const ctx = await page.context().browser().newContext({ viewport: { width: 1200, height: 2100 } });
@@ -97,7 +104,10 @@ export default async function ({ page, baseUrl }) {
     const after = await page.evaluate(() =>
       fetch('/api/templates', { credentials: 'same-origin' }).then((r) => r.json())
     );
-    assert(after.templates.library.layouts.length === 4, "the other device's edit is saved");
+    assert(
+      after.templates.library.layouts.length === shipped.length + 3,
+      "the other device's edit is saved"
+    );
   } finally {
     await ctx.close();
   }

@@ -7,11 +7,18 @@
     renameLayout,
     deleteLayout,
     saveAsPreset,
-    setPreferredLayout
+    setPreferredLayout,
+    preferStyle,
+    styleLayoutIds
   } from '../stores/layout.js';
-  import { characterLayoutPrefs, setCharacterLayoutPref } from '../stores/character.js';
+  import {
+    characterLayoutPrefs,
+    setCharacterLayoutPref,
+    setCharacterLayoutPrefs,
+    character
+  } from '../stores/character.js';
   import { screenCategory } from '../stores/screen.js';
-  import { STARTERS } from '../layout/presets.js';
+  import { STARTERS, STYLE_LABELS, TEMPLATE_STYLES, templateId } from '../layout/presets.js';
   import { SCREEN_CATEGORIES, SCREEN_HINTS, SCREEN_LABELS } from '../layout/screen.js';
 
   /**
@@ -26,6 +33,17 @@
 
   const nameFor = (id: string | undefined) =>
     $layoutList.options.find((o) => o.id === id)?.name;
+
+  /**
+   * Play styles whose full shipped set is still in the library — the one-click
+   * "use the caster templates everywhere" shortcut only makes sense while all
+   * four of that style's templates exist.
+   */
+  const styles = $derived(
+    TEMPLATE_STYLES.filter((s) =>
+      SCREEN_CATEGORIES.every((c) => $layoutList.options.some((o) => o.id === templateId(c, s)))
+    )
+  );
 
   function create() {
     const name = newName.trim();
@@ -96,6 +114,25 @@
     Sheets open with the preferred template for the current screen size. A choice made
     <em>for this character</em> wins over the default for every character.
   </p>
+  {#if styles.length}
+    <div class="styles">
+      <span>Use the shipped set for a</span>
+      {#each styles as s}
+        <button onclick={() => preferStyle(s)} title="For every character, at every screen size">
+          {STYLE_LABELS[s]}
+        </button>
+      {/each}
+      <span class="sep">— or just for {$character.name}:</span>
+      {#each styles as s}
+        <button onclick={() => setCharacterLayoutPrefs(styleLayoutIds(s))}>{STYLE_LABELS[s]}</button>
+      {/each}
+      <button
+        disabled={!Object.keys($characterLayoutPrefs).length}
+        onclick={() => setCharacterLayoutPrefs({})}
+      >Clear</button>
+    </div>
+  {/if}
+
   <table>
     <thead>
       <tr><th>Screen</th><th>Every character</th><th>This character</th></tr>
@@ -176,6 +213,17 @@
 
   .new { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.8rem; }
   .new input { flex: 1 1 10rem; min-width: 0; cursor: text; }
+
+  .styles {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-bottom: 0.7rem;
+  }
+  .styles .sep { margin-left: 0.4rem; }
 
   table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
   th, td { text-align: left; padding: 0.3rem 0.4rem 0.3rem 0; vertical-align: middle; }

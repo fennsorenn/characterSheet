@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { appendNewBlocks, adoptLibrary } from './layout.js';
+import { defaultTemplates } from '../layout/presets.js';
 import type { LayoutLibrary } from '../layout/library.js';
 
 // Upgrading the library should surface newly-shipped blocks (e.g. `traits`,
@@ -43,7 +44,7 @@ describe('appendNewBlocks', () => {
 // Reading a library — from localStorage or from another device via the server —
 // has to survive older shapes and partial corruption without losing templates.
 describe('adoptLibrary', () => {
-  it('keeps a pre-v8 library whole, including the built-in presets it pinned', () => {
+  it('keeps a pre-v8 library whole and adds the shipped per-screen-size set', () => {
     const out = adoptLibrary(
       {
         activeId: 'caster',
@@ -55,10 +56,28 @@ describe('adoptLibrary', () => {
       },
       7
     )!;
-    // Nothing is treated as a built-in any more: all three survive as the user's.
-    expect(out.layouts.map((l) => l.id)).toEqual(['default', 'caster', 'mine']);
+    // Nothing is treated as a built-in any more: all three survive as the user's,
+    // in place, with the shipped templates appended after them.
+    expect(out.layouts.slice(0, 3).map((l) => l.id)).toEqual(['default', 'caster', 'mine']);
+    expect(out.layouts.map((l) => l.id)).toContain('desktop-caster');
     expect(out.activeId).toBe('caster');
-    expect(out.preferred).toEqual({});
+    // …and each screen size starts out pointing at a shipped template.
+    expect(out.preferred).toEqual({
+      mobile: 'mobile-martial',
+      tablet: 'tablet-martial',
+      desktop: 'desktop-martial',
+      ultrawide: 'ultrawide-martial'
+    });
+  });
+
+  it('leaves a current-version library alone, deletions included', () => {
+    const kept = defaultTemplates().filter((t) => t.id !== 'mobile-caster');
+    const out = adoptLibrary(
+      { activeId: 'desktop-martial', layouts: kept, preferred: { mobile: 'mobile-martial' } },
+      8
+    )!;
+    expect(out.layouts.map((l) => l.id)).not.toContain('mobile-caster');
+    expect(out.preferred).toEqual({ mobile: 'mobile-martial' });
   });
 
   it('re-points an active id that no longer exists and prunes stale preferences', () => {

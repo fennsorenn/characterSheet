@@ -1,5 +1,13 @@
 import { writable, derived, get } from 'svelte/store';
-import { builtinPresets, starterBlocks } from '../layout/presets.js';
+import {
+  defaultTemplate,
+  defaultTemplates,
+  parseTemplateId,
+  starterBlocks,
+  templateId,
+  type TemplateStyle
+} from '../layout/presets.js';
+import { SCREEN_CATEGORIES } from '../layout/screen.js';
 import * as ops from '../layout/operations.js';
 import * as lib from '../layout/library.js';
 import type { LayoutLibrary } from '../layout/library.js';
@@ -43,10 +51,20 @@ const BLOCKS_INTRODUCED: Record<number, string[]> = {
   7: ['traits']
 };
 
-/** A brand-new library: one template, seeded from the default arrangement. */
+/**
+ * A brand-new library: every shipped template, with each screen size preferring
+ * its own martial arrangement. Martial is the starting point because a fresh
+ * character is a level-1 Fighter; a caster switches the four preferences in one
+ * click from the template manager, per character or for all of them.
+ */
 function fresh(): LayoutLibrary {
-  const seed = builtinPresets()[0];
-  return { activeId: seed.id, layouts: [seed], preferred: {} };
+  const preferred: LayoutLibrary['preferred'] = {};
+  for (const category of SCREEN_CATEGORIES) preferred[category] = templateId(category, 'martial');
+  return {
+    activeId: templateId('desktop', 'martial'),
+    layouts: defaultTemplates(),
+    preferred
+  };
 }
 
 /** Append blocks introduced after `fromVersion` to any template missing them. */
@@ -66,9 +84,27 @@ export function appendNewBlocks(library: LayoutLibrary, fromVersion: number): La
 }
 
 /**
+ * Offer the shipped per-screen-size templates to a library that predates them,
+ * without touching what the user already has: only ids that are absent are
+ * added, and preferences are only seeded when none were set. Runs on the v8
+ * upgrade alone — after that, a template the user deleted stays deleted.
+ */
+export function addShippedTemplates(library: LayoutLibrary, fromVersion: number): LayoutLibrary {
+  if (fromVersion >= LIBRARY_VERSION) return library;
+  const missing = defaultTemplates().filter((t) => !library.layouts.some((l) => l.id === t.id));
+  if (!missing.length) return library;
+  const layouts = [...library.layouts, ...missing];
+  const preferred = { ...library.preferred };
+  if (!Object.keys(preferred).length) {
+    for (const category of SCREEN_CATEGORIES) preferred[category] = templateId(category, 'martial');
+  }
+  return { ...library, layouts, preferred };
+}
+
+/**
  * Normalise anything read from storage or the server into a valid library:
- * every template kept as the user's own, preferences pruned to live templates,
- * and newly-shipped blocks surfaced.
+ * every template kept as the user's own, the shipped set offered on upgrade,
+ * preferences pruned to live templates, and newly-shipped blocks surfaced.
  */
 export function adoptLibrary(
   parsed: Partial<LayoutLibrary> | undefined,
@@ -79,7 +115,7 @@ export function adoptLibrary(
   if (!layouts.length) return null;
   const activeId = layouts.some((l) => l.id === parsed.activeId) ? parsed.activeId! : layouts[0].id;
   const library = { activeId, layouts, preferred: parsed.preferred ?? {} };
-  return lib.prunePreferred(appendNewBlocks(library, fromVersion));
+  return lib.prunePreferred(addShippedTemplates(appendNewBlocks(library, fromVersion), fromVersion));
 }
 
 interface Stored {
@@ -228,10 +264,19 @@ export const toggleStack = (id: string) => onActive((l) => ops.toggleStack(l, id
 export const setHeight = (id: string, height: number | undefined) =>
   onActive((l) => ops.setHeight(l, id, height));
 
-/** Reset the active template's blocks to the tuned default arrangement (keeps its name). */
-export const resetLayout = () =>
+/**
+ * Reset the active template's blocks to a shipped arrangement, keeping its name.
+ * A shipped template resets to its own; anything the user made resets to the
+ * arrangement for the screen size they are on, keeping its play style if the
+ * name still carries one.
+ */
+export const resetLayout = (category: ScreenCategory = 'desktop') =>
   store.update((s) =>
-    lib.updateActiveLayout(s, (l) => ({ ...l, blocks: builtinPresets()[0].blocks }))
+    lib.updateActiveLayout(s, (l) => {
+      const own = parseTemplateId(l.id);
+      const style: TemplateStyle = own?.style ?? (/caster/i.test(l.name) ? 'caster' : 'martial');
+      return { ...l, blocks: defaultTemplate(own?.category ?? category, style).blocks };
+    })
   );
 
 // --- Library-level actions ---
@@ -259,6 +304,21 @@ export const createLayout = (name: string, starter = 'blank') =>
 /** Designate (or clear) the template preferred at a screen-size category. */
 export const setPreferredLayout = (category: ScreenCategory, id: string | undefined) =>
   store.update((s) => lib.setPreferred(s, category, id));
+
+/**
+ * Point every screen size at one play style's shipped template — the one-click
+ * way to move a whole library (or, per character, one sheet) from martial to
+ * caster and back.
+ */
+export const preferStyle = (style: TemplateStyle) =>
+  store.update((s) =>
+    SCREEN_CATEGORIES.reduce((acc, c) => lib.setPreferred(acc, c, templateId(c, style)), s)
+  );
+
+/** The per-category ids for a play style, for setting a character's own set. */
+export function styleLayoutIds(style: TemplateStyle): Record<string, string> {
+  return Object.fromEntries(SCREEN_CATEGORIES.map((c) => [c, templateId(c, style)]));
+}
 
 /**
  * Switch to whichever template wins for `category` — the character's own choice

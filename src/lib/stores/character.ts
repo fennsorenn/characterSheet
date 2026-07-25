@@ -322,6 +322,11 @@ export function setCharacterLayoutPref(category: string, id: string | undefined)
   });
 }
 
+/** Replace this character's template preferences wholesale (empty clears them). */
+export function setCharacterLayoutPrefs(prefs: Record<string, string>) {
+  update((c) => ({ ...c, layoutPrefs: Object.keys(prefs).length ? { ...prefs } : undefined }));
+}
+
 function update(fn: (c: Character) => Character) {
   store.update(fn);
 }

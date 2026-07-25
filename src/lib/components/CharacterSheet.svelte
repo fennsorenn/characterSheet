@@ -120,7 +120,10 @@
           <option value={type}>{meta.label}</option>
         {/each}
       </select>
-      <button onclick={resetLayout} title="Reset this template's blocks">Reset blocks</button>
+      <button
+        onclick={() => resetLayout($screenCategory)}
+        title="Reset this template's blocks to the shipped arrangement"
+      >Reset blocks</button>
       <span class="spacer"></span>
       <button onclick={() => (showTemplates = true)}>Manage templates…</button>
     </div>
