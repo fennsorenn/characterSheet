@@ -1,4 +1,4 @@
-import { cell, assert } from '../harness.mjs';
+import { cell, assert, waitForData } from '../harness.mjs';
 
 // Persistent build changes (ASI/feat/racial) show as plain numbers; only
 // fleeting effects badge — equipment grey, buffs green.
@@ -10,7 +10,7 @@ export default async function ({ page, baseUrl }) {
       localStorage.setItem('cs.char.test', JSON.stringify(c));
     }, patch);
     await page.goto(baseUrl + '/local/test', { waitUntil: 'networkidle' });
-    await page.waitForSelector('.data-toggle:has-text("Data ✓")', { timeout: 60000 });
+    await waitForData(page);
   }
   const strCell = () => page.locator('.ability', { hasText: 'Str' }).first();
 

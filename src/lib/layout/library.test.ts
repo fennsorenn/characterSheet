@@ -7,7 +7,11 @@ import {
   renameLayout,
   deleteLayout,
   duplicateLayout,
-  updateActiveLayout,
+  editActive,
+  allTemplates,
+  isBuiltin,
+  findTemplate,
+  copyName,
   setPreferred,
   resolveLayoutId,
   prunePreferred,
@@ -31,8 +35,18 @@ const BLOCK_VARIANTS = Object.fromEntries(
   Object.entries(BLOCK_META).map(([type, meta]) => [type, meta.variants.map((v) => v.key)])
 );
 
+/** A library as a new user has it: no templates of their own yet. */
 function lib(): LayoutLibrary {
-  return { activeId: 'desktop-martial', layouts: defaultTemplates(), preferred: {} };
+  return { activeId: 'desktop-martial', layouts: [], preferred: {} };
+}
+
+/** …and one that also holds a template the user made. */
+function withOwn(): LayoutLibrary {
+  return {
+    activeId: 'mine',
+    layouts: [{ id: 'mine', name: 'Mine', blocks: [] }],
+    preferred: {}
+  };
 }
 
 describe('shipped templates', () => {
@@ -94,10 +108,12 @@ describe('shipped templates', () => {
     }
   });
 
-  it('makes fresh block ids on every call', () => {
-    const a = defaultTemplate('mobile', 'caster');
-    const b = defaultTemplate('mobile', 'caster');
-    expect(a.blocks.every((x, i) => x.id !== b.blocks[i].id)).toBe(true);
+  it('rebuilds identically every time, so block identity is stable', () => {
+    // Built-ins are re-derived from code rather than stored, so two builds must
+    // be interchangeable — otherwise keyed renders churn and copies diverge.
+    expect(defaultTemplate('mobile', 'caster')).toEqual(defaultTemplate('mobile', 'caster'));
+    const ids = defaultTemplates().flatMap((t) => t.blocks.map((b) => b.id));
+    expect(new Set(ids).size, 'block ids are unique across the whole set').toBe(ids.length);
   });
 
   it('round-trips template ids and resolves starters', () => {
@@ -117,30 +133,95 @@ describe('shipped templates', () => {
   });
 });
 
-describe('template library', () => {
-  const ACTIVE = 'desktop-martial';
-  const OTHER = 'mobile-caster';
-
-  it('selects an existing template and ignores unknown ids', () => {
-    expect(selectLayout(lib(), OTHER).activeId).toBe(OTHER);
-    expect(selectLayout(lib(), 'nope').activeId).toBe(ACTIVE);
+describe('built-ins are fixed', () => {
+  it('offers the built-ins without storing them', () => {
+    const l = withOwn();
+    expect(l.layouts.map((t) => t.id)).toEqual(['mine']); // only the user's is persisted
+    expect(allTemplates(l).map((t) => t.id)).toContain('desktop-martial');
+    expect(allTemplates(l).at(-1)!.id).toBe('mine'); // the user's come last
+    expect(isBuiltin('desktop-martial')).toBe(true);
+    expect(isBuiltin('mine')).toBe(false);
   });
 
-  it('updates only the active template', () => {
+  it('resolves and activates a built-in that was never stored', () => {
+    const l = selectLayout(lib(), 'ultrawide-caster');
+    expect(l.activeId).toBe('ultrawide-caster');
+    expect(activeLayout(l).name).toBe('Ultrawide — Caster');
+    expect(l.layouts).toEqual([]);
+  });
+
+  it('refuses to rename or delete one', () => {
+    expect(renameLayout(lib(), 'desktop-martial', 'Nope')).toEqual(lib());
+    expect(deleteLayout(lib(), 'desktop-martial')).toEqual(lib());
+    // …and the user's own are still renameable and deletable.
+    expect(renameLayout(withOwn(), 'mine', 'Yours').layouts[0].name).toBe('Yours');
+    expect(deleteLayout(withOwn(), 'mine').layouts).toEqual([]);
+  });
+
+  it('always leaves something to fall back to when the active one is deleted', () => {
+    const after = deleteLayout(withOwn(), 'mine');
+    expect(after.layouts).toEqual([]);
+    expect(isBuiltin(after.activeId)).toBe(true);
+    expect(activeLayout(after)).toBeDefined();
+  });
+});
+
+describe('editing a built-in forks it', () => {
+  it('copies it, applies the edit to the copy, and activates the copy', () => {
     const before = activeLayout(lib()).blocks.length;
-    const after = updateActiveLayout(lib(), (l) => addBlock(l, 'skills'));
-    expect(activeLayout(after).blocks.length).toBe(before + 1);
-    // Other templates untouched.
-    expect(after.layouts.find((l) => l.id === OTHER)!.blocks.length).toBe(
-      defaultTemplate('mobile', 'caster').blocks.length
-    );
+    const after = editActive(lib(), (l) => addBlock(l, 'skills'));
+
+    expect(after.layouts).toHaveLength(1);
+    const copy = after.layouts[0];
+    expect(after.activeId).toBe(copy.id);
+    expect(isBuiltin(copy.id)).toBe(false);
+    expect(copy.name).toBe('Desktop — Martial (copy)');
+    expect(copy.blocks).toHaveLength(before + 1);
+    // The built-in itself is untouched, ids included.
+    expect(findTemplate(after, 'desktop-martial')).toEqual(defaultTemplate('desktop', 'martial'));
+    expect(copy.blocks.every((b) => !b.id.startsWith('desktop-martial:'))).toBe(true);
+  });
+
+  it('carries preferences that named the built-in over to the copy', () => {
+    // Otherwise the next screen-size change snaps back and the edit looks lost.
+    let l: LayoutLibrary = { activeId: 'desktop-martial', layouts: [], preferred: {
+      mobile: 'mobile-martial',
+      desktop: 'desktop-martial'
+    } };
+    l = editActive(l, (x) => addBlock(x, 'skills'));
+    expect(l.preferred.desktop).toBe(l.activeId);
+    expect(l.preferred.mobile).toBe('mobile-martial'); // other sizes untouched
+    expect(resolveLayoutId(l, 'desktop')).toBe(l.activeId);
+  });
+
+  it('edits the user\u2019s own templates in place, without copying', () => {
+    const after = editActive(withOwn(), (l) => addBlock(l, 'skills'));
+    expect(after.layouts).toHaveLength(1);
+    expect(after.activeId).toBe('mine');
+    expect(after.layouts[0].blocks).toHaveLength(1);
+  });
+
+  it('numbers copies so repeated forks stay distinguishable', () => {
+    const once = editActive(lib(), (l) => addBlock(l, 'skills'));
+    const twice = editActive(selectLayout(once, 'desktop-martial'), (l) => addBlock(l, 'notes'));
+    expect(twice.layouts.map((l) => l.name)).toEqual([
+      'Desktop — Martial (copy)',
+      'Desktop — Martial (copy) 2'
+    ]);
+    expect(copyName(twice, 'Desktop — Martial')).toBe('Desktop — Martial (copy) 3');
+  });
+});
+
+describe('template library', () => {
+  it('selects an existing template and ignores unknown ids', () => {
+    expect(selectLayout(lib(), 'mobile-caster').activeId).toBe('mobile-caster');
+    expect(selectLayout(lib(), 'nope').activeId).toBe('desktop-martial');
   });
 
   it('adds a template and activates it', () => {
-    const before = lib().layouts.length;
     const after = addLayout(lib(), { id: 'x', name: 'X', blocks: [] });
     expect(after.activeId).toBe('x');
-    expect(after.layouts).toHaveLength(before + 1);
+    expect(after.layouts).toHaveLength(1);
   });
 
   it('creates a template from starter blocks with fresh ids', () => {
@@ -160,56 +241,36 @@ describe('template library', () => {
     expect(made.blocks).toEqual([]);
   });
 
-  it('renames a template', () => {
-    expect(renameLayout(lib(), ACTIVE, 'Home').layouts.find((l) => l.id === ACTIVE)!.name).toBe('Home');
-  });
-
-  it('never deletes the last template, and re-points active', () => {
-    const after = deleteLayout(lib(), ACTIVE); // active deleted
-    expect(after.layouts.find((l) => l.id === ACTIVE)).toBeUndefined();
-    expect(after.activeId).toBe(after.layouts[0].id);
-
-    const single: LayoutLibrary = {
-      activeId: 'a',
-      layouts: [{ id: 'a', name: 'A', blocks: [] }],
-      preferred: {}
-    };
-    expect(deleteLayout(single, 'a')).toEqual(single);
-  });
-
-  it('duplicates with fresh ids', () => {
-    const source = lib().layouts.find((l) => l.id === ACTIVE)!;
-    const after = duplicateLayout(lib(), ACTIVE, 'Copy');
-    const copy = after.layouts[after.layouts.length - 1];
+  it('duplicates a built-in with fresh ids', () => {
+    const after = duplicateLayout(lib(), 'desktop-martial', 'Copy');
+    const copy = after.layouts[0];
     expect(copy.name).toBe('Copy');
-    expect(copy.id).not.toBe(ACTIVE);
-    expect(copy.blocks.every((b) => !source.blocks.some((s) => s.id === b.id))).toBe(true);
+    expect(isBuiltin(copy.id)).toBe(false);
+    const originalIds = defaultTemplate('desktop', 'martial').blocks.map((b) => b.id);
+    expect(copy.blocks.every((b) => !originalIds.includes(b.id))).toBe(true);
     expect(after.activeId).toBe(copy.id);
   });
 });
 
 describe('per-screen-size preferences', () => {
-  const PHONE = 'mobile-caster';
-  const DESK = 'desktop-caster';
-
   it('sets, replaces and clears a preference, ignoring unknown templates', () => {
-    let l = setPreferred(lib(), 'mobile', PHONE);
-    expect(l.preferred.mobile).toBe(PHONE);
-    l = setPreferred(l, 'mobile', DESK);
-    expect(l.preferred.mobile).toBe(DESK);
+    let l = setPreferred(lib(), 'mobile', 'mobile-caster');
+    expect(l.preferred.mobile).toBe('mobile-caster');
+    l = setPreferred(l, 'mobile', 'desktop-caster');
+    expect(l.preferred.mobile).toBe('desktop-caster');
     expect(setPreferred(l, 'mobile', undefined).preferred.mobile).toBeUndefined();
     expect(setPreferred(l, 'tablet', 'ghost').preferred.tablet).toBeUndefined();
   });
 
-  it('drops a preference when its template is deleted', () => {
-    const l = deleteLayout(setPreferred(lib(), 'mobile', PHONE), PHONE);
-    expect(l.preferred.mobile).toBeUndefined();
+  it('drops a preference when the user deletes its template', () => {
+    const l = setPreferred(withOwn(), 'mobile', 'mine');
+    expect(deleteLayout(l, 'mine').preferred.mobile).toBeUndefined();
   });
 
   it('resolves character choice over library preference over active', () => {
-    const l = setPreferred(lib(), 'mobile', PHONE);
+    const l = setPreferred(lib(), 'mobile', 'mobile-caster');
     expect(resolveLayoutId(l, 'mobile', { mobile: 'mobile-martial' })).toBe('mobile-martial');
-    expect(resolveLayoutId(l, 'mobile')).toBe(PHONE);
+    expect(resolveLayoutId(l, 'mobile')).toBe('mobile-caster');
     expect(resolveLayoutId(l, 'desktop')).toBe('desktop-martial'); // no preference → active
   });
 
@@ -219,14 +280,14 @@ describe('per-screen-size preferences', () => {
     const stale: LayoutLibrary = { ...l, preferred: { mobile: 'ghost' } };
     expect(resolveLayoutId(stale, 'mobile')).toBe('desktop-martial');
     // A missing active template still resolves to something renderable.
-    expect(resolveLayoutId({ ...l, activeId: 'ghost' }, 'desktop')).toBe(l.layouts[0].id);
+    expect(isBuiltin(resolveLayoutId({ ...l, activeId: 'ghost' }, 'desktop'))).toBe(true);
   });
 
   it('prunes unknown categories and dangling ids', () => {
     const l = prunePreferred({
-      ...lib(),
-      preferred: { mobile: PHONE, desktop: 'ghost', watch: DESK } as LayoutLibrary['preferred']
+      ...withOwn(),
+      preferred: { mobile: 'mine', desktop: 'ghost', watch: 'tablet-caster' } as LayoutLibrary['preferred']
     });
-    expect(l.preferred).toEqual({ mobile: PHONE });
+    expect(l.preferred).toEqual({ mobile: 'mine' });
   });
 });

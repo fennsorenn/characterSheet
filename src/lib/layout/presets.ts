@@ -42,11 +42,18 @@ interface SpecOptions {
 
 type Spec = [type: string, variant?: string, size?: BlockSize, options?: SpecOptions];
 
+/**
+ * Block ids are derived from the template and block type rather than random,
+ * so a built-in rebuilt from code is identical every time — keyed `{#each}`
+ * blocks keep their DOM, and two calls compare equal. Copies re-randomise them
+ * (see `createLayout`), so a forked template is fully independent.
+ */
 function buildLayout(id: string, name: string, specs: Spec[]): SheetLayout {
   const blocks = specs
     .map(([type, variant, size, options]) => {
       const block = makeBlock(type);
       if (!block) return null;
+      block.id = `${id}:${type}`;
       if (variant) block.variant = variant;
       if (size) block.size = size;
       if (options?.stack) block.stack = true;
@@ -277,12 +284,12 @@ export function templateName(category: ScreenCategory, style: TemplateStyle): st
   return `${SCREEN_LABELS[category]} — ${STYLE_LABELS[style]}`;
 }
 
-/** One shipped template, freshly built (new block ids on every call). */
+/** One built-in template, rebuilt from these specs (always identical). */
 export function defaultTemplate(category: ScreenCategory, style: TemplateStyle): SheetLayout {
   return buildLayout(templateId(category, style), templateName(category, style), SPECS[category][style]);
 }
 
-/** All shipped templates, ordered mobile → ultrawide, martial before caster. */
+/** All built-in templates, ordered mobile → ultrawide, martial before caster. */
 export function defaultTemplates(): SheetLayout[] {
   return SCREEN_CATEGORIES.flatMap((c) => TEMPLATE_STYLES.map((s) => defaultTemplate(c, s)));
 }

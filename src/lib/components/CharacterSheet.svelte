@@ -14,7 +14,10 @@
     resetLayout,
     layoutList,
     selectLayout,
-    applyPreferred
+    applyPreferred,
+    forkNotice,
+    dismissFork,
+    undoFork
   } from '../stores/layout.js';
   import { screenController } from '../stores/layout.js';
   import { screenCategory } from '../stores/screen.js';
@@ -32,6 +35,7 @@
 
   // The renderer below edits the active screen template.
   setLayoutController(screenController);
+  dismissFork(); // a notice belongs to the sheet that raised it
 
   // Follow the preferred template as the viewport category or the character
   // changes. Picking one from the switcher overrides it until the next change.
@@ -43,6 +47,10 @@
 
   /** Whether this character pins the active template to the current screen size. */
   const pinnedHere = $derived($characterLayoutPrefs[$screenCategory] === $layoutList.activeId);
+  /** The built-in templates are fixed; editing one lands in a copy instead. */
+  const activeIsBuiltin = $derived(
+    $layoutList.options.find((o) => o.id === $layoutList.activeId)?.builtin ?? false
+  );
 
   function onAdd(e: Event) {
     const type = (e.target as HTMLSelectElement).value;
@@ -96,6 +104,19 @@
     </div>
   </div>
 
+  {#if $forkNotice}
+    <div class="fork-banner">
+      <span>
+        <strong>{$forkNotice.name}</strong> — the built-in template is fixed, so your change went
+        into a copy of it. This sheet now uses the copy.
+      </span>
+      <span class="fork-actions">
+        <button onclick={undoFork}>Undo</button>
+        <button onclick={dismissFork}>Got it</button>
+      </span>
+    </div>
+  {/if}
+
   {#if showTemplates}
     <TemplateManager onClose={() => (showTemplates = false)} />
   {/if}
@@ -121,8 +142,11 @@
         {/each}
       </select>
       <button
+        disabled={activeIsBuiltin}
         onclick={() => resetLayout($screenCategory)}
-        title="Reset this template's blocks to the shipped arrangement"
+        title={activeIsBuiltin
+          ? 'Built-in templates are already the shipped arrangement'
+          : "Reset this template's blocks to the built-in arrangement"}
       >Reset blocks</button>
       <span class="spacer"></span>
       <button onclick={() => (showTemplates = true)}>Manage templates…</button>
@@ -180,9 +204,33 @@
     border-radius: 6px;
     cursor: pointer;
   }
+  .tools button:disabled, .editbar button:disabled { opacity: 0.45; cursor: not-allowed; }
   .tools button.on, .edit.on { border-color: var(--accent); color: var(--accent); }
   .pin { white-space: nowrap; }
   .buff.on { border-color: var(--accent); background: var(--accent); color: #fff; }
+  .fork-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 0.6rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--field-hover);
+    font-size: 0.85rem;
+  }
+  .fork-actions { display: flex; gap: 0.4rem; flex: none; }
+  .fork-banner button {
+    font: inherit;
+    font-size: 0.8rem;
+    padding: 0.3rem 0.6rem;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    color: var(--fg);
+    border-radius: 6px;
+    cursor: pointer;
+  }
   .buff-banner {
     display: flex;
     align-items: center;

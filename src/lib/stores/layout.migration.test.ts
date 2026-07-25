@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { appendNewBlocks, adoptLibrary } from './layout.js';
-import { defaultTemplates } from '../layout/presets.js';
+import { appendNewBlocks, adoptLibrary, unstoreBuiltins } from './layout.js';
+import { defaultTemplate } from '../layout/presets.js';
+import { addBlock } from '../layout/operations.js';
 import type { LayoutLibrary } from '../layout/library.js';
 
 // Upgrading the library should surface newly-shipped blocks (e.g. `traits`,
@@ -44,7 +45,7 @@ describe('appendNewBlocks', () => {
 // Reading a library — from localStorage or from another device via the server —
 // has to survive older shapes and partial corruption without losing templates.
 describe('adoptLibrary', () => {
-  it('keeps a pre-v8 library whole and adds the shipped per-screen-size set', () => {
+  it('keeps a pre-v8 library whole and prefers a built-in per screen size', () => {
     const out = adoptLibrary(
       {
         activeId: 'caster',
@@ -56,28 +57,10 @@ describe('adoptLibrary', () => {
       },
       7
     )!;
-    // Nothing is treated as a built-in any more: all three survive as the user's,
-    // in place, with the shipped templates appended after them.
-    expect(out.layouts.slice(0, 3).map((l) => l.id)).toEqual(['default', 'caster', 'mine']);
-    expect(out.layouts.map((l) => l.id)).toContain('desktop-caster');
+    // The old presets were never built-ins under these ids: they survive intact
+    // as the user's own templates, and stay active.
+    expect(out.layouts.map((l) => l.id)).toEqual(['default', 'caster', 'mine']);
     expect(out.activeId).toBe('caster');
-    // …and each screen size starts out pointing at a shipped template.
-    expect(out.preferred).toEqual({
-      mobile: 'mobile-martial',
-      tablet: 'tablet-martial',
-      desktop: 'desktop-martial',
-      ultrawide: 'ultrawide-martial'
-    });
-  });
-
-  it('leaves a current-version library alone, deletions included', () => {
-    const kept = defaultTemplates().filter((t) => t.id !== 'mobile-caster');
-    const out = adoptLibrary(
-      { activeId: 'desktop-martial', layouts: kept, preferred: { mobile: 'mobile-martial' } },
-      8
-    )!;
-    expect(out.layouts.map((l) => l.id)).not.toContain('mobile-caster');
-    expect(out.preferred).toEqual({ mobile: 'mobile-martial' });
   });
 
   it('re-points an active id that no longer exists and prunes stale preferences', () => {
@@ -87,15 +70,71 @@ describe('adoptLibrary', () => {
         preferred: { mobile: 'x', desktop: 'gone' },
         layouts: [{ id: 'x', name: 'X', blocks: [] }]
       },
-      8
+      9
     )!;
-    expect(out.activeId).toBe('x');
+    expect(out.activeId).toBe('desktop-martial'); // falls back to a built-in
     expect(out.preferred).toEqual({ mobile: 'x' });
   });
 
+  it('adopts a document that holds only preferences', () => {
+    // A new user who never made a template still has screen-size preferences
+    // worth syncing between devices.
+    const out = adoptLibrary({ activeId: 'mobile-caster', layouts: [], preferred: { mobile: 'mobile-caster' } }, 9)!;
+    expect(out.activeId).toBe('mobile-caster');
+    expect(out.preferred).toEqual({ mobile: 'mobile-caster' });
+  });
+
   it('rejects empty or malformed documents', () => {
-    expect(adoptLibrary(undefined, 8)).toBeNull();
-    expect(adoptLibrary({ layouts: [] }, 8)).toBeNull();
-    expect(adoptLibrary({ layouts: [{ name: 'no id' }] as never }, 8)).toBeNull();
+    expect(adoptLibrary(undefined, 9)).toBeNull();
+    expect(adoptLibrary({ layouts: [] }, 9)).toBeNull();
+    expect(adoptLibrary({ layouts: [{ name: 'no id' }] as never }, 9)).toBeNull();
+  });
+});
+
+// v8 stored copies of the shipped templates in the library; v9 rebuilds them
+// from code. The upgrade has to retire the stored copies without discarding any
+// edit a user had made to one.
+describe('unstoreBuiltins', () => {
+  const stored = (...layouts: ReturnType<typeof defaultTemplate>[]): LayoutLibrary => ({
+    activeId: layouts[0].id,
+    layouts,
+    preferred: { desktop: 'desktop-martial', mobile: 'mobile-martial' }
+  });
+
+  it('drops untouched copies — the built-in stands in for them', () => {
+    const out = unstoreBuiltins(
+      stored(defaultTemplate('desktop', 'martial'), defaultTemplate('mobile', 'martial')),
+      8
+    );
+    expect(out.layouts).toEqual([]);
+    expect(out.activeId).toBe('desktop-martial');
+    expect(out.preferred).toEqual({ desktop: 'desktop-martial', mobile: 'mobile-martial' });
+  });
+
+  it('keeps an edited copy as the user’s own and repoints everything at it', () => {
+    const edited = addBlock(defaultTemplate('desktop', 'martial'), 'notes');
+    const out = unstoreBuiltins(stored(edited, defaultTemplate('mobile', 'martial')), 8);
+
+    expect(out.layouts).toHaveLength(1);
+    const kept = out.layouts[0];
+    expect(kept.id).not.toBe('desktop-martial');
+    expect(kept.name).toBe('Desktop — Martial (copy)');
+    expect(kept.blocks).toHaveLength(edited.blocks.length);
+    // Active template and the preference that named it both follow the copy.
+    expect(out.activeId).toBe(kept.id);
+    expect(out.preferred.desktop).toBe(kept.id);
+    expect(out.preferred.mobile).toBe('mobile-martial'); // untouched one still points at the built-in
+  });
+
+  it('leaves the user’s own templates alone and only runs on the upgrade', () => {
+    const mine: LayoutLibrary = {
+      activeId: 'mine',
+      layouts: [{ id: 'mine', name: 'Mine', blocks: [] }],
+      preferred: {}
+    };
+    expect(unstoreBuiltins(mine, 8)).toEqual(mine);
+    // At the current version there is nothing to retire, even if ids collide.
+    const current = stored(defaultTemplate('desktop', 'martial'));
+    expect(unstoreBuiltins(current, 9)).toEqual(current);
   });
 });

@@ -35,16 +35,17 @@ in this repo.
   `explain()` returns the full computation tree behind any number. Reactive
   Svelte wrappers sit on top; the framework owns the UI, not the math.
 - **`src/lib/layout/`** — a sheet is data, not markup: an ordered list of sized
-  block instances. Arrangements are saved as named **templates**. The app ships
-  eight — one per screen-size category (mobile / tablet / desktop / ultrawide)
-  × play style (martial / caster), each built for that breakpoint's column
-  arithmetic — but they are seeds, not fixtures: every template is the user's
-  to edit, rename or delete, and no upgrade rewrites one. A template can be
-  designated the preferred one per screen-size category, either for every
-  character or for one character alone, and the sheet follows the viewport as
-  it resizes. Signed in, the whole library syncs to the server (last-write-wins
-  on `updatedAt`) so it follows you between devices; signed out it lives in
-  localStorage.
+  block instances. Arrangements are named **templates**. Eight are built in —
+  one per screen-size category (mobile / tablet / desktop / ultrawide) × play
+  style (martial / caster), each built for that breakpoint's column arithmetic.
+  Built-ins are fixed: they live in code rather than in the saved library, so
+  they can't be renamed, deleted or drifted, and editing blocks while one is
+  active silently forks it into a copy of your own that the edit lands on. A
+  template — built-in or yours — can be designated the preferred one per
+  screen-size category, either for every character or for one character alone,
+  and the sheet follows the viewport as it resizes. Signed in, your own
+  templates sync to the server (last-write-wins on `updatedAt`) so they follow
+  you between devices; signed out they live in localStorage.
 
 ### Planned phases
 

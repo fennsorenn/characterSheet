@@ -18,7 +18,7 @@
     character
   } from '../stores/character.js';
   import { screenCategory } from '../stores/screen.js';
-  import { STARTERS, STYLE_LABELS, TEMPLATE_STYLES, templateId } from '../layout/presets.js';
+  import { STARTERS, STYLE_LABELS, TEMPLATE_STYLES } from '../layout/presets.js';
   import { SCREEN_CATEGORIES, SCREEN_HINTS, SCREEN_LABELS } from '../layout/screen.js';
 
   /**
@@ -34,22 +34,16 @@
   const nameFor = (id: string | undefined) =>
     $layoutList.options.find((o) => o.id === id)?.name;
 
-  /**
-   * Play styles whose full shipped set is still in the library — the one-click
-   * "use the caster templates everywhere" shortcut only makes sense while all
-   * four of that style's templates exist.
-   */
-  const styles = $derived(
-    TEMPLATE_STYLES.filter((s) =>
-      SCREEN_CATEGORIES.every((c) => $layoutList.options.some((o) => o.id === templateId(c, s)))
-    )
-  );
-
   function create() {
     const name = newName.trim();
     if (!name) return;
     createLayout(name, starter);
     newName = '';
+  }
+
+  function duplicate(id: string, name: string) {
+    selectLayout(id);
+    saveAsPreset(`${name} copy`);
   }
 
   function rename(id: string) {
@@ -78,17 +72,27 @@
           {opt.name}
         </button>
         <span class="badges">
+          {#if opt.builtin}
+            <span class="badge fixed" title="Built in — editing it makes your own copy">Built-in</span>
+          {/if}
           {#each usedFor as c}
             <span class="badge" class:own={$characterLayoutPrefs[c] === opt.id} title={SCREEN_HINTS[c]}>
               {SCREEN_LABELS[c]}
             </span>
           {/each}
         </span>
-        <button onclick={() => saveAsPreset(`${opt.name} copy`)} title="Duplicate">Duplicate</button>
-        <button onclick={() => rename(opt.id)}>Rename</button>
+        <button onclick={() => duplicate(opt.id, opt.name)} title="Copy into a template of your own">
+          Duplicate
+        </button>
+        <button
+          disabled={opt.builtin}
+          title={opt.builtin ? 'Built-in templates keep their name' : 'Rename'}
+          onclick={() => rename(opt.id)}
+        >Rename</button>
         <button
           class="danger"
-          disabled={$layoutList.options.length <= 1}
+          disabled={opt.builtin}
+          title={opt.builtin ? 'Built-in templates cannot be deleted' : 'Delete'}
           onclick={() => remove(opt.id)}
         >Delete</button>
       </li>
@@ -112,26 +116,25 @@
   <h3>Preferred template per screen size</h3>
   <p class="hint">
     Sheets open with the preferred template for the current screen size. A choice made
-    <em>for this character</em> wins over the default for every character.
+    <em>for this character</em> wins over the default for every character. The built-in
+    templates are fixed — editing blocks while one is active puts your changes in a copy.
   </p>
-  {#if styles.length}
-    <div class="styles">
-      <span>Use the shipped set for a</span>
-      {#each styles as s}
-        <button onclick={() => preferStyle(s)} title="For every character, at every screen size">
-          {STYLE_LABELS[s]}
-        </button>
-      {/each}
-      <span class="sep">— or just for {$character.name}:</span>
-      {#each styles as s}
-        <button onclick={() => setCharacterLayoutPrefs(styleLayoutIds(s))}>{STYLE_LABELS[s]}</button>
-      {/each}
-      <button
-        disabled={!Object.keys($characterLayoutPrefs).length}
-        onclick={() => setCharacterLayoutPrefs({})}
-      >Clear</button>
-    </div>
-  {/if}
+  <div class="styles">
+    <span>Use the built-in set for a</span>
+    {#each TEMPLATE_STYLES as s}
+      <button onclick={() => preferStyle(s)} title="For every character, at every screen size">
+        {STYLE_LABELS[s]}
+      </button>
+    {/each}
+    <span class="sep">— or just for {$character.name}:</span>
+    {#each TEMPLATE_STYLES as s}
+      <button onclick={() => setCharacterLayoutPrefs(styleLayoutIds(s))}>{STYLE_LABELS[s]}</button>
+    {/each}
+    <button
+      disabled={!Object.keys($characterLayoutPrefs).length}
+      onclick={() => setCharacterLayoutPrefs({})}
+    >Clear</button>
+  </div>
 
   <table>
     <thead>
@@ -210,6 +213,7 @@
     color: var(--muted);
   }
   .badge.own { border-color: var(--accent); color: var(--accent); }
+  .badge.fixed { background: var(--field-hover); }
 
   .new { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.8rem; }
   .new input { flex: 1 1 10rem; min-width: 0; cursor: text; }

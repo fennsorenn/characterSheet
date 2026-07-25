@@ -1,13 +1,12 @@
 import { writable, derived, get } from 'svelte/store';
 import {
   defaultTemplate,
-  defaultTemplates,
-  parseTemplateId,
   starterBlocks,
   templateId,
   type TemplateStyle
 } from '../layout/presets.js';
 import { SCREEN_CATEGORIES } from '../layout/screen.js';
+import { characterLayoutPrefs, setCharacterLayoutPrefs } from './character.js';
 import * as ops from '../layout/operations.js';
 import * as lib from '../layout/library.js';
 import type { LayoutLibrary } from '../layout/library.js';
@@ -18,28 +17,30 @@ import { me } from './session.js';
 import { apiGetTemplates, apiPutTemplates, type TemplateDoc } from '../api/client.js';
 
 /**
- * The library of layout **templates** — user-created, named block arrangements
- * — plus an edit-mode flag.
+ * The template library — the built-ins the app ships plus the user's own — and
+ * an edit-mode flag.
  *
- * Templates are cached in localStorage (so the app works signed-out and
+ * Built-ins are rebuilt from code and never stored, so only the user's
+ * templates are persisted. Those are cached in localStorage (so the app works signed-out and
  * offline) and, once signed in, synced to the server so they follow you between
  * devices. Sync is whole-document last-write-wins on `updatedAt`: simple and
  * predictable, at the cost of not merging two devices edited concurrently
  * while offline.
  *
- * Block-level edits apply to the active template via the pure operations;
- * library-level actions create/switch/rename/delete templates and designate
- * which one is preferred at each screen-size category.
+ * Block-level edits apply to the active template via the pure operations. A
+ * built-in is read-only, so editing one forks it into a copy first; the store
+ * notices the switch and moves the character's own preferences over too, so the
+ * edit doesn't get stranded behind a preference still naming the original.
  */
 
 const STORAGE_KEY = 'charactersheet.layouts';
 const LEGACY_KEY = 'charactersheet.layout';
 /**
- * v8 retired the four pinned built-in presets: every template is now owned by
- * the user (the presets survive only as starting points for new ones), and the
- * library carries per-screen-size preferences.
+ * v8 introduced per-screen-size preferences; v9 made the shipped templates fixed
+ * built-ins that live in code rather than stored copies, so the persisted
+ * library holds only what the user made.
  */
-const LIBRARY_VERSION = 8;
+const LIBRARY_VERSION = 9;
 
 /**
  * Block types introduced in each library version. On upgrade these are appended
@@ -51,19 +52,24 @@ const BLOCKS_INTRODUCED: Record<number, string[]> = {
   7: ['traits']
 };
 
+/** Each screen size pointed at its built-in for a play style. */
+function styleDefaults(style: TemplateStyle): LayoutLibrary['preferred'] {
+  const preferred: LayoutLibrary['preferred'] = {};
+  for (const category of SCREEN_CATEGORIES) preferred[category] = templateId(category, style);
+  return preferred;
+}
+
 /**
- * A brand-new library: every shipped template, with each screen size preferring
- * its own martial arrangement. Martial is the starting point because a fresh
- * character is a level-1 Fighter; a caster switches the four preferences in one
- * click from the template manager, per character or for all of them.
+ * A brand-new library: no templates of the user's own yet, with each screen size
+ * preferring its built-in martial arrangement. Martial is the starting point
+ * because a fresh character is a level-1 Fighter; a caster switches the four
+ * preferences in one click from the template manager, per character or for all.
  */
 function fresh(): LayoutLibrary {
-  const preferred: LayoutLibrary['preferred'] = {};
-  for (const category of SCREEN_CATEGORIES) preferred[category] = templateId(category, 'martial');
   return {
     activeId: templateId('desktop', 'martial'),
-    layouts: defaultTemplates(),
-    preferred
+    layouts: [],
+    preferred: styleDefaults('martial')
   };
 }
 
@@ -84,38 +90,70 @@ export function appendNewBlocks(library: LayoutLibrary, fromVersion: number): La
 }
 
 /**
- * Offer the shipped per-screen-size templates to a library that predates them,
- * without touching what the user already has: only ids that are absent are
- * added, and preferences are only seeded when none were set. Runs on the v8
- * upgrade alone — after that, a template the user deleted stays deleted.
+ * Take stored copies of the built-ins back out of the library (v8 stored them;
+ * v9 rebuilds them from code). A copy that still matches what the code ships is
+ * simply dropped — the built-in stands in for it, ids and all. One the user had
+ * edited is kept as a template of their own under a copy name, and every
+ * preference naming it is repointed, so no customisation is lost.
  */
-export function addShippedTemplates(library: LayoutLibrary, fromVersion: number): LayoutLibrary {
+export function unstoreBuiltins(library: LayoutLibrary, fromVersion: number): LayoutLibrary {
   if (fromVersion >= LIBRARY_VERSION) return library;
-  const missing = defaultTemplates().filter((t) => !library.layouts.some((l) => l.id === t.id));
-  if (!missing.length) return library;
-  const layouts = [...library.layouts, ...missing];
-  const preferred = { ...library.preferred };
-  if (!Object.keys(preferred).length) {
-    for (const category of SCREEN_CATEGORIES) preferred[category] = templateId(category, 'martial');
+  const shipped = new Map(lib.builtinTemplates().map((t) => [t.id, t]));
+  const layouts: SheetLayout[] = [];
+  const renamed = new Map<string, string>();
+  for (const layout of library.layouts) {
+    const original = shipped.get(layout.id);
+    if (!original) {
+      layouts.push(layout);
+      continue;
+    }
+    if (sameBlocks(layout, original)) continue; // untouched — the built-in covers it
+    const kept: SheetLayout = {
+      ...layout,
+      id: crypto.randomUUID(),
+      name: `${layout.name} (copy)`,
+      blocks: layout.blocks.map((b) => ({ ...b, id: crypto.randomUUID() }))
+    };
+    renamed.set(layout.id, kept.id);
+    layouts.push(kept);
   }
-  return { ...library, layouts, preferred };
+  const repoint = (id: string | undefined) => (id && renamed.get(id)) || id;
+  const preferred = { ...library.preferred };
+  for (const category of SCREEN_CATEGORIES) {
+    const next = repoint(preferred[category]);
+    if (next) preferred[category] = next;
+  }
+  return { activeId: repoint(library.activeId)!, layouts, preferred };
+}
+
+/** Whether a stored layout still holds exactly the blocks the code ships. */
+function sameBlocks(a: SheetLayout, b: SheetLayout): boolean {
+  const strip = (l: SheetLayout) =>
+    JSON.stringify(l.blocks.map(({ id: _id, ...rest }) => rest));
+  return strip(a) === strip(b);
 }
 
 /**
  * Normalise anything read from storage or the server into a valid library:
- * every template kept as the user's own, the shipped set offered on upgrade,
- * preferences pruned to live templates, and newly-shipped blocks surfaced.
+ * stored built-ins retired, preferences pruned to templates that exist, and
+ * newly-shipped blocks surfaced on the user's own templates.
  */
 export function adoptLibrary(
   parsed: Partial<LayoutLibrary> | undefined,
   fromVersion: number
 ): LayoutLibrary | null {
-  if (!parsed?.layouts?.length) return null;
-  const layouts = parsed.layouts.filter((l) => l?.id && Array.isArray(l.blocks));
-  if (!layouts.length) return null;
-  const activeId = layouts.some((l) => l.id === parsed.activeId) ? parsed.activeId! : layouts[0].id;
-  const library = { activeId, layouts, preferred: parsed.preferred ?? {} };
-  return lib.prunePreferred(addShippedTemplates(appendNewBlocks(library, fromVersion), fromVersion));
+  if (!parsed) return null;
+  const layouts = (parsed.layouts ?? []).filter((l) => l?.id && Array.isArray(l.blocks));
+  const preferred = parsed.preferred ?? {};
+  // A document with neither templates nor preferences carries nothing to adopt.
+  if (!layouts.length && !Object.keys(preferred).length) return null;
+  const library = { activeId: parsed.activeId ?? '', layouts, preferred };
+  const adopted = lib.prunePreferred(
+    unstoreBuiltins(appendNewBlocks(library, fromVersion), fromVersion)
+  );
+  return lib.findTemplate(adopted, adopted.activeId)
+    ? adopted
+    : { ...adopted, activeId: templateId('desktop', 'martial') };
 }
 
 interface Stored {
@@ -238,18 +276,71 @@ me.subscribe((user) => {
 
 /** The active template, rendered by LayoutRenderer. */
 export const layout = derived(store, lib.activeLayout);
-/** Lightweight list for the template switcher. */
+/** Lightweight list for the template switcher: built-ins first, then the user's. */
 export const layoutList = derived(store, ($s) => ({
   activeId: $s.activeId,
-  options: $s.layouts.map((l) => ({ id: l.id, name: l.name }))
+  options: lib.allTemplates($s).map((l) => ({ id: l.id, name: l.name, builtin: lib.isBuiltin(l.id) }))
 }));
 /** The template preferred at each screen-size category (library-wide). */
 export const preferredLayouts = derived(store, ($s) => $s.preferred);
 export const editMode = writable(false);
 
+/**
+ * Names the copy made the last time an edit forked a built-in, for the notice
+ * the sheet shows. Cleared by {@link dismissFork}.
+ */
+export const forkNotice = writable<{ from: string; to: string; name: string } | null>(null);
+export const dismissFork = () => forkNotice.set(null);
+
+/**
+ * Undo the fork the notice describes: throw the copy away, and put the active
+ * template and every preference that followed it back on the built-in.
+ */
+export function undoFork() {
+  const notice = get(forkNotice);
+  if (!notice) return;
+  const { from, to } = notice;
+  const prefs = get(characterLayoutPrefs);
+  if (Object.values(prefs).includes(to)) {
+    setCharacterLayoutPrefs(
+      Object.fromEntries(Object.entries(prefs).map(([c, id]) => [c, id === to ? from : id]))
+    );
+  }
+  store.update((s) => {
+    const preferred = { ...s.preferred };
+    for (const [category, target] of Object.entries(preferred)) {
+      if (target === to) preferred[category as ScreenCategory] = from;
+    }
+    return lib.selectLayout(
+      { ...s, preferred, layouts: s.layouts.filter((l) => l.id !== to) },
+      from
+    );
+  });
+  forkNotice.set(null);
+}
+
 // --- Block-level edits (act on the active template) ---
+/**
+ * Apply an edit to the active template. Editing a built-in forks it, so this
+ * also carries the character's own screen-size preferences over to the copy —
+ * the library's are repointed by `editActive` itself — and raises the notice
+ * telling the user where their edit went.
+ */
 const onActive = (fn: (l: SheetLayout) => SheetLayout) =>
-  store.update((s) => lib.updateActiveLayout(s, fn));
+  store.update((s) => {
+    const next = lib.editActive(s, fn);
+    if (next.activeId === s.activeId) return next;
+    const from = s.activeId;
+    const to = next.activeId;
+    const prefs = get(characterLayoutPrefs);
+    if (Object.values(prefs).includes(from)) {
+      setCharacterLayoutPrefs(
+        Object.fromEntries(Object.entries(prefs).map(([c, id]) => [c, id === from ? to : id]))
+      );
+    }
+    forkNotice.set({ from, to, name: lib.activeLayout(next).name });
+    return next;
+  });
 
 export const addBlock = (type: string) => onActive((l) => ops.addBlock(l, type));
 export const removeBlock = (id: string) => onActive((l) => ops.removeBlock(l, id));
@@ -265,19 +356,23 @@ export const setHeight = (id: string, height: number | undefined) =>
   onActive((l) => ops.setHeight(l, id, height));
 
 /**
- * Reset the active template's blocks to a shipped arrangement, keeping its name.
- * A shipped template resets to its own; anything the user made resets to the
- * arrangement for the screen size they are on, keeping its play style if the
- * name still carries one.
+ * Reset the active template's blocks to a built-in arrangement, keeping its
+ * name: the one for the screen size in use, in the play style the template's
+ * name still suggests. A built-in is already pristine, so this is a no-op there
+ * (and never forks — resetting a built-in to itself would be a strange way to
+ * end up with a copy).
  */
 export const resetLayout = (category: ScreenCategory = 'desktop') =>
-  store.update((s) =>
-    lib.updateActiveLayout(s, (l) => {
-      const own = parseTemplateId(l.id);
-      const style: TemplateStyle = own?.style ?? (/caster/i.test(l.name) ? 'caster' : 'martial');
-      return { ...l, blocks: defaultTemplate(own?.category ?? category, style).blocks };
-    })
-  );
+  store.update((s) => {
+    if (lib.isBuiltin(s.activeId)) return s;
+    const active = lib.activeLayout(s);
+    const style: TemplateStyle = /caster/i.test(active.name) ? 'caster' : 'martial';
+    const blocks = defaultTemplate(category, style).blocks.map((b) => ({
+      ...b,
+      id: crypto.randomUUID()
+    }));
+    return lib.editActive(s, (l) => ({ ...l, blocks }));
+  });
 
 // --- Library-level actions ---
 export const selectLayout = (id: string) => store.update((s) => lib.selectLayout(s, id));
@@ -306,18 +401,16 @@ export const setPreferredLayout = (category: ScreenCategory, id: string | undefi
   store.update((s) => lib.setPreferred(s, category, id));
 
 /**
- * Point every screen size at one play style's shipped template — the one-click
- * way to move a whole library (or, per character, one sheet) from martial to
- * caster and back.
+ * Point every screen size at one play style's built-in — the one-click way to
+ * move a whole library (or, per character, one sheet) from martial to caster
+ * and back.
  */
 export const preferStyle = (style: TemplateStyle) =>
-  store.update((s) =>
-    SCREEN_CATEGORIES.reduce((acc, c) => lib.setPreferred(acc, c, templateId(c, style)), s)
-  );
+  store.update((s) => ({ ...s, preferred: styleDefaults(style) }));
 
 /** The per-category ids for a play style, for setting a character's own set. */
 export function styleLayoutIds(style: TemplateStyle): Record<string, string> {
-  return Object.fromEntries(SCREEN_CATEGORIES.map((c) => [c, templateId(c, style)]));
+  return styleDefaults(style) as Record<string, string>;
 }
 
 /**

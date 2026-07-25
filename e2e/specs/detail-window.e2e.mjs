@@ -1,4 +1,4 @@
-import { cell, assert } from '../harness.mjs';
+import { cell, assert, waitForData } from '../harness.mjs';
 
 // Clicking a spell/item opens a floating detail window, placed beside the list
 // (not over it), draggable, with a pop-out button.
@@ -11,7 +11,7 @@ export default async function ({ page, baseUrl }) {
     localStorage.setItem('cs.char.test', JSON.stringify(c));
   });
   await page.goto(baseUrl + '/local/test', { waitUntil: 'networkidle' });
-  await page.waitForSelector('.data-toggle:has-text("Data ✓")', { timeout: 60000 });
+  await waitForData(page);
 
   const spells = cell(page, 'Spells').filter({ has: page.locator('button.name') }).first();
   const cellBox = await spells.boundingBox();

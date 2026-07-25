@@ -1,4 +1,4 @@
-import { cell, assert } from '../harness.mjs';
+import { cell, assert, waitForData } from '../harness.mjs';
 
 async function setCharacter(page, baseUrl, patch) {
   await page.evaluate((p) => {
@@ -7,7 +7,7 @@ async function setCharacter(page, baseUrl, patch) {
     localStorage.setItem('cs.char.test', JSON.stringify(c));
   }, patch);
   await page.goto(baseUrl + '/local/test', { waitUntil: 'networkidle' });
-  await page.waitForSelector('.data-toggle:has-text("Data ✓")', { timeout: 60000 });
+  await waitForData(page);
 }
 const counts = (page) => cell(page, 'Spells').locator('.counts').innerText();
 
