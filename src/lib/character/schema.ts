@@ -180,6 +180,12 @@ export interface Character {
   notes?: NoteNode[];
   /** Open note tabs + active tab, so the notes view is restored on reload. */
   noteTabs?: { open: string[]; active: string | null };
+  /**
+   * This character's preferred layout template per screen-size category
+   * (`{ mobile: <templateId>, … }`), overriding the library-wide preference.
+   * Lives on the document so the choice travels with the character.
+   */
+  layoutPrefs?: Record<string, string>;
 }
 
 export interface FeatureMeta {
@@ -256,7 +262,8 @@ export function createCharacter(partial: Partial<Character> = {}): Character {
     featureMeta: partial.featureMeta ?? {},
     variantChoices: partial.variantChoices ?? {},
     notes: partial.notes,
-    noteTabs: partial.noteTabs
+    noteTabs: partial.noteTabs,
+    layoutPrefs: partial.layoutPrefs
   };
 }
 

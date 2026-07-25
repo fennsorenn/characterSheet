@@ -2,9 +2,11 @@ import { makeBlock } from './operations.js';
 import type { BlockInstance, BlockSize, SheetLayout } from './types.js';
 
 /**
- * Built-in layout presets, each optimised for a different play style. They are
- * ordinary layouts (fully editable once selected); the library seeds them so a
- * new user has solid starting points beyond the default.
+ * Starting points for new templates, each optimised for a different play style.
+ *
+ * These are *not* fixed entries in the library — nothing pins them there and
+ * nothing refreshes them. They exist purely so "New template" can seed a fresh,
+ * fully-owned template with a sensible arrangement instead of a blank page.
  */
 
 type Spec = [type: string, variant?: string, size?: BlockSize];
@@ -116,4 +118,33 @@ export function builtinPresets(): SheetLayout[] {
       ['notes', 'full', 'full']
     ])
   ];
+}
+
+/** A starting point offered by the "New template" form. */
+export interface Starter {
+  key: string;
+  name: string;
+  description: string;
+}
+
+/**
+ * The starting points a new template can be seeded from. `blank` and `current`
+ * are handled by the caller (which knows the active template); the rest map to
+ * the preset arrangements above.
+ */
+export const STARTERS: Starter[] = [
+  { key: 'blank', name: 'Blank', description: 'No blocks — build it up yourself.' },
+  { key: 'current', name: 'Copy of current', description: "The active template's blocks." },
+  { key: 'default', name: 'Default', description: 'General-purpose arrangement.' },
+  { key: 'caster', name: 'Caster', description: 'Slots and spell list up top.' },
+  { key: 'martial', name: 'Martial', description: 'HP, resources, and gear front and centre.' },
+  { key: 'compact', name: 'Compact', description: 'Everything narrow and terse.' }
+];
+
+/**
+ * Blocks for a preset starting point (empty for `blank`/unknown). `current` is
+ * not resolved here — the caller supplies the active template's blocks.
+ */
+export function starterBlocks(key: string): BlockInstance[] {
+  return builtinPresets().find((p) => p.id === key)?.blocks ?? [];
 }

@@ -34,6 +34,15 @@ in this repo.
   editable; computed nodes derive from dependencies and layer typed modifiers.
   `explain()` returns the full computation tree behind any number. Reactive
   Svelte wrappers sit on top; the framework owns the UI, not the math.
+- **`src/lib/layout/`** — a sheet is data, not markup: an ordered list of sized
+  block instances. Arrangements are saved as named **templates**, all
+  user-created (the shipped presets are only starting points for new ones).
+  A template can be designated the preferred one per screen-size category —
+  mobile / tablet / desktop / ultrawide — either for every character or for one
+  character alone, and the sheet follows the viewport as it resizes. Signed in,
+  the whole template library syncs to the server (last-write-wins on
+  `updatedAt`) so it follows you between devices; signed out it lives in
+  localStorage.
 
 ### Planned phases
 

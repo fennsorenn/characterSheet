@@ -9,7 +9,8 @@ import { scryptSync, randomBytes, timingSafeEqual, randomUUID } from 'node:crypt
  * an in-memory store (tests).
  *
  * State shape:
- *   { users: { [username]: { salt, hash, characters: { [slug]: { name, doc, updatedAt } } } },
+ *   { users: { [username]: { salt, hash, characters: { [slug]: { name, doc, updatedAt } },
+ *                            templates: { version, updatedAt, library } } },
  *     sessions: { [token]: username } }
  */
 
@@ -104,6 +105,34 @@ export function createStore({ file } = {}) {
         persist();
       }
       return { slug };
+    },
+
+    /**
+     * The user's layout-template library. The document is opaque here — the
+     * client owns its shape and resolves local-vs-remote by `updatedAt`, so the
+     * server only refuses a write that would replace a newer copy with an older
+     * one (which is what a stale second tab would try to do).
+     */
+    getTemplates(username) {
+      return state.users[username]?.templates ?? null;
+    },
+    putTemplates(username, doc) {
+      if (!state.users[username]) return { error: 'Unknown user.' };
+      if (!doc || typeof doc !== 'object' || typeof doc.library !== 'object' || !doc.library) {
+        return { error: 'Invalid template document.' };
+      }
+      const updatedAt = Number(doc.updatedAt) || 0;
+      const current = state.users[username].templates;
+      if (current && (current.updatedAt ?? 0) > updatedAt) {
+        return { stale: true, templates: current };
+      }
+      state.users[username].templates = {
+        version: Number(doc.version) || 0,
+        updatedAt,
+        library: doc.library
+      };
+      persist();
+      return { ok: true };
     }
   };
   return api;

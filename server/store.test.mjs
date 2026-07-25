@@ -43,4 +43,40 @@ describe('user store', () => {
     expect(s.getCharacter('u2', 'hero')).toBeNull();
     expect(s.listCharacters('u2')).toEqual([]);
   });
+
+  it('stores a layout-template library per user', () => {
+    const s = createStore();
+    s.createUser('dana', 'secret1');
+    s.createUser('erin', 'secret1');
+    expect(s.getTemplates('dana')).toBeNull();
+
+    const doc = { version: 8, updatedAt: 100, library: { activeId: 'a', layouts: [], preferred: {} } };
+    expect(s.putTemplates('dana', doc)).toEqual({ ok: true });
+    expect(s.getTemplates('dana')).toEqual(doc);
+    // Private to its owner.
+    expect(s.getTemplates('erin')).toBeNull();
+  });
+
+  it('rejects malformed template documents and unknown users', () => {
+    const s = createStore();
+    s.createUser('finn', 'secret1');
+    expect(s.putTemplates('nobody', { version: 8, updatedAt: 1, library: {} }).error).toMatch(/Unknown/);
+    expect(s.putTemplates('finn', null).error).toMatch(/Invalid/);
+    expect(s.putTemplates('finn', { updatedAt: 1 }).error).toMatch(/Invalid/);
+  });
+
+  it('refuses to overwrite a newer library with a stale one', () => {
+    const s = createStore();
+    s.createUser('gil', 'secret1');
+    const newer = { version: 8, updatedAt: 200, library: { activeId: 'a', layouts: [], preferred: {} } };
+    s.putTemplates('gil', newer);
+
+    const stale = { version: 8, updatedAt: 100, library: { activeId: 'b', layouts: [], preferred: {} } };
+    expect(s.putTemplates('gil', stale)).toEqual({ stale: true, templates: newer });
+    expect(s.getTemplates('gil')).toEqual(newer);
+
+    // Same timestamp or later still wins (a re-save of the current document).
+    expect(s.putTemplates('gil', { ...stale, updatedAt: 200 })).toEqual({ ok: true });
+    expect(s.getTemplates('gil').library.activeId).toBe('b');
+  });
 });

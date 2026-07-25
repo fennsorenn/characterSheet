@@ -1,5 +1,12 @@
 <script lang="ts">
-  import { character, setName, clearAllManualModifiers } from '../stores/character.js';
+  import {
+    character,
+    setName,
+    clearAllManualModifiers,
+    characterLayoutPrefs,
+    setCharacterLayoutPref,
+    MANUAL_SOURCE
+  } from '../stores/character.js';
   import {
     editMode,
     toggleEdit,
@@ -7,28 +14,35 @@
     resetLayout,
     layoutList,
     selectLayout,
-    saveAsPreset,
-    renameLayout,
-    deleteLayout
+    applyPreferred
   } from '../stores/layout.js';
   import { screenController } from '../stores/layout.js';
+  import { screenCategory } from '../stores/screen.js';
   import { buffMode, toggleBuffMode } from '../stores/ui.js';
-  import { MANUAL_SOURCE } from '../stores/character.js';
   import { setLayoutController } from '../layout/controller.js';
   import { BLOCK_META } from '../layout/blocks.js';
+  import { SCREEN_LABELS } from '../layout/screen.js';
   import LayoutRenderer from './layout/LayoutRenderer.svelte';
+  import TemplateManager from './TemplateManager.svelte';
   import ExplainPopover from './ExplainPopover.svelte';
 
   const manualCount = $derived(
     $character.modifiers.filter((m) => m.source === MANUAL_SOURCE).length
   );
 
-  // The renderer below edits the active screen layout.
+  // The renderer below edits the active screen template.
   setLayoutController(screenController);
+
+  // Follow the preferred template as the viewport category or the character
+  // changes. Picking one from the switcher overrides it until the next change.
+  $effect(() => applyPreferred($screenCategory, $characterLayoutPrefs));
 
   const blockTypes = Object.entries(BLOCK_META);
   let addType = $state('');
-  let newPresetName = $state('');
+  let showTemplates = $state(false);
+
+  /** Whether this character pins the active template to the current screen size. */
+  const pinnedHere = $derived($characterLayoutPrefs[$screenCategory] === $layoutList.activeId);
 
   function onAdd(e: Event) {
     const type = (e.target as HTMLSelectElement).value;
@@ -36,17 +50,8 @@
     addType = '';
   }
 
-  function savePreset() {
-    const name = newPresetName.trim();
-    if (!name) return;
-    saveAsPreset(name);
-    newPresetName = '';
-  }
-
-  function renameActive() {
-    const current = $layoutList.options.find((o) => o.id === $layoutList.activeId);
-    const name = window.prompt('Rename layout', current?.name ?? '');
-    if (name && name.trim()) renameLayout($layoutList.activeId, name.trim());
+  function togglePin() {
+    setCharacterLayoutPref($screenCategory, pinnedHere ? undefined : $layoutList.activeId);
   }
 </script>
 
@@ -65,18 +70,35 @@
       <select
         class="preset"
         value={$layoutList.activeId}
-        title="Layout preset"
+        title="Layout template"
         onchange={(e) => selectLayout((e.target as HTMLSelectElement).value)}
       >
         {#each $layoutList.options as opt}
           <option value={opt.id}>{opt.name}</option>
         {/each}
       </select>
+      <button
+        class="pin"
+        class:on={pinnedHere}
+        onclick={togglePin}
+        title={pinnedHere
+          ? `${$character.name} always opens this template on ${SCREEN_LABELS[$screenCategory]} — click to unpin`
+          : `Always use this template for ${$character.name} on ${SCREEN_LABELS[$screenCategory]}`}
+      >
+        {pinnedHere ? '★' : '☆'} {SCREEN_LABELS[$screenCategory]}
+      </button>
+      <button class:on={showTemplates} onclick={() => (showTemplates = !showTemplates)}>
+        Templates…
+      </button>
       <button class="edit" class:on={$editMode} onclick={toggleEdit}>
         {$editMode ? 'Done' : 'Edit layout'}
       </button>
     </div>
   </div>
+
+  {#if showTemplates}
+    <TemplateManager onClose={() => (showTemplates = false)} />
+  {/if}
 
   {#if $buffMode}
     <div class="buff-banner">
@@ -98,27 +120,16 @@
           <option value={type}>{meta.label}</option>
         {/each}
       </select>
-      <button onclick={resetLayout} title="Reset this layout's blocks">Reset blocks</button>
+      <button onclick={resetLayout} title="Reset this template's blocks">Reset blocks</button>
       <span class="spacer"></span>
-      <input
-        class="presetname"
-        placeholder="Save as preset…"
-        bind:value={newPresetName}
-        onkeydown={(e) => e.key === 'Enter' && savePreset()}
-      />
-      <button onclick={savePreset}>Save as</button>
-      <button onclick={renameActive}>Rename</button>
-      <button
-        class="danger"
-        disabled={$layoutList.options.length <= 1}
-        onclick={() => deleteLayout($layoutList.activeId)}
-      >Delete</button>
+      <button onclick={() => (showTemplates = true)}>Manage templates…</button>
     </div>
   {/if}
 
   <p class="tip">
     {#if $editMode}
-      Drag to reorder, change a block's template/verbosity, resize, or remove it. Save arrangements as named presets.
+      Drag to reorder, change a block's variant/verbosity, resize, or remove it. Save arrangements as
+      named templates and pick one per screen size.
     {:else}
       Every dotted value is computed — click it to see and trace the calculation.
     {/if}
@@ -156,7 +167,7 @@
     border-radius: 8px;
   }
   .editbar .spacer { flex: 1; }
-  .tools select, .tools button, .editbar select, .editbar button, .editbar input {
+  .tools select, .tools button, .editbar select, .editbar button {
     font: inherit;
     font-size: 0.85rem;
     padding: 0.35rem 0.7rem;
@@ -166,10 +177,8 @@
     border-radius: 6px;
     cursor: pointer;
   }
-  .editbar input { cursor: text; }
-  .edit.on { border-color: var(--accent); color: var(--accent); }
-  .danger { color: var(--accent); border-color: var(--accent); }
-  .danger:disabled { opacity: 0.4; cursor: not-allowed; }
+  .tools button.on, .edit.on { border-color: var(--accent); color: var(--accent); }
+  .pin { white-space: nowrap; }
   .buff.on { border-color: var(--accent); background: var(--accent); color: #fff; }
   .buff-banner {
     display: flex;

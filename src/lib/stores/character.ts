@@ -1,4 +1,4 @@
-import { writable, derived, get } from 'svelte/store';
+import { writable, derived, readable, get } from 'svelte/store';
 import {
   ABILITIES,
   applyRest,
@@ -295,6 +295,32 @@ export const acOverride = derived([store, catalogLookup, grantPool, graph], ([$c
 export type { OverrideKind };
 
 export const character = { subscribe: store.subscribe };
+
+/**
+ * This character's preferred layout template per screen-size category. Emits
+ * only when the preferences themselves change, so subscribers aren't woken by
+ * every unrelated edit to the document.
+ */
+export const characterLayoutPrefs = readable<Record<string, string>>({}, (set) => {
+  let last = '';
+  return store.subscribe((c) => {
+    const prefs = c.layoutPrefs ?? {};
+    const key = JSON.stringify(prefs);
+    if (key === last) return;
+    last = key;
+    set(prefs);
+  });
+});
+
+/** Designate (or clear, with undefined) this character's template for a category. */
+export function setCharacterLayoutPref(category: string, id: string | undefined) {
+  update((c) => {
+    const layoutPrefs = { ...c.layoutPrefs };
+    if (id) layoutPrefs[category] = id;
+    else delete layoutPrefs[category];
+    return { ...c, layoutPrefs: Object.keys(layoutPrefs).length ? layoutPrefs : undefined };
+  });
+}
 
 function update(fn: (c: Character) => Character) {
   store.update(fn);
