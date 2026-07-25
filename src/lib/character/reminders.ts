@@ -19,7 +19,19 @@ export interface Reminder {
   id: string;
   /** Where it is pinned, e.g. `skill.stealth` — see the anchor helpers. */
   anchor: string;
+  /** The one-liner shown on the sheet. */
   text: string;
+  /**
+   * A longer explanation behind the one-liner, read and written in a floating
+   * window. Absent when there is nothing more to say, so the common case costs
+   * the document nothing.
+   */
+  detail?: string;
+}
+
+/** Whether a reminder has a longer explanation to open. */
+export function hasDetail(r: Reminder | undefined): boolean {
+  return !!r?.detail?.trim();
 }
 
 /** Anchor ids. Keep them lowercase and stable: they are persisted. */
@@ -61,6 +73,23 @@ export function updateReminder(
   const trimmed = text.trim();
   if (!trimmed) return removeReminder(list, id);
   return (list ?? []).map((r) => (r.id === id ? { ...r, text: trimmed } : r));
+}
+
+/** Set a reminder's longer explanation; blanking it drops the field entirely. */
+export function setReminderDetail(
+  list: Reminder[] | undefined,
+  id: string,
+  detail: string
+): Reminder[] {
+  const trimmed = detail.trim();
+  return (list ?? []).map((r) => {
+    if (r.id !== id) return r;
+    if (!trimmed) {
+      const { detail: _drop, ...rest } = r;
+      return rest;
+    }
+    return { ...r, detail: trimmed };
+  });
 }
 
 export function removeReminder(list: Reminder[] | undefined, id: string): Reminder[] {

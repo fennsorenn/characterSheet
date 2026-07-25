@@ -80,6 +80,42 @@ export default async function ({ page, baseUrl }) {
     'editing the text saves it'
   );
 
+  // --- A longer explanation, opened in a window ---
+  // Without one, the note is plain text with nothing to open.
+  assert((await stealth().locator('button.text').count()) === 0, 'nothing to open yet');
+
+  await stealth().locator('button.explain').click();
+  await page.waitForSelector('.win[role=dialog]');
+  assert(
+    (await page.locator('.win .title').inputValue()) === 'disadvantage in heavy armor',
+    'the window is titled with the one-liner'
+  );
+  assert(/at Stealth/.test(await page.locator('.win .where').innerText()), 'and says what it is pinned to');
+  await page.locator('.win .body').fill('Chain mail imposes disadvantage.\n\nMithral would remove it.');
+  await page.locator('.win .body').blur();
+  await page.waitForTimeout(300);
+  const explained = (await reminders()).find((r) => r.anchor === 'skill.stealth');
+  assert(explained.detail?.startsWith('Chain mail'), 'the explanation is saved on the reminder');
+  assert(explained.text === 'disadvantage in heavy armor', 'and the one-liner is untouched');
+  await page.locator('.win .ic').click();
+
+  // --- Outside the mode, the note itself opens it ---
+  await page.click('.tools button:has-text("Reminders")');
+  await page.waitForTimeout(300);
+  assert((await stealth().locator('button.text').count()) === 1, 'a note with more behind it is clickable');
+  await stealth().locator('button.text').click();
+  await page.waitForSelector('.win[role=dialog]');
+  assert(
+    (await page.locator('.win .body').inputValue()).startsWith('Chain mail'),
+    'clicking the note reopens the explanation'
+  );
+  // Notes with nothing behind them stay plain text.
+  const potionNote = block('Inventory').locator('li', { hasText: 'Potion of Healing' }).first();
+  assert((await potionNote.locator('span.text').count()) === 1, 'a note with no explanation is not a button');
+  await page.locator('.win .ic').click();
+  await page.click('.tools button:has-text("Reminders")');
+  await page.waitForSelector('.reminder-banner');
+
   // --- A stranded reminder is surfaced, and can be cleared from there ---
   await page.evaluate(() => {
     const c = JSON.parse(localStorage.getItem('cs.char.test'));

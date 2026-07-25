@@ -50,8 +50,10 @@ in this repo.
   the sheet ("disadv. in armor" under Stealth). A reminder names an *anchor* —
   a skill, save, ability, attack, item, spell, or a whole block — rather than a
   position, so it stays attached through a template switch or a reflow to one
-  column. They live on the character document, since what they say is usually a
-  fact about that character's build or gear.
+  column. A reminder can carry a longer explanation behind its one-liner, opened
+  in a small floating window — from a button in reminder mode, or by clicking the
+  note itself. They live on the character document, since what they say is
+  usually a fact about that character's build or gear.
 
 ### Planned phases
 

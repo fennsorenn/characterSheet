@@ -37,6 +37,7 @@ import {
   type SpellStatus,
   addReminder as addReminderPure,
   updateReminder as updateReminderPure,
+  setReminderDetail as setReminderDetailPure,
   removeReminder as removeReminderPure,
   moveReminder as moveReminderPure
 } from '../character/index.js';
@@ -337,6 +338,11 @@ export function addReminder(anchor: string, text: string) {
 /** Edit a reminder's text; blanking it deletes the reminder. */
 export function setReminderText(id: string, text: string) {
   update((c) => withReminders(c, updateReminderPure(c.reminders, id, text)));
+}
+
+/** Set the longer explanation behind a reminder; blank text clears it. */
+export function setReminderDetail(id: string, detail: string) {
+  update((c) => withReminders(c, setReminderDetailPure(c.reminders, id, detail)));
 }
 
 export function removeReminder(id: string) {

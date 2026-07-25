@@ -1,6 +1,7 @@
 import { writable, derived } from 'svelte/store';
 import { character } from './character.js';
 import { strandedReminders } from '../character/index.js';
+import type { Rect } from '../components/windowShell.js';
 
 /**
  * Reminder mode: while on, every spot that can take a pinned note shows a place
@@ -35,3 +36,19 @@ export function registerAnchor(anchor: string): () => void {
 export const stranded = derived([character, counts], ([$c, $counts]) =>
   strandedReminders($c.reminders, $counts.keys())
 );
+
+/**
+ * The reminder whose longer explanation is open in a floating window, plus the
+ * rect of whatever opened it so the window can sit beside rather than over it.
+ * One at a time: these are short notes, not a workspace.
+ */
+export const openExplanation = writable<{ id: string; anchor: Rect | null } | null>(null);
+
+export function openReminderWindow(id: string, el?: Element | null) {
+  const r = el?.getBoundingClientRect();
+  openExplanation.set({ id, anchor: r ? { x: r.x, y: r.y, width: r.width, height: r.height } : null });
+}
+
+export function closeReminderWindow() {
+  openExplanation.set(null);
+}

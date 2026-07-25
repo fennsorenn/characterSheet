@@ -4,6 +4,8 @@ import {
   remindersAt,
   addReminder,
   updateReminder,
+  setReminderDetail,
+  hasDetail,
   removeReminder,
   moveReminder,
   strandedReminders,
@@ -55,6 +57,30 @@ describe('reminders', () => {
       'stealth ok now'
     );
     expect(updateReminder(list(), 'a', '  ').map((r) => r.id)).toEqual(['b', 'c']);
+  });
+
+  it('carries a longer explanation, and drops the field when blanked', () => {
+    const withDetail = setReminderDetail(list(), 'a', '  Heavy armor gives disadvantage on Stealth.  ');
+    expect(withDetail.find((r) => r.id === 'a')!.detail).toBe('Heavy armor gives disadvantage on Stealth.');
+    expect(hasDetail(withDetail.find((r) => r.id === 'a'))).toBe(true);
+    // Others are untouched, and none of them gains an empty field.
+    expect(withDetail.filter((r) => 'detail' in r)).toHaveLength(1);
+
+    const cleared = setReminderDetail(withDetail, 'a', '   ');
+    expect('detail' in cleared.find((r) => r.id === 'a')!).toBe(false);
+    expect(hasDetail(cleared.find((r) => r.id === 'a'))).toBe(false);
+    expect(hasDetail(undefined)).toBe(false);
+    expect(setReminderDetail(list(), 'zz', 'x')).toEqual(list());
+  });
+
+  it('keeps the explanation through an edit of the one-liner', () => {
+    const withDetail = setReminderDetail(list(), 'a', 'why');
+    expect(updateReminder(withDetail, 'a', 'new text').find((r) => r.id === 'a')).toEqual({
+      id: 'a',
+      anchor: 'skill.stealth',
+      text: 'new text',
+      detail: 'why'
+    });
   });
 
   it('removes by id, ignoring unknown ones', () => {

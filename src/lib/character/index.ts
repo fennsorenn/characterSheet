@@ -131,6 +131,8 @@ export {
   remindersAt,
   addReminder,
   updateReminder,
+  setReminderDetail,
+  hasDetail,
   removeReminder,
   moveReminder,
   strandedReminders,

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { character, addReminder, setReminderText, removeReminder, moveReminder } from '../stores/character.js';
-  import { reminderMode, registerAnchor } from '../stores/reminders.js';
-  import { remindersAt } from '../character/index.js';
+  import { reminderMode, registerAnchor, openReminderWindow } from '../stores/reminders.js';
+  import { remindersAt, hasDetail } from '../character/index.js';
 
   /**
    * The notes pinned at one anchor — a skill row, an item, a whole block. Sits
@@ -60,9 +60,23 @@
             aria-label="Reminder"
             onchange={(e) => setReminderText(r.id, (e.target as HTMLInputElement).value)}
           />
+          <button
+            class="mini explain"
+            class:has={hasDetail(r)}
+            title={hasDetail(r) ? 'Open the longer explanation' : 'Add a longer explanation'}
+            aria-label="Longer explanation"
+            onclick={(e) => openReminderWindow(r.id, e.currentTarget)}
+          >⋯</button>
           <button class="mini" title="Move up" disabled={i === 0} onclick={() => moveReminder(r.id, -1)}>↑</button>
           <button class="mini" title="Move down" disabled={i === list.length - 1} onclick={() => moveReminder(r.id, 1)}>↓</button>
           <button class="mini danger" title="Delete reminder" onclick={() => removeReminder(r.id)}>✕</button>
+        {:else if hasDetail(r)}
+          <!-- Dotted, like every other "there's more behind this" value here. -->
+          <button
+            class="text more"
+            title="Open the explanation"
+            onclick={(e) => openReminderWindow(r.id, e.currentTarget)}
+          >{r.text}</button>
         {:else}
           <span class="text">{r.text}</span>
         {/if}
@@ -101,6 +115,23 @@
   /* A hanging mark so a note reads as an annotation, not another data row. */
   .reminder .text::before { content: '↳'; margin-right: 0.3rem; color: var(--line); }
   span.text { color: var(--muted); font-style: italic; min-width: 0; overflow-wrap: anywhere; }
+  /* A reminder with more behind it reads as clickable, using the same dotted
+     underline the sheet uses for "click to see where this comes from". */
+  button.text {
+    font: inherit;
+    font-style: italic;
+    text-align: left;
+    color: var(--muted);
+    background: none;
+    border: none;
+    padding: 0;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    border-bottom: 1px dotted var(--muted);
+    cursor: pointer;
+  }
+  button.text:hover { color: var(--accent); border-bottom-color: var(--accent); }
+  .explain.has { color: var(--accent); }
 
   input.text {
     flex: 1;

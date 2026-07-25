@@ -15,6 +15,7 @@
   import FeatPicker from './FeatPicker.svelte';
   import VariantPicker from './VariantPicker.svelte';
   import DetailWindow from './DetailWindow.svelte';
+  import ReminderWindow from './ReminderWindow.svelte';
   import PinnedDock from './PinnedDock.svelte';
   import DiceRoller from './DiceRoller.svelte';
   import Icon from './Icon.svelte';
@@ -60,6 +61,7 @@
 <FeatPicker />
 <VariantPicker />
 <DetailWindow />
+<ReminderWindow />
 <PinnedDock />
 <DiceRoller />
 
