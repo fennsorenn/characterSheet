@@ -53,11 +53,21 @@
   <header class="nav">
     <button class="brand" onclick={() => navigate('/local')}>Character Sheet</button>
     <nav>
+      <!-- Both libraries stay reachable while signed in: characters live on this
+           device *or* in the account, and copying between them is a round trip. -->
+      <button
+        class="link"
+        aria-current={$route.view === 'localOverview' ? 'page' : undefined}
+        onclick={() => navigate('/local')}
+      >Local</button>
       {#if $me}
-        <button class="link" onclick={() => navigate(`/user/${encodeURIComponent($me)}`)}>{$me}</button>
+        <button
+          class="link"
+          aria-current={$route.view === 'userOverview' ? 'page' : undefined}
+          onclick={() => navigate(`/user/${encodeURIComponent($me)}`)}
+        >{$me}</button>
         <button class="link" onclick={() => { logout(); navigate('/local'); }}>Log out</button>
       {:else}
-        <button class="link" onclick={() => navigate('/local')}>Local</button>
         <button class="link" onclick={() => navigate('/login')}>Log in</button>
       {/if}
     </nav>
@@ -82,5 +92,6 @@
   nav { display: flex; gap: 0.75rem; }
   .link { background: none; border: none; color: var(--fg); cursor: pointer; font: inherit; }
   .link:hover { color: var(--accent); }
+  .link[aria-current='page'] { color: var(--accent); font-weight: 600; }
   .loading { text-align: center; color: var(--muted); margin: 4rem 1rem; }
 </style>

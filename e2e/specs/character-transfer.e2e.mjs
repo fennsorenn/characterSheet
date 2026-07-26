@@ -56,6 +56,20 @@ export default async function ({ page, baseUrl }) {
   const localId = await page.evaluate(() => JSON.parse(localStorage.getItem('cs.char.bran')).id);
   assert(stored.doc.id !== localId, 'the copy is a separate character, not the same one in two places');
 
+  // --- Both libraries are reachable from either one ---
+  // Copying is a round trip, so the nav has to go both ways while signed in.
+  await page.locator('nav button.link', { hasText: user }).click();
+  await page.waitForTimeout(400);
+  assertEqual(new URL(page.url()).pathname, `/user/${user}`, 'the local list links to the account');
+  assertEqual(
+    await page.locator('nav button.link[aria-current=page]').innerText(),
+    user,
+    'and marks where you are'
+  );
+  await page.locator('nav button.link', { hasText: 'Local' }).click();
+  await page.waitForTimeout(400);
+  assertEqual(new URL(page.url()).pathname, '/local', 'the account links back to the local list');
+
   // --- And back down: the same character copied to this device ---
   await page.goto(`${baseUrl}/user/${user}`, { waitUntil: 'networkidle' });
   await page.waitForSelector('.chars button.cp');
