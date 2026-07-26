@@ -9,9 +9,10 @@
   import StatValue from './StatValue.svelte';
   import BuffField from './BuffField.svelte';
   import EffectiveScore from './EffectiveScore.svelte';
-  import Saves from './Saves.svelte';
+  import SaveDot from './SaveDot.svelte';
 
   let { variant = 'full' }: { variant?: string } = $props();
+  const withSaves = $derived(variant === 'withSaves');
 
   // A purely-persistent boost (ASI / feat / racial grant) shows as a plain number
   // — the character's own score — with no badge. True when there's no fleeting
@@ -75,12 +76,19 @@
             {/if}
           </div>
           <Reminders anchor={anchors.ability(abil)} />
+          <!-- The saving throw belongs to the ability, so it rides in the same
+               box rather than repeating all six names in a list underneath. -->
+          {#if withSaves}
+            <div class="save" data-volatile="occasional">
+              <SaveDot {abil} />
+              <span class="slabel">save</span>
+              <span class="sval"><StatValue node={`save.${abil}`} signed /></span>
+            </div>
+            <Reminders anchor={anchors.save(abil)} />
+          {/if}
         </div>
       {/each}
     </div>
-    {#if variant === 'withSaves'}
-      <div class="saves-embed"><Saves /></div>
-    {/if}
   {/if}
 </section>
 
@@ -105,10 +113,19 @@
   .ab .name { font-weight: 600; }
   .ab .mod { font-weight: 700; }
 
-  /* Saving throws folded into the same cell: drop the nested block's frame so it
-     reads as one section, and separate it with a rule. */
-  .saves-embed { margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid var(--line); }
-  .saves-embed :global(.block) { border: none; border-radius: 0; padding: 0; }
+  /* The saving throw, folded into its ability's box: a rule separates it from
+     the score above, and the label stays small so the mod remains the headline. */
+  .save {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    margin-top: 0.25rem;
+    padding-top: 0.2rem;
+    border-top: 1px solid var(--line);
+  }
+  .slabel { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); }
+  .sval { font-weight: 600; font-size: 0.85rem; }
 
   /* Reflow to 3 wide when the cell itself is narrow, not just the viewport. */
   @container cell (max-width: 340px) {
