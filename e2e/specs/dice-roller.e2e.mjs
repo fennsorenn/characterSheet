@@ -1,4 +1,4 @@
-import { cell, assert, waitForData } from '../harness.mjs';
+import { cell, assert, waitForData, dockControl } from '../harness.mjs';
 
 // Floating dice roller: roll-all on an attack (advantage d20 + damage together),
 // detailed/concise toggle, and the log.
@@ -16,7 +16,7 @@ export default async function ({ page, baseUrl }) {
   await waitForData(page);
 
   // Open the roller and set advantage.
-  await page.locator('header.top button', { hasText: 'Dice' }).click();
+  await dockControl(page, 'Dice');
   await page.waitForSelector('.roller', { timeout: 5000 });
   const roller = page.locator('.roller');
   await roller.locator('.modes button[title="Advantage"]').click();
@@ -64,7 +64,7 @@ export default async function ({ page, baseUrl }) {
   });
   await page.goto(baseUrl + '/local/test', { waitUntil: 'networkidle' });
   await waitForData(page);
-  await page.locator('header.top button', { hasText: 'Dice' }).click();
+  await dockControl(page, 'Dice');
   await cell(page, 'Rest & Level Up').locator('button.roll', { hasText: 'Roll' }).first().click();
   await page.waitForTimeout(150);
   assert((await roller.locator('.gtitle').innerText()).toUpperCase() === 'HIT DIE D10', 'hit-dice roll shows in the roller');

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { SCREEN_MAX_WIDTH } from '../layout/screen.js';
+  import { screenCategory } from '../stores/screen.js';
   import {
     diceOpen,
     diceMode,
@@ -19,12 +21,28 @@
   let expr = $state('');
   let showLog = $state(false);
 
-  // Default to the bottom-right corner the first time it opens.
+  // Default to the bottom-right corner the first time it opens, clear of the
+  // dock: it holds the right edge on a desktop and the bottom on a phone, and
+  // it draws above this window, so the old corner put the log underneath it.
+  // (Provisional — the roller is due to move into the dock itself.)
+  const SIDE_DOCK = 60;
+  const BOTTOM_DOCK = 104;
   $effect(() => {
     if ($diceOpen && !pos) {
-      pos = { x: window.innerWidth - WIDTH - 20, y: window.innerHeight - 360 - 20 };
+      const onPhone = window.innerWidth <= SCREEN_MAX_WIDTH.mobile;
+      pos = {
+        x: onPhone
+          ? Math.max(10, (window.innerWidth - WIDTH) / 2)
+          : window.innerWidth - WIDTH - SIDE_DOCK,
+        y: window.innerHeight - 360 - (onPhone ? BOTTOM_DOCK : 20)
+      };
     }
   });
+
+  /** Never let the log run down behind the bottom dock. */
+  const maxHeight = $derived(
+    $screenCategory === 'mobile' ? `calc(75vh - ${BOTTOM_DOCK}px)` : '75vh'
+  );
 
   const latest = $derived($diceLog[0]);
   const older = $derived($diceLog.slice(1));
@@ -79,7 +97,7 @@
 {/snippet}
 
 {#if $diceOpen && pos}
-  <div class="roller" style="left:{pos.x}px; top:{pos.y}px; width:{WIDTH}px;" role="dialog" aria-label="Dice roller">
+  <div class="roller" style="left:{pos.x}px; top:{pos.y}px; width:{WIDTH}px; max-height:{maxHeight};" role="dialog" aria-label="Dice roller">
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <header class="bar" onpointerdown={down} onpointermove={move} onpointerup={up}>
       <span class="title"><Icon name="dice" /> Dice</span>
@@ -126,7 +144,7 @@
 {/if}
 
 <style>
-  .roller { position: fixed; z-index: 96; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 12px 40px rgba(0,0,0,0.35); display: flex; flex-direction: column; max-height: 75vh; }
+  .roller { position: fixed; z-index: 96; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 12px 40px rgba(0,0,0,0.35); display: flex; flex-direction: column; }
   .bar { display: flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--line); cursor: grab; touch-action: none; }
   .bar:active { cursor: grabbing; }
   .title { flex: 1; font-weight: 700; font-size: 0.85rem; }

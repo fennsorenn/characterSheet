@@ -46,6 +46,15 @@ in this repo.
   and the sheet follows the viewport as it resizes. Signed in, your own
   templates sync to the server (last-write-wins on `updatedAt`) so they follow
   you between devices; signed out they live in localStorage.
+- **The dock** (`src/lib/components/Dock.svelte`) — one edge-anchored surface
+  holding what used to be three separate bars. It takes the right edge on a
+  desktop and the bottom on a phone, and slides open in place rather than
+  opening a menu somewhere else. Its first layer is what you touch mid-session
+  — dice, buff mode, reminders, quick add — and everything to do with building
+  or exporting the sheet sits one expand away. Pinned creatures live in it too,
+  so an open statblock and the controls share a surface instead of competing for
+  the same corner. Turning buff mode on opens it onto the list of buffs it is
+  applying, each clearable on its own.
 - **Choosing vs. reading** — picking what a character *is* and reading what that
   gave them are separate blocks. **Race, Class & Feats** holds the selectors;
   **Features & Traits** lists what they granted, with the choices each feature
