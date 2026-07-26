@@ -65,6 +65,22 @@ export default async function ({ page }) {
 
   assert(has('current hit points'), `current HP is editable in play (${playable.join(' | ')})`);
   assert(!has('maximum hit points'), 'max HP is not');
+
+  // Locked numbers are text, not dead fields: a disabled input still looks
+  // like somewhere to type.
+  const maxHp = cell(page, 'Hit Points').locator('[aria-label="Maximum hit points"]');
+  assertEqual(
+    await maxHp.evaluate((el) => el.tagName.toLowerCase()),
+    'span',
+    'max HP reads as text in play mode'
+  );
+  assert((await maxHp.innerText()).trim().length > 0, 'and still shows its value');
+
+  // Affordances you cannot use are gone rather than greyed out.
+  assertEqual(await page.locator('.cell .quickadd').count(), 0, 'no quick-add bars in play');
+  assertEqual(await page.locator('.search .bar input').count(), 0, 'and no import bar either');
+  assertEqual(await page.locator('.cell button.rm').count(), 0, 'no remove buttons in play');
+  assertEqual(await page.locator('.cell .mini.describe').count(), 0, 'no per-feature edit buttons');
   assert(
     !playable.some((f) => f.startsWith('Ability Scores:')),
     `ability scores are locked in play (${playable.filter((f) => f.startsWith('Ability Scores:')).join(', ')})`
@@ -101,4 +117,31 @@ export default async function ({ page }) {
 
   await setMode(page, 'edit');
   assert((await openFields(page)).length > 5, 'edit mode gives everything back');
+  assert((await page.locator('.cell .quickadd').count()) > 0, 'and the quick-add bars return');
+  assert((await page.locator('.search .bar input').count()) === 1, 'along with the import bar');
+  assertEqual(
+    await cell(page, 'Hit Points')
+      .locator('[aria-label="Maximum hit points"]')
+      .evaluate((el) => el.tagName.toLowerCase()),
+    'input',
+    'max HP is a field again'
+  );
+
+  // --- The rail keeps its controls reachable on a short viewport ---
+  await page.setViewportSize({ width: 1440, height: 500 });
+  await page.waitForTimeout(300);
+  await dock(page).locator('button[title="More"]').click();
+  await page.waitForTimeout(300);
+  const rail = await page.evaluate(() => {
+    const d = document.querySelector('aside.dock');
+    const s = d.querySelector('.railscroll');
+    return {
+      dockScrolls: d.scrollHeight > d.clientHeight + 1,
+      pinned: d.querySelectorAll(':scope > .db').length,
+      railScrolls: s.scrollHeight > s.clientHeight + 1
+    };
+  });
+  assert(!rail.dockScrolls, 'the rail itself does not scroll');
+  assert(rail.pinned >= 5, `the controls stay put (${rail.pinned} pinned)`);
+  assert(rail.railScrolls, 'the overflow goes to the scrolling section instead');
 }

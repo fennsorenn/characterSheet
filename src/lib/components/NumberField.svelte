@@ -46,11 +46,10 @@
     editing = '';
     focused = false;
     const next = applyNumberEdit(value, raw);
-    if (next !== null && !locked) onchange(clamp(next));
+    if (next !== null) onchange(clamp(next));
   }
 
   function nudge(delta: number) {
-    if (locked) return;
     onchange(clamp(value + delta));
   }
 
@@ -68,32 +67,35 @@
   }
 </script>
 
-<input
-  class="number-field"
-  class:locked
-  aria-label={label}
-  style="width: {width}"
-  readonly={locked}
-  tabindex={locked ? -1 : 0}
-  value={display}
-  inputmode="numeric"
-  onfocus={(e) => {
-    focused = true;
-    editing = String(value);
-    (e.target as HTMLInputElement).select();
-  }}
-  oninput={(e) => (editing = (e.target as HTMLInputElement).value)}
-  onblur={commit}
-  onkeydown={onKey}
-  onwheel={(e) => {
-    if (locked) return;
-    e.preventDefault();
-    nudge(Math.sign(-e.deltaY) * (e.shiftKey ? 5 : 1));
-  }}
-/>
+{#if locked}
+  <!-- Locked values read as text. A disabled input still looks like a
+       field, which invites the click it is going to refuse. -->
+  <span class="number-field locked" style="width: {width}" aria-label={label}>{value}</span>
+{:else}
+  <input
+    class="number-field"
+    aria-label={label}
+    style="width: {width}"
+    value={display}
+    inputmode="numeric"
+    onfocus={(e) => {
+      focused = true;
+      editing = String(value);
+      (e.target as HTMLInputElement).select();
+    }}
+    oninput={(e) => (editing = (e.target as HTMLInputElement).value)}
+    onblur={commit}
+    onkeydown={onKey}
+    onwheel={(e) => {
+      e.preventDefault();
+      nudge(Math.sign(-e.deltaY) * (e.shiftKey ? 5 : 1));
+    }}
+  />
+{/if}
 
 <style>
-  .number-field.locked { cursor: default; }
+  /* Same metrics as the input so nothing shifts when the mode changes. */
+  span.number-field { display: inline-block; cursor: default; }
   .number-field {
     font: inherit;
     font-variant-numeric: tabular-nums;

@@ -312,7 +312,7 @@
                 title={r.grantedBy ? 'Unmark granted' : 'Mark as granted by a feature/item'}
                 onclick={() => setSpellGranted(r.index!, r.grantedBy ? undefined : 'Feature')}
               ><UiIcon name="flag" filled={!!r.grantedBy} /></button>
-              <button class="rm" aria-label="Remove" disabled={!$canEditBuild} onclick={() => removeSpell(r.index!)}><UiIcon name="close" size="0.85em" /></button>
+              {#if $canEditBuild}<button class="rm" aria-label="Remove" onclick={() => removeSpell(r.index!)}><UiIcon name="close" size="0.85em" /></button>{/if}
             {/if}
           </div>
           {#if r.grantedBy && r.index !== null}

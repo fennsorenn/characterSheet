@@ -53,9 +53,9 @@
   }
 </script>
 
+{#if $canEditBuild}
 <div class="quickadd">
   <input
-    disabled={!$canEditBuild}
     placeholder={`Quick add ${NOUN[kind]}…`}
     bind:value={query}
     onfocus={() => (open = true)}
@@ -79,6 +79,7 @@
     </ul>
   {/if}
 </div>
+{/if}
 
 <style>
   .quickadd { position: relative; margin-top: 0.6rem; }

@@ -187,26 +187,26 @@
       {#if f.subtitle}<span class="sub">{f.subtitle}</span>{/if}
       {#if pending > 0}<span class="pbadge" title="{pending} choice{pending === 1 ? '' : 's'} to make">{pending}</span>{/if}
       {#each customTags(f) as t}
-        <span class="ctag">{t}<button class="x" title="Remove tag" disabled={!$canEditBuild} onclick={() => removeFeatureTag(metaKey(f), t)}><UiIcon name="close" size="0.8em" /></button></span>
+        <span class="ctag">{t}{#if $canEditBuild}<button class="x" title="Remove tag" onclick={() => removeFeatureTag(metaKey(f), t)}><UiIcon name="close" size="0.8em" /></button>{/if}</span>
       {/each}
       <span class="spacer"></span>
+      {#if $canEditBuild}
       <button
         class="mini describe"
-        disabled={!$canEditBuild}
         class:has={!!ownText(f)}
         title={ownText(f) ? 'Edit your description' : 'Write your own description'}
         aria-label="Describe feature"
         onclick={(e) => openCustomEntry('feature', f.name, f.source, e.currentTarget)}
       >⋯</button>
-      <button class="mini" disabled={!$canEditBuild} title="Add tag" onclick={() => addTag(f)}>#</button>
-      <button class="mini" disabled={!$canEditBuild} title={hideable ? 'Hide' : 'Unhide'} onclick={() => setFeatureHidden(metaKey(f), hideable)}><UiIcon name={hideable ? 'eye-off' : 'eye'} /></button>
-      {#if f.customId}
+      <button class="mini" title="Add tag" onclick={() => addTag(f)}>#</button>
+      <button class="mini" title={hideable ? 'Hide' : 'Unhide'} onclick={() => setFeatureHidden(metaKey(f), hideable)}><UiIcon name={hideable ? 'eye-off' : 'eye'} /></button>
+      {/if}
+      {#if f.customId && $canEditBuild}
         <!-- Only the player's own features can be deleted; the rest go when
              whatever grants them goes. -->
         <button
           class="mini remove"
-          disabled={!$canEditBuild}
-          title="Remove this feature"
+            title="Remove this feature"
           aria-label="Remove feature"
           onclick={() => removeCustomFeature(f.customId!)}
         ><UiIcon name="close" /></button>
@@ -360,8 +360,7 @@
             <label class="vtoggle">
               <input
                 type="checkbox"
-                disabled={!$canEditBuild}
-                checked={f.variantEnabled}
+                        checked={f.variantEnabled}
                 onchange={(e) => setFeatureVariant(f.variantKey!, (e.target as HTMLInputElement).checked)}
               />
               <span class="fname">{f.name}</span>

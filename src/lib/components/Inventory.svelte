@@ -135,7 +135,9 @@
               title={readable(item) ? 'Show details' : 'Describe this item'}
               onclick={(e) => openItemDetail(item, e.currentTarget)}
             >{item.label ?? item.name}</button>
-            <button class="edit" disabled={!$canEditBuild} title="Rename item" aria-label="Rename item" onclick={() => startRename(i, item.label ?? item.name)}><UiIcon name="pencil" size="0.85em" /></button>
+            {#if $canEditBuild}
+              <button class="edit" title="Rename item" aria-label="Rename item" onclick={() => startRename(i, item.label ?? item.name)}><UiIcon name="pencil" size="0.85em" /></button>
+            {/if}
           {/if}
           {#if needsAttune(item.name, item.source)}
             <button
@@ -148,7 +150,7 @@
           {/if}
           <span class="src">{item.source}</span>
           {#if note}<span class="note">{note}</span>{/if}
-          <button class="rm" aria-label="Remove" disabled={!$canEditBuild} onclick={() => removeInventoryItem(i)}>×</button>
+          {#if $canEditBuild}<button class="rm" aria-label="Remove" onclick={() => removeInventoryItem(i)}>×</button>{/if}
           </div>
           <Reminders anchor={anchors.item(item)} />
         </li>

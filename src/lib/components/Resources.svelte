@@ -54,21 +54,23 @@
           </span>
           <span class="max">max <NumberField value={r.max} min={0} locked={!$canEditBuild} onchange={(v) => setResourceMax(r.id, v)} /></span>
           <span class="tag">{r.recharge}</span>
-          <button class="rm" aria-label="Remove" disabled={!$canEditBuild} onclick={() => removeResource(r.id)}>×</button>
+          {#if $canEditBuild}<button class="rm" aria-label="Remove" onclick={() => removeResource(r.id)}>×</button>{/if}
         </li>
       {/each}
     </ul>
   {/if}
 
-  <form class="add" onsubmit={(e) => { e.preventDefault(); add(); }}>
-    <input placeholder="Feature name" disabled={!$canEditBuild} bind:value={name} />
-    <NumberField value={max} min={1} locked={!$canEditBuild} onchange={(v) => (max = v)} />
-    <select bind:value={recharge} disabled={!$canEditBuild}>
-      <option value="short">short rest</option>
-      <option value="long">long rest</option>
-    </select>
-    <button type="submit" disabled={!$canEditBuild}>Add</button>
-  </form>
+  {#if $canEditBuild}
+    <form class="add" onsubmit={(e) => { e.preventDefault(); add(); }}>
+      <input placeholder="Feature name" bind:value={name} />
+      <NumberField value={max} min={1} locked={!$canEditBuild} onchange={(v) => (max = v)} />
+      <select bind:value={recharge}>
+        <option value="short">short rest</option>
+        <option value="long">long rest</option>
+      </select>
+      <button type="submit">Add</button>
+    </form>
+  {/if}
 </section>
 
 <style>

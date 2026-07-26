@@ -247,32 +247,34 @@
     {/if}
     {@render controls(open)}
 
-    {#if $pinned.length}
-      {#if open}<div class="sec">Open creatures</div>{:else}<div class="hair"></div>{/if}
-      {#each $pinned as c (c.id)}
-        {#if open}
-          <PinnedCreature
-            {c}
-            open={openCreature === c.id}
-            onToggle={() => toggleDockView({ kind: 'creature', id: c.id })}
-          />
-        {:else}
-          <button class="stub" title="{c.entry.name} — {c.hp.current}/{c.hp.max} HP" onclick={() => toggleDockView({ kind: 'creature', id: c.id })}>
-            <span class="sn">{c.entry.name.slice(0, 4)}</span>
-            <small>{c.hp.current}/{c.hp.max}</small>
-          </button>
-        {/if}
-      {/each}
-    {/if}
+    <div class="railscroll">
+      {#if $pinned.length}
+        {#if open}<div class="sec">Open creatures</div>{:else}<div class="hair"></div>{/if}
+        {#each $pinned as c (c.id)}
+          {#if open}
+            <PinnedCreature
+              {c}
+              open={openCreature === c.id}
+              onToggle={() => toggleDockView({ kind: 'creature', id: c.id })}
+            />
+          {:else}
+            <button class="stub" title="{c.entry.name} — {c.hp.current}/{c.hp.max} HP" onclick={() => toggleDockView({ kind: 'creature', id: c.id })}>
+              <span class="sn">{c.entry.name.slice(0, 4)}</span>
+              <small>{c.hp.current}/{c.hp.max}</small>
+            </button>
+          {/if}
+        {/each}
+      {/if}
 
-    {#if open}
-      {@render menu()}
-    {:else}
-      <div class="hair"></div>
-      <button class="db" title="More" aria-label="Open the dock" onclick={() => toggleDockView({ kind: 'menu' })}>
-        <span class="g">‹</span><span class="lb">More</span>
-      </button>
-    {/if}
+      {#if open}
+        {@render menu()}
+      {:else}
+        <div class="hair"></div>
+        <button class="db" title="More" aria-label="Open the dock" onclick={() => toggleDockView({ kind: 'menu' })}>
+          <span class="g">‹</span><span class="lb">More</span>
+        </button>
+      {/if}
+    </div>
   {/if}
 </aside>
 
@@ -352,6 +354,7 @@
   .hair { height: 1px; background: var(--line); margin: 0.25rem 0.1rem; width: 100%; }
 
   /* --- a single active buff --- */
+  .side .buff { flex: none; }
   .buff { display: flex; align-items: center; gap: 0.4rem; padding: 0.22rem 0.45rem; border: 1px solid var(--line); border-radius: 8px; font-size: 0.78rem; }
   .buff .wh { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .buff .d { font-weight: 700; font-variant-numeric: tabular-nums; }
@@ -375,13 +378,25 @@
     width: 3.4rem;
     align-items: center;
     max-height: 88vh;
-    overflow-y: auto;
+    /* The rail itself never scrolls: the controls stay put and `.railscroll`
+       takes the overflow, so they cannot be pushed off a short viewport. */
+    overflow: hidden;
     transition: width 0.16s ease;
   }
   .side.open { width: 19.5rem; padding: 0.5rem; align-items: stretch; }
   .side:not(.open) .db { width: 2.5rem; height: 2.5rem; justify-content: center; padding: 0; }
   .side:not(.open) .db .lb { display: none; }
   .side:not(.open) .db .ct { position: absolute; top: -1px; right: -1px; margin: 0; }
+  .railscroll {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    align-items: inherit;
+    min-height: 0;
+    overflow-y: auto;
+    width: 100%;
+  }
+  .side:not(.open) .railscroll { align-items: center; }
   .stub { border: 1px solid var(--line); border-radius: 8px; width: 2.5rem; padding: 0.18rem; text-align: center; font: inherit; font-size: 0.6rem; font-weight: 700; color: var(--accent); background: var(--bg); cursor: pointer; }
   .stub small { display: block; font-weight: 400; color: var(--muted); font-size: 0.56rem; }
 
