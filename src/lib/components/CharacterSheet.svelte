@@ -27,6 +27,7 @@
   import TemplateManager from './TemplateManager.svelte';
   import ExplainPopover from './ExplainPopover.svelte';
   import RulesTip from './RulesTip.svelte';
+  import NumberDial from './NumberDial.svelte';
 
 
   // The renderer below edits the active screen template.
@@ -142,6 +143,7 @@
 
 <ExplainPopover />
 <RulesTip />
+<NumberDial />
 
 <style>
   .head { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }

@@ -43,7 +43,8 @@ import {
   updateReminder as updateReminderPure,
   setReminderDetail as setReminderDetailPure,
   removeReminder as removeReminderPure,
-  moveReminder as moveReminderPure
+  moveReminder as moveReminderPure,
+  castingAbility as resolveCastingAbility
 } from '../character/index.js';
 import {
   classifyAbility,
@@ -122,8 +123,18 @@ export const grantPool = derived([store, catalogState], ([$c, $cat]) =>
   $cat.catalog ? gatherGrants($c, $cat.catalog) : EMPTY_POOL
 );
 
-export const graph = derived([store, catalogLookup, grantPool], ([$c, $lookup, $grants]) =>
-  buildGraph($c, $lookup, $grants)
+/**
+ * The ability the character casts with — from its class unless the document
+ * names one. A cleric says "Cleric", not "wisdom", so without this the spell
+ * save DC and attack bonus have nothing to be built from.
+ */
+export const castingAbility = derived([store, catalogState], ([$c, $cat]) =>
+  resolveCastingAbility($c, $cat.catalog)
+);
+
+export const graph = derived(
+  [store, catalogLookup, grantPool, castingAbility],
+  ([$c, $lookup, $grants, $casting]) => buildGraph($c, $lookup, $grants, $casting)
 );
 
 /**

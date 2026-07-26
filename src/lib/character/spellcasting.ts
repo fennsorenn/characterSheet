@@ -106,6 +106,30 @@ export function evalPreparedFormula(
   return Math.max(1, total);
 }
 
+/**
+ * The ability a character casts with, for the save DC and spell attack bonus.
+ *
+ * A cleric does not carry "wisdom" on its document — the class data says so, and
+ * the character just names the class. So the class decides unless the document
+ * overrides it, which is also what makes the pair appear for a character built
+ * before this existed.
+ *
+ * One ability for a multiclass caster is a simplification: each class really
+ * has its own DC. The highest-level caster class wins, being the one whose
+ * spells are doing the most work.
+ */
+export function castingAbility(character: Character, catalog: Catalog | null): Ability | null {
+  if (character.spellcasting?.ability) return character.spellcasting.ability;
+  if (!catalog) return null;
+  let best: { level: number; ability: Ability } | null = null;
+  for (const cls of character.classes) {
+    const ability = String(findClass(catalog, cls)?.spellcastingAbility ?? '');
+    if (!isAbility(ability)) continue;
+    if (!best || cls.level > best.level) best = { level: cls.level, ability };
+  }
+  return best?.ability ?? null;
+}
+
 /** The character's caster classes with their per-class limits. */
 export function casterClasses(
   character: Character,

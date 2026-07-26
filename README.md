@@ -84,6 +84,16 @@ in this repo.
   **Features & Traits** lists what they granted, with the choices each feature
   still wants. A finished character can shrink or drop the former without losing
   the latter.
+- **The value dial** (`src/lib/components/numberDial.ts`) — a phone's keyboard
+  covers half the sheet to type a number that is nearly always a small nudge from
+  the one already there. Where the pointer is coarse, a number opens a dial
+  instead: an arrow above and below each digit, the new value and the change it
+  would make shown together, nothing written until Apply. Stepping carries rather
+  than cycling — ▲ over the tens of 99 gives 109, not 9. Digit counts come from
+  each field's own bounds, and the ceiling is what sizes it (a field with `min: 0`
+  and no maximum is not one digit wide). The mode lives under **More** in the dock:
+  on touch (the default), always, or never — and even forced on, a fine pointer
+  can still type the value straight into the dial.
 - **Rules tooltips** (`src/lib/components/rulesTip.ts`) — a condition chip
   explains itself: hover it with a mouse, hold it on a touchscreen, or focus it
   with a keyboard. Hold rather than tap, because tapping a chip already toggles

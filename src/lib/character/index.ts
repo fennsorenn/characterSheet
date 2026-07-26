@@ -114,6 +114,7 @@ export {
 export { ATTUNEMENT_LIMIT } from './schema.js';
 export {
   casterClasses,
+  castingAbility,
   assignSpellCounts,
   evalPreparedFormula,
   type CasterClass,

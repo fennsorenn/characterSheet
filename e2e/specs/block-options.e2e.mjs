@@ -35,15 +35,25 @@ async function setOption(page, label, on, n = 0) {
 // is an arrangement, an option is one line item. Two instances of the same block
 // with different options do the work a second block type would need.
 export default async function ({ page }) {
-  // A caster, so the spell pair has something to say.
+  // A caster, so the spell pair has something to say — and a *class* one, with
+  // nothing written on the document: a cleric's sheet says "Cleric", never
+  // "wisdom", and the casting ability has to come from the class data.
   await page.evaluate(() => {
     const key = 'cs.char.test';
     const c = JSON.parse(localStorage.getItem(key));
-    c.spellcasting = { ability: 'int' };
+    delete c.spellcasting;
+    c.classes = [{ name: 'Cleric', source: 'PHB', level: 5, hitDie: 8 }];
     localStorage.setItem(key, JSON.stringify(c));
   });
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForSelector('.cell', { timeout: 20000 });
+  await page.waitForTimeout(400);
+  const spellStats = (await statNames(page)).filter((n) => n.startsWith('Spell'));
+  assertEqual(
+    spellStats,
+    ['Spell DC', 'Spell Atk'],
+    `a cleric gets the spell pair from its class (${(await statNames(page)).join(', ')})`
+  );
 
   // Edit mode is where the layout is arranged.
   await enterEditMode(page);
@@ -111,6 +121,7 @@ export default async function ({ page }) {
     const key = 'cs.char.test';
     const c = JSON.parse(localStorage.getItem(key));
     delete c.spellcasting;
+    c.classes = [{ name: 'Fighter', source: 'PHB', level: 5, hitDie: 10 }];
     localStorage.setItem(key, JSON.stringify(c));
   });
   await page.reload({ waitUntil: 'networkidle' });

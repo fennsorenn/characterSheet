@@ -6,6 +6,7 @@
   import { catalogState } from '../stores/catalog.js';
   import { pinned, openPinnedDetail } from '../stores/detail.js';
   import { editMode, toggleEdit, layoutList, selectLayout } from '../stores/layout.js';
+  import { dialMode, cycleDialMode, DIAL_LABELS, DIAL_HINTS } from '../stores/dial.js';
   import { screenCategory } from '../stores/screen.js';
   import { SCREEN_LABELS } from '../layout/screen.js';
   import { openPrint } from '../stores/print.js';
@@ -191,6 +192,9 @@
   </button>
   <button class="db wide" class:on={$editMode} onclick={onEditLayout}>
     <span class="g">▦</span><span class="lb">{$editMode ? 'Done editing layout' : 'Edit layout'}</span>
+  </button>
+  <button class="db wide" class:on={$dialMode !== 'off'} title={DIAL_HINTS[$dialMode]} onclick={cycleDialMode}>
+    <span class="g">⇅</span><span class="lb">{DIAL_LABELS[$dialMode]}</span>
   </button>
   <button class="db wide" onclick={() => { closeDock(); openPrint(); }}>
     <span class="g">⎙</span><span class="lb">Print / PDF</span>

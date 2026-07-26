@@ -11,6 +11,7 @@
     /**
      * How many digits the field must show without clipping. The component adds
      * the slack, so callers never have to guess how much a `ch` really buys.
+     * Left out, it comes from the bounds — a field capped at 30 needs two.
      */
     digits?: number;
     /** Read-only: the value still shows, but nothing can change it. */
@@ -23,16 +24,20 @@
     onchange,
     min = -Infinity,
     max = Infinity,
-    digits = 2,
+    digits = undefined,
     locked = false,
     label = undefined
   }: Props = $props();
 
-  // `ch` is the advance of "0", and the digits are tabular, so N digits are
-  // exactly N ch; half a character of slack keeps them off the edges.
-  const width = $derived(`calc(${digits}ch + 0.5ch)`);
-
   import { applyNumberEdit, clampValue } from './numberEdit.js';
+  import { digitsFor } from './numberDial.js';
+  import { dialEnabled, openDial } from '../stores/dial.js';
+
+  const places = $derived(digits ?? digitsFor(min, max));
+  // `ch` is the advance of "0", and the digits are tabular, so N digits are
+  // exactly N ch; half a character of slack keeps them off the edges. A field
+  // that can go negative needs room for the sign as well.
+  const width = $derived(`calc(${places + (min < 0 ? 1 : 0)}ch + 0.5ch)`);
 
   let editing = $state('');
   let focused = $state(false);
@@ -71,6 +76,17 @@
   <!-- Locked values read as text. A disabled input still looks like a
        field, which invites the click it is going to refuse. -->
   <span class="number-field locked" style="width: {width}" aria-label={label}>{value}</span>
+{:else if $dialEnabled}
+  <!-- No input element at all: focusing one is what raises the keyboard the
+       dial exists to avoid. -->
+  <button
+    type="button"
+    class="number-field dial"
+    aria-label={label}
+    style="width: {width}"
+    onclick={() =>
+      openDial({ label: label ?? 'Edit value', value, min, max, digits: places, onchange })}
+  >{value}</button>
 {:else}
   <input
     class="number-field"
@@ -96,6 +112,9 @@
 <style>
   /* Same metrics as the input so nothing shifts when the mode changes. */
   span.number-field { display: inline-block; cursor: default; }
+  button.number-field { display: inline-block; cursor: pointer; }
+  /* The dotted underline the sheet uses for "there is more behind this". */
+  button.number-field.dial { text-decoration: underline dotted var(--line); text-underline-offset: 0.2em; }
   .number-field {
     font: inherit;
     font-variant-numeric: tabular-nums;

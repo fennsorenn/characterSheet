@@ -1,6 +1,7 @@
 import { CalcGraph, abilityModifier } from '../calc/index.js';
 import {
   ABILITIES,
+  type Ability,
   SKILLS,
   SKILL_ABILITY,
   PROFICIENCY_MULTIPLIER,
@@ -38,7 +39,17 @@ const EMPTY_POOL: GrantPool = { numeric: [], sets: [], choices: [] };
  *   ac, initiative, passive.perception
  *   spell.dc, spell.attack (only if the character is a spellcaster)
  */
-export function buildGraph(character: Character, lookup?: CatalogLookup, grants: GrantPool = EMPTY_POOL): CalcGraph {
+export function buildGraph(
+  character: Character,
+  lookup?: CatalogLookup,
+  grants: GrantPool = EMPTY_POOL,
+  /**
+   * The ability the character casts with. Resolved by the caller, because it
+   * usually comes from the *class* rather than the document — see
+   * `castingAbility` — and the graph has no catalog to ask.
+   */
+  casting?: Ability | null
+): CalcGraph {
   const g = new CalcGraph();
   const equipment: EquipmentEffects = lookup
     ? computeEquipmentEffects(character, lookup)
@@ -114,8 +125,8 @@ export function buildGraph(character: Character, lookup?: CatalogLookup, grants:
   });
 
   // Spellcasting, when the character has a casting ability.
-  if (character.spellcasting) {
-    const abil = character.spellcasting.ability;
+  const abil = casting ?? character.spellcasting?.ability;
+  if (abil) {
     g.define('spell.dc', ['prof.bonus', `ability.${abil}.mod`], (c) =>
       8 + c.get('prof.bonus') + c.get(`ability.${abil}.mod`)
     );

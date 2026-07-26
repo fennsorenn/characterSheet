@@ -1,6 +1,6 @@
 <script lang="ts">
   import { canEditBuild } from '../stores/mode.js';
-  import { character, setAcBase, setClassLevel, acOverride } from '../stores/character.js';
+  import { character, setAcBase, setClassLevel, acOverride, castingAbility } from '../stores/character.js';
   import { totalLevel } from '../character/index.js';
   import NumberField from './NumberField.svelte';
   import StatValue from './StatValue.svelte';
@@ -77,14 +77,15 @@
       </div>
     {/if}
     <!-- The spell pair still needs a casting ability to mean anything, so the
-         option decides whether to offer it, not whether it exists. -->
-    {#if $character.spellcasting && on.spellDc}
+         option decides whether to offer it, not whether it exists. The ability
+         comes from the class — a cleric's document never says "wisdom". -->
+    {#if $castingAbility && on.spellDc}
       <div class="stat">
         <span class="k">Spell DC</span>
         <span class="v" data-volatile="occasional"><StatValue node="spell.dc" /></span>
       </div>
     {/if}
-    {#if $character.spellcasting && on.spellAttack}
+    {#if $castingAbility && on.spellAttack}
       <div class="stat">
         <span class="k">Spell Atk</span>
         <span class="v" data-volatile="occasional"><StatValue node="spell.attack" signed /></span>
