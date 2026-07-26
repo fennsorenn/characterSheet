@@ -74,6 +74,12 @@ in this repo.
   **Features & Traits** lists what they granted, with the choices each feature
   still wants. A finished character can shrink or drop the former without losing
   the latter.
+- **Two libraries** (`src/lib/stores/transfer.ts`) — characters live either on
+  this device (localStorage) or in an account on the server. The selection screen
+  copies a character either way: *To account* on a local one while signed in, *To
+  device* on one of yours. It is a copy, not a link — the two diverge from that
+  moment, since there is no sane merge for a character edited in both places — so
+  it takes a fresh id and a name free in the library it lands in ("Bran (2)").
 - **Custom entries** — an item, spell or feature added by hand has no catalog
   text behind it, so its window holds a description you write instead, stored on
   the character. A description you have written always wins over catalog content,
