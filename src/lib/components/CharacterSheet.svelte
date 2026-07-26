@@ -26,6 +26,7 @@
   import LayoutRenderer from './layout/LayoutRenderer.svelte';
   import TemplateManager from './TemplateManager.svelte';
   import ExplainPopover from './ExplainPopover.svelte';
+  import RulesTip from './RulesTip.svelte';
 
 
   // The renderer below edits the active screen template.
@@ -140,6 +141,7 @@
 </div>
 
 <ExplainPopover />
+<RulesTip />
 
 <style>
   .head { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }

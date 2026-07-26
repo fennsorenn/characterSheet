@@ -74,6 +74,16 @@ in this repo.
   **Features & Traits** lists what they granted, with the choices each feature
   still wants. A finished character can shrink or drop the former without losing
   the latter.
+- **Rules tooltips** (`src/lib/components/rulesTip.ts`) — a condition chip
+  explains itself: hover it with a mouse, hold it on a touchscreen, or focus it
+  with a keyboard. Hold rather than tap, because tapping a chip already toggles
+  the condition — so the press that opens the rules swallows the click it would
+  otherwise fire. The wording is catalog content looked up by name (2024 printing
+  first, since that is the edition the sheet's own rules follow), so it is absent
+  until a dataset is imported and the chips simply have nothing to explain.
+  Chips are `aria-disabled` rather than `disabled` outside play, because a
+  browser dispatches no pointer events at a disabled control and read mode is
+  exactly when someone wants to look a condition up.
 - **Two libraries** (`src/lib/stores/transfer.ts`) — characters live either on
   this device (localStorage) or in an account on the server. The selection screen
   copies a character either way: *To account* on a local one while signed in, *To
