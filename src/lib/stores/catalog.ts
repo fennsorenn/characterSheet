@@ -20,6 +20,7 @@ import {
   type NamedEntry,
   type LoadStage
 } from '../data/index.js';
+import { conditionRuleMap } from '../character/conditionRules.js';
 
 /**
  * Reactive wrapper around the data layer. Holds the base catalog plus any active
@@ -46,6 +47,15 @@ const composed = derived(state, ($s) =>
 
 /** Search index rebuilt whenever the composed catalog changes. */
 export const searchIndex = derived(composed, ($c) => ($c ? new SearchIndex($c) : null));
+
+/**
+ * Rules text for the condition chips, by lowercased name. Empty until a dataset
+ * is loaded — the app ships no 5e content — so every consumer treats a missing
+ * entry as "no explanation available" rather than an error.
+ */
+export const conditionRules = derived(composed, ($c) =>
+  conditionRuleMap($c?.entries.condition ?? [])
+);
 
 const itemKey = (name: string, source: string) =>
   `${name.toLowerCase()}|${source.toLowerCase()}`;

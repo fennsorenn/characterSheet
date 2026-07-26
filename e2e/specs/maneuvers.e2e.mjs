@@ -1,4 +1,4 @@
-import { cell, setLevel, assert } from '../harness.mjs';
+import { cell, buildCell, setLevel, assert } from '../harness.mjs';
 
 // Optional-feature progressions: a Battle Master at level 7 has 5 maneuver
 // slots, the picker filters to maneuvers, and picks dedupe across slots.
@@ -6,7 +6,8 @@ export default async function ({ page }) {
   const features = cell(page, 'Features & Traits');
   await setLevel(page, 7);
 
-  const sub = features.locator('.line', { hasText: 'subclass' }).locator('select').first();
+  // The subclass picker lives in the build block now, not the Features header.
+  const sub = buildCell(page).locator('.line', { hasText: 'subclass' }).locator('select').first();
   await sub.selectOption({ label: 'Battle Master' });
   await page.waitForTimeout(300);
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { canEditPlay } from '../stores/mode.js';
   import { ABILITIES, ABILITY_NAMES, type Buff } from '../character/index.js';
   import { character, addBuff, removeBuff, toggleBuff } from '../stores/character.js';
 
@@ -80,23 +81,25 @@
           </label>
           <span class="sum">{summary(buff)}</span>
           {#if buff.concentration}<span class="ctag" title="Concentration">C</span>{/if}
-          <button class="rm" aria-label="Remove" onclick={() => removeBuff(buff.id)}>×</button>
+          {#if $canEditPlay}<button class="rm" aria-label="Remove" onclick={() => removeBuff(buff.id)}>×</button>{/if}
         </li>
       {/each}
     </ul>
   {/if}
 
   <div class="addrow">
-    <select onchange={addPreset} aria-label="Add preset effect">
-      <option value="">+ Add preset…</option>
-      {#each PRESETS as preset, i}
-        <option value={i}>{preset.name}</option>
-      {/each}
-    </select>
-    <button class="custom" onclick={() => (showCustom = !showCustom)}>Custom</button>
+    {#if $canEditPlay}
+      <select onchange={addPreset} aria-label="Add preset effect">
+        <option value="">+ Add preset…</option>
+        {#each PRESETS as preset, i}
+          <option value={i}>{preset.name}</option>
+        {/each}
+      </select>
+      <button class="custom" onclick={() => (showCustom = !showCustom)}>Custom</button>
+    {/if}
   </div>
 
-  {#if showCustom}
+  {#if showCustom && $canEditPlay}
     <form class="customform" onsubmit={(e) => { e.preventDefault(); addCustom(); }}>
       <input placeholder="Effect name" bind:value={cName} />
       <select bind:value={cTarget}>

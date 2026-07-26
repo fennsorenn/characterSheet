@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { canEditBuild, canEditPlay } from '../stores/mode.js';
   import { character, rest, spendHitDie, adjustHitDie } from '../stores/character.js';
   import { conModifier, hpGainAverage, totalHpGain } from '../character/index.js';
   import { rollParts } from '../stores/dice.js';
@@ -43,8 +44,8 @@
   <header class="head">
     <h3>Rest &amp; Level Up</h3>
     <span class="rests">
-      <button onclick={() => rest('short')}>Short rest</button>
-      <button class="long" onclick={() => rest('long')}>Long rest</button>
+      <button disabled={!$canEditPlay} onclick={() => rest('short')}>Short rest</button>
+      <button class="long" disabled={!$canEditPlay} onclick={() => rest('long')}>Long rest</button>
     </span>
   </header>
 
@@ -57,10 +58,11 @@
           max={pool.max}
           used={pool.used}
           onSet={(u) => adjustHitDie(pool.die, u - pool.used)}
+          locked={!$canEditPlay}
         />
         <button
           class="spend"
-          disabled={pool.used >= pool.max || $character.hp.current >= $character.hp.max}
+          disabled={!$canEditPlay || pool.used >= pool.max || $character.hp.current >= $character.hp.max}
           title="Spend a die to heal (avg)"
           onclick={() => spendHitDie(pool.die, healFor(pool.die))}
         >
@@ -68,7 +70,7 @@
         </button>
         <button
           class="spend roll"
-          disabled={pool.used >= pool.max || $character.hp.current >= $character.hp.max}
+          disabled={!$canEditPlay || pool.used >= pool.max || $character.hp.current >= $character.hp.max}
           title="Roll the die to heal (roll + CON)"
           onclick={() => rollFor(pool.die)}
         >
@@ -81,7 +83,7 @@
     {/each}
   </div>
 
-  <button class="levelup" onclick={() => (leveling = true)}>Level Up…</button>
+  <button class="levelup" disabled={!$canEditBuild} onclick={() => (leveling = true)}>Level Up…</button>
 </section>
 
 {#if leveling}

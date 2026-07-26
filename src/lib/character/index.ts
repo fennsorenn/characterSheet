@@ -62,6 +62,7 @@ export {
 } from './equipment.js';
 export { iconForItem, slotIcon, iconForSchool, iconForDamageType, iconLabel } from './itemIcons.js';
 export { spellTags, conditionIcon, type SpellTag } from './spellTags.js';
+export { pickConditionRule, conditionRuleMap, type ConditionRule } from './conditionRules.js';
 export {
   attachedSpellNames,
   grantedSpellsFromItems,
@@ -113,6 +114,7 @@ export {
 export { ATTUNEMENT_LIMIT } from './schema.js';
 export {
   casterClasses,
+  castingAbility,
   assignSpellCounts,
   evalPreparedFormula,
   type CasterClass,

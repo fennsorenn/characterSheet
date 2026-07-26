@@ -67,6 +67,32 @@ export function cycleSize(layout: SheetLayout, id: string): SheetLayout {
   });
 }
 
+/**
+ * Turn one of a block's content options on or off.
+ *
+ * Agreeing with the default deletes the entry rather than writing it down: a
+ * layout should record what its owner *chose*, so a default that changes later
+ * still reaches everyone who never had an opinion about it.
+ */
+export function setOption(
+  layout: SheetLayout,
+  id: string,
+  key: string,
+  on: boolean
+): SheetLayout {
+  return mapBlock(layout, id, (b) => {
+    const meta = BLOCK_META[b.type]?.options?.find((o) => o.key === key);
+    if (!meta) return b;
+    const fallback = meta.offIn?.includes(b.variant) ? false : meta.default;
+    const options = { ...b.options };
+    if (on === fallback) delete options[key];
+    else options[key] = on;
+    const next: BlockInstance = { ...b, options };
+    if (Object.keys(options).length === 0) delete next.options;
+    return next;
+  });
+}
+
 /** Set (or clear, with undefined) a scrollable list block's pixel height cap. */
 export function setHeight(layout: SheetLayout, id: string, height: number | undefined): SheetLayout {
   return mapBlock(layout, id, (b) => {

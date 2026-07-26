@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { canEditBuild, canEditPlay } from '../stores/mode.js';
   import { character, graph, setSpellStatus, setSpellGranted, removeSpell } from '../stores/character.js';
   import { catalogLookup, catalogState } from '../stores/catalog.js';
   import { openDetail } from '../stores/detail.js';
@@ -281,12 +282,14 @@
               <button
                 class="status prep"
                 class:on={r.status === 'prepared'}
+                disabled={!$canEditPlay}
                 title="Prepared"
                 onclick={() => setSpellStatus(r.index!, r.status === 'prepared' ? 'known' : 'prepared')}
               ><UiIcon name="check" /></button>
               <button
                 class="status fav"
                 class:on={r.status === 'favorite'}
+                disabled={!$canEditPlay}
                 title="Favorite — keep handy"
                 onclick={() => setSpellStatus(r.index!, r.status === 'favorite' ? 'known' : 'favorite')}
               ><UiIcon name="star" filled={r.status === 'favorite'} /></button>
@@ -305,16 +308,18 @@
               <button
                 class="grant"
                 class:on={r.grantedBy}
+                disabled={!$canEditBuild}
                 title={r.grantedBy ? 'Unmark granted' : 'Mark as granted by a feature/item'}
                 onclick={() => setSpellGranted(r.index!, r.grantedBy ? undefined : 'Feature')}
               ><UiIcon name="flag" filled={!!r.grantedBy} /></button>
-              <button class="rm" aria-label="Remove" onclick={() => removeSpell(r.index!)}><UiIcon name="close" size="0.85em" /></button>
+              {#if $canEditBuild}<button class="rm" aria-label="Remove" onclick={() => removeSpell(r.index!)}><UiIcon name="close" size="0.85em" /></button>{/if}
             {/if}
           </div>
           {#if r.grantedBy && r.index !== null}
             <input
               class="gsource"
               value={r.grantedBy}
+              disabled={!$canEditBuild}
               title="Granting feature/item"
               onchange={(e) => setSpellGranted(r.index!, (e.target as HTMLInputElement).value)}
             />

@@ -69,3 +69,36 @@ describe('item facets', () => {
     ).toEqual(['Ring of Protection']);
   });
 });
+
+// Catalog order is not relevance order: a supplement's "Dwarf (Duergar)" sits
+// ahead of the Dwarf in the race list, so an unranked search answered the wrong
+// entry first — quietly, since it is still a match.
+describe('name relevance', () => {
+  const races: NamedEntry[] = [
+    { name: 'Dwarf (Duergar)', source: 'MTF' },
+    { name: 'Dwarf (Hill)', source: 'PHB' },
+    { name: 'Dwarf', source: 'PHB' },
+    { name: 'Dwarf', source: 'XPHB' },
+    { name: 'Duergar', source: 'MPMM' }
+  ];
+  const facets = facetsFor('race');
+  const search = (q: string) => filterEntries(races, q, facets, sel({})).map((r) => `${r.name} (${r.source})`);
+
+  it('puts an exact name first', () => {
+    expect(search('Dwarf')[0]).toBe('Dwarf (PHB)');
+  });
+
+  it('ranks exact, then prefix, then a later word, then anywhere', () => {
+    expect(search('duergar')).toEqual(['Duergar (MPMM)', 'Dwarf (Duergar) (MTF)']);
+  });
+
+  it('keeps catalog order among equally relevant entries', () => {
+    // Both Dwarves match exactly; the core book comes first because the catalog
+    // lists it first, not because of an alphabetical tiebreak on the source.
+    expect(search('Dwarf').slice(0, 2)).toEqual(['Dwarf (PHB)', 'Dwarf (XPHB)']);
+  });
+
+  it('leaves order alone when there is no query', () => {
+    expect(filterEntries(races, '', facets, sel({})).map((r) => r.name)).toEqual(races.map((r) => r.name));
+  });
+});

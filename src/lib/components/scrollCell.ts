@@ -16,7 +16,7 @@ export function scrollStyle(editing: boolean | undefined, height: number | undef
   const h = height ?? DEFAULT_SCROLL_HEIGHT;
   return editing
     ? `height:${h}px;overflow:auto;resize:vertical;min-height:4rem;`
-    : `max-height:${h}px;overflow-y:auto;`;
+    : `max-height:${h}px;overflow-x:hidden;overflow-y:auto;`;
 }
 
 export interface ResizeParams {

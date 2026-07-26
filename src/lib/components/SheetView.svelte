@@ -1,10 +1,11 @@
 <script lang="ts">
   import { catalogState } from '../stores/catalog.js';
   import { character } from '../stores/character.js';
-  import { printOpen, openPrint } from '../stores/print.js';
+  import { printOpen } from '../stores/print.js';
   import { browseOpen } from '../stores/browse.js';
-  import { diceOpen } from '../stores/dice.js';
   import { navigate } from '../stores/router.js';
+  import { dataPanelOpen } from '../stores/ui.js';
+  import { screenCategory } from '../stores/screen.js';
   import DataImport from './DataImport.svelte';
   import QuickSearch from './QuickSearch.svelte';
   import CharacterSheet from './CharacterSheet.svelte';
@@ -17,32 +18,25 @@
   import DetailWindow from './DetailWindow.svelte';
   import ReminderWindow from './ReminderWindow.svelte';
   import CustomEntryWindow from './CustomEntryWindow.svelte';
-  import PinnedDock from './PinnedDock.svelte';
+  import Dock from './Dock.svelte';
   import DiceRoller from './DiceRoller.svelte';
-  import Icon from './Icon.svelte';
-  import UiIcon from './UiIcon.svelte';
 
   // Where "← Back" returns: the owning overview.
   let { backTo = '/local' }: { backTo?: string } = $props();
-  let showData = $state(false);
+
+  // The dock reserves an edge: a gutter on the side, a strip at the bottom.
+  const bottomDock = $derived($screenCategory === 'mobile');
 </script>
 
-<main class="app-root">
+<main class="app-root" class:bottom-dock={bottomDock} class:side-dock={!bottomDock}>
   <header class="top">
     <div class="lead">
       <button class="back" onclick={() => navigate(backTo)} title="Back to characters">←</button>
       <h1>{$character.name}</h1>
     </div>
-    <div class="actions">
-      <button class="data-toggle" title="Dice roller" onclick={() => diceOpen.update((o) => !o)}><Icon name="dice" /> Dice</button>
-      <button class="data-toggle" onclick={openPrint}>Print / PDF</button>
-      <button class="data-toggle" onclick={() => (showData = !showData)}>
-        {#if $catalogState.catalog}Data <UiIcon name="check" size="0.85em" />{:else}Load data{/if}
-      </button>
-    </div>
   </header>
 
-  {#if showData || !$catalogState.catalog}
+  {#if $dataPanelOpen || !$catalogState.catalog}
     <DataImport />
     <hr />
   {/if}
@@ -64,16 +58,18 @@
 <DetailWindow />
 <ReminderWindow />
 <CustomEntryWindow />
-<PinnedDock />
+<Dock {backTo} />
 <DiceRoller />
 
 <style>
   main { max-width: 2400px; margin: 0 auto; padding: 1.25rem clamp(1rem, 2.5vw, 2.5rem); }
+  /* Keep the sheet clear of the dock's resting footprint, so the shut dock
+     never covers content. Opening it overlays — it is transient. */
+  .side-dock { padding-right: calc(clamp(1rem, 2.5vw, 2.5rem) + 3.4rem); }
+  .bottom-dock { padding-bottom: 6rem; }
   .top { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
   .lead { display: flex; align-items: baseline; gap: 0.6rem; }
   .back { font: inherit; font-size: 1.1rem; border: 1px solid var(--line); background: var(--bg); color: var(--fg); border-radius: 6px; padding: 0.1rem 0.5rem; cursor: pointer; }
-  .actions { display: flex; gap: 0.5rem; }
   h1 { color: var(--accent); margin: 0; }
-  .data-toggle { padding: 0.35rem 0.7rem; border: 1px solid var(--line); background: var(--bg); color: var(--fg); border-radius: 6px; cursor: pointer; }
   hr { border: none; border-top: 1px solid var(--line); margin: 1.5rem 0; }
 </style>

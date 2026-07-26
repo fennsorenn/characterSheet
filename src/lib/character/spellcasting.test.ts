@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { casterClasses, assignSpellCounts, evalPreparedFormula, type CasterClass } from './spellcasting.js';
+import { casterClasses, castingAbility, assignSpellCounts, evalPreparedFormula, type CasterClass } from './spellcasting.js';
 import { createCharacter } from './schema.js';
 import { emptyCatalog, type Catalog } from '../data/catalog.js';
 import type { Ability } from './abilities.js';
@@ -149,5 +149,46 @@ describe('assignSpellCounts', () => {
     expect(counts[0].bookUsed).toBeGreaterThan(counts[0].bookLimit!); // not clamped/flagged
     // Prepared slots still tally only prepared (or known-only) leveled spells.
     expect(counts[0].spellsUsed).toBe(2);
+  });
+});
+
+
+// The save DC and spell attack need an ability, and a character document does
+// not carry one: it names a class, and the class data says how it casts.
+describe('castingAbility', () => {
+  const withClasses = (...classes: { name: string; source: string; level: number }[]) =>
+    createCharacter({ classes: classes.map((c) => ({ ...c, hitDie: 8 })) });
+
+  it('takes it from the class', () => {
+    expect(castingAbility(withClasses({ name: 'Cleric', source: 'PHB', level: 5 }), catalog())).toBe('wis');
+    expect(castingAbility(withClasses({ name: 'Wizard', source: 'PHB', level: 3 }), catalog())).toBe('int');
+  });
+
+  it('is null for a class that does not cast', () => {
+    expect(castingAbility(withClasses({ name: 'Fighter', source: 'PHB', level: 5 }), catalog())).toBeNull();
+  });
+
+  // One DC for a multiclass caster is a simplification; the class doing the most
+  // work is the least surprising one to show.
+  it('prefers the highest-level caster in a multiclass', () => {
+    const c = withClasses(
+      { name: 'Wizard', source: 'PHB', level: 2 },
+      { name: 'Cleric', source: 'PHB', level: 7 }
+    );
+    expect(castingAbility(c, catalog())).toBe('wis');
+  });
+
+  it('lets the document override the class', () => {
+    const c = createCharacter({
+      classes: [{ name: 'Cleric', source: 'PHB', level: 5, hitDie: 8 }],
+      spellcasting: { ability: 'cha' }
+    });
+    expect(castingAbility(c, catalog())).toBe('cha');
+    // …and still answers before any data is loaded, since it needs no catalog.
+    expect(castingAbility(c, null)).toBe('cha');
+  });
+
+  it('is null without a catalog to ask', () => {
+    expect(castingAbility(withClasses({ name: 'Cleric', source: 'PHB', level: 5 }), null)).toBeNull();
   });
 });

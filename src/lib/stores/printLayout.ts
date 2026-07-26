@@ -48,6 +48,7 @@ export const printController: LayoutController = {
   moveBlock: (id, dir) => upd((l) => ops.moveBlock(l, id, dir)),
   reorderBlock: (from, to) => upd((l) => ops.reorderBlock(l, from, to)),
   setVariant: (id, variant) => upd((l) => ops.setVariant(l, id, variant)),
+  setOption: (id, key, on) => upd((l) => ops.setOption(l, id, key, on)),
   cycleSize: (id) => upd((l) => ops.cycleSize(l, id)),
   setSize: (id, size) => upd((l) => ops.setSize(l, id, size)),
   toggleStack: (id) => upd((l) => ops.toggleStack(l, id)),

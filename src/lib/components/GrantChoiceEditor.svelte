@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { canEditBuild } from '../stores/mode.js';
   import { character, setAbilityChoice, setGrantChoice } from '../stores/character.js';
   import { universeMembers, memberLabel, type GrantChoice, type Ability } from '../character/index.js';
 
@@ -42,13 +43,14 @@
   {#each slots as sel, j}
     {#if freeText}
       <input
+        disabled={!$canEditBuild}
         class="txt"
         value={sel}
         placeholder={choice.label}
         onchange={(e) => setSlot(j, (e.target as HTMLInputElement).value.trim())}
       />
     {:else}
-      <select value={sel} onchange={(e) => setSlot(j, (e.target as HTMLSelectElement).value)}>
+      <select value={sel} disabled={!$canEditBuild} onchange={(e) => setSlot(j, (e.target as HTMLSelectElement).value)}>
         <option value="">{isAbility ? `+${choice.amount}…` : 'choose…'}</option>
         {#each options as m}
           <option value={m} disabled={m !== sel && slots.includes(m)}>

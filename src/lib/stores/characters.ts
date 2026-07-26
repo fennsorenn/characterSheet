@@ -49,12 +49,32 @@ export function localList(): LocalEntry[] {
   return readIndex().sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
-/** A slug for `name` not already used (suffixes -2, -3, … on collision). */
-export function uniqueLocalSlug(name: string): string {
+/** A slug for `name` not among `taken` (suffixes -2, -3, … on collision). */
+export function uniqueSlug(name: string, taken: Iterable<string>): string {
+  const used = new Set(taken);
   const base = slugify(name);
-  const used = new Set(readIndex().map((e) => e.slug));
   if (!used.has(base)) return base;
   for (let i = 2; ; i++) if (!used.has(`${base}-${i}`)) return `${base}-${i}`;
+}
+
+/**
+ * A display name not among `taken` ("Bran" → "Bran (2)").
+ *
+ * Slugs alone are not enough when a character is copied between libraries: two
+ * rows reading "Bran" with different slugs are indistinguishable in a list.
+ */
+export function uniqueName(name: string, taken: Iterable<string>): string {
+  const used = new Set(taken);
+  if (!used.has(name)) return name;
+  for (let i = 2; ; i++) if (!used.has(`${name} (${i})`)) return `${name} (${i})`;
+}
+
+/** A slug for `name` not already used by a local character. */
+export function uniqueLocalSlug(name: string): string {
+  return uniqueSlug(
+    name,
+    readIndex().map((e) => e.slug)
+  );
 }
 
 export function loadLocal(slug: string): Character | null {

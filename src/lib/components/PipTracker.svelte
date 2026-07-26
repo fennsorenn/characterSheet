@@ -6,8 +6,10 @@
     max: number;
     used: number;
     onSet: (used: number) => void;
+    /** Read-only: pips still show what is spent, but clicking does nothing. */
+    locked?: boolean;
   }
-  let { max, used, onSet }: Props = $props();
+  let { max, used, onSet, locked = false }: Props = $props();
   const PIP_LIMIT = 12;
   const remaining = $derived(max - used);
 </script>
@@ -21,6 +23,7 @@
       <button
         class="pip"
         class:on={available}
+        disabled={locked}
         aria-label={`Use ${i + 1} of ${max}`}
         onclick={() => onSet(available ? max - i : max - i - 1)}
       ></button>
@@ -28,13 +31,14 @@
   </span>
 {:else}
   <span class="numeric">
-    <button onclick={() => onSet(Math.min(max, used + 1))} aria-label="Spend one">−</button>
+    <button disabled={locked} onclick={() => onSet(Math.min(max, used + 1))} aria-label="Spend one">−</button>
     <span class="count">{remaining}/{max}</span>
-    <button onclick={() => onSet(Math.max(0, used - 1))} aria-label="Restore one">+</button>
+    <button disabled={locked} onclick={() => onSet(Math.max(0, used - 1))} aria-label="Restore one">+</button>
   </span>
 {/if}
 
 <style>
+  button:disabled { cursor: default; }
   .pips { display: inline-flex; gap: 0.2rem; flex-wrap: wrap; }
   .pip {
     width: 0.85rem;

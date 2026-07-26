@@ -9,8 +9,10 @@ import {
   cycleSize,
   toggleStack,
   setHeight,
+  setOption,
   makeBlock
 } from './operations.js';
+import { resolveOptions } from './blocks.js';
 import { defaultLayout } from './defaultLayout.js';
 import type { SheetLayout } from './types.js';
 
@@ -28,6 +30,7 @@ describe('defaultLayout', () => {
       'saves',
       'skills',
       'attacks',
+      'characterBuild',
       'features',
       'traits',
       'inventory',
@@ -105,6 +108,58 @@ describe('layout operations', () => {
     const withH = setHeight(l, id, 300);
     expect(setHeight(withH, id, undefined).blocks[0].height).toBeUndefined();
     expect(setHeight(withH, id, 0).blocks[0].height).toBeUndefined();
+  });
+
+  // Options are per-instance content switches; the stored layout records only
+  // what its owner disagreed with, so defaults stay live.
+  describe('block options', () => {
+    const withDefenses = () => {
+      const l = addBlock(defaultLayout(), 'defenses');
+      return { l, id: l.blocks[l.blocks.length - 1].id };
+    };
+
+    it('resolves to the type defaults when nothing is set', () => {
+      const { l, id } = withDefenses();
+      const b = l.blocks.find((x) => x.id === id)!;
+      expect(b.options).toBeUndefined();
+      expect(resolveOptions(b)).toMatchObject({ ac: true, passiveInvestigation: false });
+    });
+
+    it('records a deviation and drops it again when it agrees', () => {
+      const { l, id } = withDefenses();
+      const off = setOption(l, id, 'ac', false);
+      expect(off.blocks.find((b) => b.id === id)!.options).toEqual({ ac: false });
+      expect(resolveOptions(off.blocks.find((b) => b.id === id)!).ac).toBe(false);
+      // Back to the default: the entry goes, rather than being written as `true`.
+      const back = setOption(off, id, 'ac', true);
+      expect(back.blocks.find((b) => b.id === id)!.options).toBeUndefined();
+    });
+
+    it('takes the variant into account when deciding what the default is', () => {
+      const { l, id } = withDefenses();
+      const compact = setVariant(l, id, 'compact');
+      const b = compact.blocks.find((x) => x.id === id)!;
+      expect(resolveOptions(b).passivePerception).toBe(false); // off in compact
+      // Turning it on there is a deviation and is recorded; turning it off is not.
+      expect(setOption(compact, id, 'passivePerception', true).blocks.find((x) => x.id === id)!.options)
+        .toEqual({ passivePerception: true });
+      expect(setOption(compact, id, 'passivePerception', false).blocks.find((x) => x.id === id)!.options)
+        .toBeUndefined();
+    });
+
+    it('ignores keys the block type does not have', () => {
+      const { l, id } = withDefenses();
+      expect(setOption(l, id, 'nonsense', true).blocks.find((b) => b.id === id)!.options).toBeUndefined();
+    });
+
+    // A saved layout from a future version, or one hand-edited: unknown keys are
+    // dropped on read rather than reaching the component as stray truthy values.
+    it('drops unknown keys when resolving', () => {
+      const { l, id } = withDefenses();
+      const b = { ...l.blocks.find((x) => x.id === id)!, options: { ac: false, bogus: true } };
+      expect(resolveOptions(b)).not.toHaveProperty('bogus');
+      expect(resolveOptions(b).ac).toBe(false);
+    });
   });
 
   it('does not mutate the input layout', () => {

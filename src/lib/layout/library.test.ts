@@ -17,7 +17,7 @@ import {
   prunePreferred,
   type LayoutLibrary
 } from './library.js';
-import { addBlock } from './operations.js';
+import { addBlock, setSize } from './operations.js';
 import { allBlockTypes, BLOCK_META } from './blocks.js';
 import { SCREEN_CATEGORIES } from './screen.js';
 import {
@@ -180,6 +180,19 @@ describe('editing a built-in forks it', () => {
     // The built-in itself is untouched, ids included.
     expect(findTemplate(after, 'desktop-martial')).toEqual(defaultTemplate('desktop', 'martial'));
     expect(copy.blocks.every((b) => !b.id.startsWith('desktop-martial:'))).toBe(true);
+  });
+
+  // The fork mints new block ids. An edit that names a block by id — every one
+  // of them except adding — has to be applied before that happens, or the first
+  // click on a built-in silently does nothing and only the second one takes.
+  it('applies an edit aimed at a block by id, not just a whole-layout one', () => {
+    const source = activeLayout(lib());
+    const i = source.blocks.findIndex((b) => b.size !== 'full');
+    const after = editActive(lib(), (l) => setSize(l, source.blocks[i].id, 'full'));
+    expect(activeLayout(after).blocks[i].size).toBe('full');
+    // Still a genuine copy: the built-in keeps its own ids and its old size.
+    expect(activeLayout(after).blocks[i].id).not.toBe(source.blocks[i].id);
+    expect(defaultTemplate('desktop', 'martial').blocks[i].size).not.toBe('full');
   });
 
   it('carries preferences that named the built-in over to the copy', () => {

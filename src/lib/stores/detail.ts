@@ -11,17 +11,36 @@ export interface DetailTarget {
   anchor: { x: number; y: number; width: number; height: number } | null;
   /** For a summon creature: the chosen spell level (defaults to its minimum). */
   spellLevel?: number;
+  /**
+   * Statblock params to render with, when the caller has its own. A pinned
+   * creature keeps the caster stats it was pinned at, so reopening it must not
+   * silently re-resolve against whatever the caster looks like now.
+   */
+  params?: StatblockParams;
+  /**
+   * The pinned entry this window is showing, if it was opened from one — or
+   * pinned while open. It makes the window's pin control a toggle: without it
+   * the only thing pinning can do is add another copy.
+   */
+  pinnedId?: string;
 }
 
 export const detail = writable<DetailTarget | null>(null);
 
 /** Open the detail window for a catalog entry, anchored to the clicked element. */
-export function openDetail(kind: DetailKind, entry: NamedEntry, el?: Element | null, spellLevel?: number) {
+export function openDetail(
+  kind: DetailKind,
+  entry: NamedEntry,
+  el?: Element | null,
+  spellLevel?: number,
+  params?: StatblockParams
+) {
   const r = el?.getBoundingClientRect();
   detail.set({
     kind,
     entry,
     spellLevel,
+    params,
     anchor: r ? { x: r.x, y: r.y, width: r.width, height: r.height } : null
   });
 }
@@ -67,12 +86,16 @@ pinned.subscribe((list) => {
 });
 
 /** Pin a creature to the dock with a starting HP pool and captured params. */
-export function pinCreature(entry: NamedEntry, params: StatblockParams, maxHp: number) {
+/** Pin a creature and return the id of the entry created, so a caller can
+ *  offer to unpin exactly that one. Pinning the same creature twice is
+ *  deliberate — two goblins are two goblins. */
+export function pinCreature(entry: NamedEntry, params: StatblockParams, maxHp: number): string {
   const id = crypto.randomUUID();
   pinned.update((list) => [
     ...list,
     { id, entry, params, hp: { current: maxHp, max: maxHp, temp: 0 }, legendaryUsed: 0 }
   ]);
+  return id;
 }
 
 export function unpinCreature(id: string) {
@@ -116,4 +139,22 @@ export function togglePinnedUse(id: string, key: string) {
   pinned.update((list) =>
     list.map((c) => (c.id === id ? { ...c, uses: { ...c.uses, [key]: !c.uses?.[key] } } : c))
   );
+}
+
+/** Open the detail window on an already-pinned creature, as that entry. */
+export function openPinnedDetail(c: PinnedCreature, el?: Element | null) {
+  const r = el?.getBoundingClientRect();
+  detail.set({
+    kind: 'creature',
+    entry: c.entry,
+    spellLevel: c.params?.spellLevel,
+    params: c.params,
+    pinnedId: c.id,
+    anchor: r ? { x: r.x, y: r.y, width: r.width, height: r.height } : null
+  });
+}
+
+/** Note that the open window is now (or is no longer) a pinned entry. */
+export function setDetailPinned(id: string | undefined) {
+  detail.update((d) => (d ? { ...d, pinnedId: id } : d));
 }

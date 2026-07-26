@@ -1,3 +1,4 @@
+import { syncHitDice } from '../character/hitDice.js';
 import { writable, derived, readable, get } from 'svelte/store';
 import {
   ABILITIES,
@@ -42,7 +43,8 @@ import {
   updateReminder as updateReminderPure,
   setReminderDetail as setReminderDetailPure,
   removeReminder as removeReminderPure,
-  moveReminder as moveReminderPure
+  moveReminder as moveReminderPure,
+  castingAbility as resolveCastingAbility
 } from '../character/index.js';
 import {
   classifyAbility,
@@ -91,7 +93,9 @@ store.subscribe((c) => {
 /** Load a character into the editor and bind autosave to a source. */
 function setActive(ref: CharacterRef, doc: Character | null) {
   activeRef = null; // suppress the save triggered by loading
-  store.set(createCharacter(doc ?? {}));
+  // Characters saved before hit dice followed the classes carry stale pools;
+  // reconcile on load rather than waiting for the first unrelated edit.
+  store.set(syncHitDice(createCharacter(doc ?? {})));
   activeRef = ref;
 }
 
@@ -119,8 +123,18 @@ export const grantPool = derived([store, catalogState], ([$c, $cat]) =>
   $cat.catalog ? gatherGrants($c, $cat.catalog) : EMPTY_POOL
 );
 
-export const graph = derived([store, catalogLookup, grantPool], ([$c, $lookup, $grants]) =>
-  buildGraph($c, $lookup, $grants)
+/**
+ * The ability the character casts with — from its class unless the document
+ * names one. A cleric says "Cleric", not "wisdom", so without this the spell
+ * save DC and attack bonus have nothing to be built from.
+ */
+export const castingAbility = derived([store, catalogState], ([$c, $cat]) =>
+  resolveCastingAbility($c, $cat.catalog)
+);
+
+export const graph = derived(
+  [store, catalogLookup, grantPool, castingAbility],
+  ([$c, $lookup, $grants, $casting]) => buildGraph($c, $lookup, $grants, $casting)
 );
 
 /**
@@ -368,7 +382,11 @@ export function setCharacterLayoutPrefs(prefs: Record<string, string>) {
 }
 
 function update(fn: (c: Character) => Character) {
-  store.update(fn);
+  // Hit dice follow the classes, so they are reconciled on every write
+  // rather than by each action that can change a class. `syncHitDice`
+  // returns the same object when nothing needs changing, so this costs
+  // nothing on unrelated edits.
+  store.update((c) => syncHitDice(fn(c)));
 }
 
 export function setAbilityScore(ability: Ability, score: number) {
@@ -868,7 +886,7 @@ export function adjustHitDie(die: number, delta: number) {
 }
 
 export function resetCharacter() {
-  store.set(createCharacter());
+  store.set(syncHitDice(createCharacter()));
 }
 
 // --- Manual buffs/debuffs (buff mode) ---

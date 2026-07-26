@@ -5,11 +5,13 @@
     localList,
     localVersion,
     uniqueLocalSlug,
+    uniqueSlug,
     saveLocal,
     deleteLocal,
-    slugify,
     type LocalEntry
   } from '../stores/characters.js';
+  import { copyLocalToUser, copyUserToLocal } from '../stores/transfer.js';
+  import { me } from '../stores/session.js';
   import { apiListCharacters, apiPutCharacter, apiDeleteCharacter, type CharacterSummary } from '../api/client.js';
 
   let { scope, username = '' }: { scope: 'local' | 'user'; username?: string } = $props();
@@ -17,6 +19,8 @@
   let newName = $state('');
   let userList = $state<CharacterSummary[]>([]);
   let loading = $state(false);
+  let notice = $state<{ text: string; error?: boolean } | null>(null);
+  let copying = $state<string | null>(null);
 
   // Local list reacts to the localVersion bump; the user list is fetched.
   const list = $derived.by<LocalEntry[] | CharacterSummary[]>(() => {
@@ -50,9 +54,10 @@
       saveLocal(slug, name, createCharacter({ name }));
       navigate(`/local/${slug}`);
     } else {
-      const used = new Set(userList.map((c) => c.slug));
-      let slug = slugify(name);
-      for (let i = 2; used.has(slug); i++) slug = `${slugify(name)}-${i}`;
+      const slug = uniqueSlug(
+        name,
+        userList.map((c) => c.slug)
+      );
       await apiPutCharacter(slug, name, createCharacter({ name }));
       navigate(`/user/${encodeURIComponent(username)}/character/${slug}`);
     }
@@ -66,10 +71,35 @@
       refreshUser();
     }
   }
+
+  /**
+   * Copy a row into the other library. The copy lands where you are not, so the
+   * list in front of you does not change — say what happened and where it went.
+   */
+  async function copy(slug: string) {
+    copying = slug;
+    notice = null;
+    try {
+      const to = scope === 'local' ? await copyLocalToUser(slug) : await copyUserToLocal(slug);
+      notice = {
+        text:
+          scope === 'local'
+            ? `Copied to ${$me}'s characters as "${to.name}".`
+            : `Copied to this device as "${to.name}".`
+      };
+    } catch (e) {
+      notice = { text: e instanceof Error ? e.message : 'The copy failed.', error: true };
+    }
+    copying = null;
+  }
 </script>
 
 <section class="overview">
   <h1>{scope === 'local' ? 'Local characters' : `${username}'s characters`}</h1>
+
+  {#if notice}
+    <p class="notice" class:err={notice.error} role="status">{notice.text}</p>
+  {/if}
 
   {#if loading}
     <p class="muted">Loading…</p>
@@ -83,6 +113,17 @@
             <span class="nm">{c.name}</span>
             <span class="meta">{new Date(c.updatedAt).toLocaleDateString()}</span>
           </button>
+          {#if scope === 'user' || $me}
+            <button
+              class="cp"
+              disabled={copying !== null}
+              title={scope === 'local' ? `Copy "${c.name}" to ${$me}'s characters` : `Copy "${c.name}" to this device`}
+              aria-label={scope === 'local' ? `Copy ${c.name} to account` : `Copy ${c.name} to this device`}
+              onclick={() => copy(c.slug)}
+            >
+              {copying === c.slug ? 'Copying…' : scope === 'local' ? 'To account' : 'To device'}
+            </button>
+          {/if}
           <button class="del" title="Delete" aria-label="Delete {c.name}" onclick={() => remove(c.slug, c.name)}>×</button>
         </li>
       {/each}
@@ -105,6 +146,10 @@
   .open:hover { border-color: var(--accent); }
   .nm { font-weight: 600; }
   .meta { font-size: 0.75rem; color: var(--muted); }
+  .notice { margin: -0.5rem 0 1rem; font-size: 0.85rem; color: var(--accent); }
+  .notice.err { color: #d2645a; }
+  .cp { font: inherit; font-size: 0.78rem; white-space: nowrap; padding: 0 0.7rem; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--muted); cursor: pointer; }
+  .cp:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); }
   .del { font: inherit; font-size: 1.1rem; line-height: 1; padding: 0 0.6rem; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--muted); cursor: pointer; }
   .del:hover { color: #d2645a; border-color: #d2645a; }
   .new { display: flex; gap: 0.5rem; }

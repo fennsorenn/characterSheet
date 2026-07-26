@@ -1,4 +1,4 @@
-import { assert, seedCharacter } from '../harness.mjs';
+import { assert, seedCharacter, dockControl, selectTemplate } from '../harness.mjs';
 
 // Reminders: short notes pinned to an exact spot on the sheet. They are anchored
 // to what they annotate rather than to a position, so they survive a template
@@ -22,7 +22,7 @@ export default async function ({ page, baseUrl }) {
   await page.waitForSelector('.cell', { timeout: 20000 });
 
   // --- Pin one right after the Stealth skill ---
-  await page.click('.tools button:has-text("Reminders")');
+  await dockControl(page, 'Notes');
   await page.waitForSelector('.reminder-banner');
   await stealth().locator('button.add').click();
   await stealth().locator('input.text').fill('disadv. in armor');
@@ -35,24 +35,24 @@ export default async function ({ page, baseUrl }) {
   assert(pinned[0].text === 'disadv. in armor', 'with the text as typed');
 
   // --- It reads as a margin note once the mode is off ---
-  await page.click('.tools button:has-text("Reminders")');
+  await dockControl(page, 'Notes');
   await page.waitForTimeout(300);
   assert(/disadv\. in armor/.test(await stealth().innerText()), 'the note shows under Stealth');
   assert((await stealth().locator('input.text').count()) === 0, 'and is not editable outside the mode');
 
   // --- Anchored, not positioned: it follows the row anywhere ---
-  await page.selectOption('select.preset', 'mobile-martial');
+  await selectTemplate(page, 'mobile-martial');
   await page.waitForTimeout(400);
   assert(/disadv\. in armor/.test(await stealth().innerText()), 'survives a template switch');
   await page.setViewportSize({ width: 430, height: 1400 });
   await page.waitForTimeout(400);
   assert(/disadv\. in armor/.test(await stealth().innerText()), 'survives a reflow to one column');
   await page.setViewportSize({ width: 1200, height: 2100 });
-  await page.selectOption('select.preset', 'desktop-martial');
+  await selectTemplate(page, 'desktop-martial');
   await page.waitForTimeout(400);
 
   // --- Other kinds of anchor: an inventory row and a whole block ---
-  await page.click('.tools button:has-text("Reminders")');
+  await dockControl(page, 'Notes');
   await page.waitForSelector('.reminder-banner');
   const potion = block('Inventory').locator('li', { hasText: 'Potion of Healing' }).first();
   await potion.locator('button.add').first().click();
@@ -100,7 +100,7 @@ export default async function ({ page, baseUrl }) {
   await page.locator('.win .ic').click();
 
   // --- Outside the mode, the note itself opens it ---
-  await page.click('.tools button:has-text("Reminders")');
+  await dockControl(page, 'Notes');
   await page.waitForTimeout(300);
   assert((await stealth().locator('button.text').count()) === 1, 'a note with more behind it is clickable');
   await stealth().locator('button.text').click();
@@ -113,7 +113,7 @@ export default async function ({ page, baseUrl }) {
   const potionNote = block('Inventory').locator('li', { hasText: 'Potion of Healing' }).first();
   assert((await potionNote.locator('span.text').count()) === 1, 'a note with no explanation is not a button');
   await page.locator('.win .ic').click();
-  await page.click('.tools button:has-text("Reminders")');
+  await dockControl(page, 'Notes');
   await page.waitForSelector('.reminder-banner');
 
   // --- A stranded reminder is surfaced, and can be cleared from there ---
@@ -124,7 +124,7 @@ export default async function ({ page, baseUrl }) {
   });
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForSelector('.cell', { timeout: 20000 });
-  await page.click('.tools button:has-text("Reminders")');
+  await dockControl(page, 'Notes');
   await page.waitForSelector('.stranded');
   const strandedText = await page.locator('.stranded').innerText();
   assert(/3 charges left/.test(strandedText), 'the stranded note is listed');

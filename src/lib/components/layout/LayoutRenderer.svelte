@@ -1,6 +1,7 @@
 <script lang="ts">
   import { getLayoutController } from '../../layout/controller.js';
   import { componentFor } from '../../layout/registry.js';
+  import { resolveOptions } from '../../layout/blocks.js';
   import { anchors } from '../../character/index.js';
   import type { BlockInstance } from '../../layout/types.js';
   import BlockControls from './BlockControls.svelte';
@@ -54,6 +55,7 @@
             {#if Block}
               <Block
                 variant={block.variant}
+                options={resolveOptions(block)}
                 height={block.height}
                 editing={$editMode}
                 onResize={(h) => ctrl.setHeight(block.id, h)}

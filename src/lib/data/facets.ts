@@ -48,13 +48,36 @@ export function entryMatches(
   return true;
 }
 
+/**
+ * How well an entry's name answers a query: exact, then prefix, then a match
+ * starting some later word, then anywhere at all.
+ *
+ * Without it results come back in catalog order, which buries the thing you
+ * typed: searching "Dwarf" answered with "Dwarf (Duergar)" and left the Dwarf
+ * itself further down the list.
+ */
+function nameRank(entryName: string, query: string): number {
+  const n = normalize(entryName);
+  const q = normalize(query);
+  if (n === q) return 0;
+  if (n.startsWith(q)) return 1;
+  return n.split(/[^a-z0-9]+/).some((word) => word.startsWith(q)) ? 2 : 3;
+}
+
 export function filterEntries(
   entries: NamedEntry[],
   name: string,
   facets: Facet[],
   selection: Selection
 ): NamedEntry[] {
-  return entries.filter((e) => entryMatches(e, name, facets, selection));
+  const hits = entries.filter((e) => entryMatches(e, name, facets, selection));
+  if (!name) return hits; // no query, nothing to be relevant to: keep catalog order
+  // Stable within a rank, so entries of equal relevance keep catalog order
+  // (which puts the core books first) rather than being reshuffled by name.
+  return hits
+    .map((entry, i) => ({ entry, rank: nameRank(entry.name, name), i }))
+    .sort((a, b) => a.rank - b.rank || a.i - b.i)
+    .map((r) => r.entry);
 }
 
 /** Compute the option list + counts for each facet, cross-filtered by the others. */

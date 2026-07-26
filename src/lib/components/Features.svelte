@@ -1,13 +1,8 @@
 <script lang="ts">
+  import { canEditBuild } from '../stores/mode.js';
   import {
     character,
     grantPool,
-    setRace,
-    setBackground,
-    removeFeat,
-    setSubclass,
-    setClassLevel,
-    removeClass,
     setSpellChoice,
     setFeatureOption,
     setOptionalChoice,
@@ -17,12 +12,10 @@
     setFeatureVariant,
     addFeatureTag,
     removeFeatureTag,
-    addCustomFeature,
     removeCustomFeature
   } from '../stores/character.js';
   import { openCustomEntry } from '../stores/customEntry.js';
   import { catalogState } from '../stores/catalog.js';
-  import { openBrowse } from '../stores/browse.js';
   import { openSpellPicker } from '../stores/spellPicker.js';
   import { openOptionalPicker } from '../stores/optionalPicker.js';
   import { openFeatPicker } from '../stores/featPicker.js';
@@ -39,6 +32,7 @@
   import { parseTaggedString, renderToHtml } from '../render/tags.js';
   import AsiEditor from './AsiEditor.svelte';
   import GrantChoiceEditor from './GrantChoiceEditor.svelte';
+  import QuickAdd from './QuickAdd.svelte';
   import UiIcon from './UiIcon.svelte';
   import { scrollStyle, resizePersist } from './scrollCell.js';
 
@@ -96,11 +90,6 @@
   const autoHidden = (f: Feature) => /ability score improvement/i.test(f.name);
   const customTags = (f: Feature) => $character.featureMeta[metaKey(f)]?.tags ?? [];
   const ownText = (f: Feature) => $character.featureMeta[metaKey(f)]?.description;
-
-  function addFeature() {
-    const name = window.prompt('Name of the feature');
-    if (name?.trim()) addCustomFeature(name.trim());
-  }
 
   // --- ASI + pending-choice tracking ---
   const isAsi = (f: Feature) => /ability score improvement/i.test(f.name);
@@ -198,9 +187,10 @@
       {#if f.subtitle}<span class="sub">{f.subtitle}</span>{/if}
       {#if pending > 0}<span class="pbadge" title="{pending} choice{pending === 1 ? '' : 's'} to make">{pending}</span>{/if}
       {#each customTags(f) as t}
-        <span class="ctag">{t}<button class="x" title="Remove tag" onclick={() => removeFeatureTag(metaKey(f), t)}><UiIcon name="close" size="0.8em" /></button></span>
+        <span class="ctag">{t}{#if $canEditBuild}<button class="x" title="Remove tag" onclick={() => removeFeatureTag(metaKey(f), t)}><UiIcon name="close" size="0.8em" /></button>{/if}</span>
       {/each}
       <span class="spacer"></span>
+      {#if $canEditBuild}
       <button
         class="mini describe"
         class:has={!!ownText(f)}
@@ -210,6 +200,17 @@
       >⋯</button>
       <button class="mini" title="Add tag" onclick={() => addTag(f)}>#</button>
       <button class="mini" title={hideable ? 'Hide' : 'Unhide'} onclick={() => setFeatureHidden(metaKey(f), hideable)}><UiIcon name={hideable ? 'eye-off' : 'eye'} /></button>
+      {/if}
+      {#if f.customId && $canEditBuild}
+        <!-- Only the player's own features can be deleted; the rest go when
+             whatever grants them goes. -->
+        <button
+          class="mini remove"
+            title="Remove this feature"
+          aria-label="Remove feature"
+          onclick={() => removeCustomFeature(f.customId!)}
+        ><UiIcon name="close" /></button>
+      {/if}
       <button class="mini" title={expanded.has(featKey(f)) ? 'Collapse' : 'Expand'} onclick={() => toggleExpand(f)}><UiIcon name={expanded.has(featKey(f)) ? 'chevron-down' : 'chevron-right'} /></button>
     </div>
 
@@ -220,7 +221,7 @@
           <GrantChoiceEditor choice={field} />
         {/each}
         {#if isAsi(f)}
-          <select class="opt" value={asiMode(f)} title="Ability increase or feat"
+          <select class="opt" value={asiMode(f)} disabled={!$canEditBuild} title="Ability increase or feat"
             onchange={(e) => setAsiMode(f, (e.target as HTMLSelectElement).value)}>
             <option value="ability">Ability increase</option>
             <option value="feat">Feat</option>
@@ -231,16 +232,16 @@
             {@const feat = featValue(f)}
             {#if feat}
               <span class="pill picked">
-                <button class="pname" title="Change" onclick={() => openFeatPicker({ key: asiKey(f), label: `${f.name}: choose a feat` })}>{feat.name}</button>
-                <button class="x" aria-label="Clear" onclick={() => setFeatChoice(asiKey(f), undefined)}><UiIcon name="close" size="0.85em" /></button>
+                <button class="pname" title="Change" disabled={!$canEditBuild} onclick={() => openFeatPicker({ key: asiKey(f), label: `${f.name}: choose a feat` })}>{feat.name}</button>
+                <button class="x" aria-label="Clear" disabled={!$canEditBuild} onclick={() => setFeatChoice(asiKey(f), undefined)}><UiIcon name="close" size="0.85em" /></button>
               </span>
             {:else}
-              <button class="pill empty" onclick={() => openFeatPicker({ key: asiKey(f), label: `${f.name}: choose a feat` })}>+ choose feat</button>
+              <button class="pill empty" disabled={!$canEditBuild} onclick={() => openFeatPicker({ key: asiKey(f), label: `${f.name}: choose a feat` })}>+ choose feat</button>
             {/if}
           {/if}
         {/if}
         {#each optionsFor(f) as opt (opt.key)}
-          <select class="opt" value={$character.featureOptions[opt.key] ?? ''} title={opt.label}
+          <select class="opt" value={$character.featureOptions[opt.key] ?? ''} disabled={!$canEditBuild} title={opt.label}
             onchange={(e) => setFeatureOption(opt.key, (e.target as HTMLSelectElement).value || undefined)}>
             <option value="">{opt.label}…</option>
             {#each opt.options as o}<option value={o.value}>{o.label}</option>{/each}
@@ -250,11 +251,11 @@
           {@const picked = $character.spellChoices[field.key]}
           {#if picked}
             <span class="pill picked">
-              <button class="pname" title="Change" onclick={() => openSpellPicker(field)}>{picked.name}</button>
-              <button class="x" aria-label="Clear" onclick={() => setSpellChoice(field.key, undefined)}><UiIcon name="close" size="0.85em" /></button>
+              <button class="pname" title="Change" disabled={!$canEditBuild} onclick={() => openSpellPicker(field)}>{picked.name}</button>
+              <button class="x" aria-label="Clear" disabled={!$canEditBuild} onclick={() => setSpellChoice(field.key, undefined)}><UiIcon name="close" size="0.85em" /></button>
             </span>
           {:else}
-            <button class="pill empty" title={field.label} onclick={() => openSpellPicker(field)}>+ choose spell</button>
+            <button class="pill empty" disabled={!$canEditBuild} title={field.label} onclick={() => openSpellPicker(field)}>+ choose spell</button>
           {/if}
         {/each}
       </div>
@@ -287,11 +288,11 @@
         {@const picked = $character.optionalChoices[slotKey(p, i)]}
         {#if picked}
           <span class="pill picked">
-            <button class="pname" title="Change" onclick={() => openOptionalPicker({ key: slotKey(p, i), types: p.featureType, label: `Choose ${slotNoun(p)}` })}>{picked.name}</button>
-            <button class="x" aria-label="Clear" onclick={() => setOptionalChoice(slotKey(p, i), undefined)}><UiIcon name="close" size="0.85em" /></button>
+            <button class="pname" title="Change" disabled={!$canEditBuild} onclick={() => openOptionalPicker({ key: slotKey(p, i), types: p.featureType, label: `Choose ${slotNoun(p)}` })}>{picked.name}</button>
+            <button class="x" aria-label="Clear" disabled={!$canEditBuild} onclick={() => setOptionalChoice(slotKey(p, i), undefined)}><UiIcon name="close" size="0.85em" /></button>
           </span>
         {:else}
-          <button class="pill empty" onclick={() => openOptionalPicker({ key: slotKey(p, i), types: p.featureType, label: `Choose ${slotNoun(p)}` })}>+ choose {slotNoun(p)}</button>
+          <button class="pill empty" disabled={!$canEditBuild} onclick={() => openOptionalPicker({ key: slotKey(p, i), types: p.featureType, label: `Choose ${slotNoun(p)}` })}>+ choose {slotNoun(p)}</button>
         {/if}
       {/each}
     </div>
@@ -313,71 +314,6 @@
     <h3>Features &amp; Traits</h3>
     {#if totalPending + totalProgPending > 0}<span class="hdr-pending">{totalPending + totalProgPending} pending choice{totalPending + totalProgPending === 1 ? '' : 's'}</span>{/if}
   </header>
-
-  <div class="setup">
-    <div class="line">
-      <span class="k">Race</span>
-      {#if $character.race}
-        <span class="v">{$character.race.name}</span>
-        <button class="x" onclick={() => setRace(undefined)} aria-label="Clear race"><UiIcon name="close" size="0.85em" /></button>
-      {:else}
-        <button class="choose" onclick={() => openBrowse('race')}>Choose…</button>
-      {/if}
-    </div>
-    <div class="line">
-      <span class="k">Background</span>
-      {#if $character.background}
-        <span class="v">{$character.background.name}</span>
-        <button class="x" onclick={() => setBackground(undefined)} aria-label="Clear background"><UiIcon name="close" size="0.85em" /></button>
-      {:else}
-        <button class="choose" onclick={() => openBrowse('background')}>Choose…</button>
-      {/if}
-    </div>
-    <div class="line classes">
-      <span class="k">Classes</span>
-      {#each $character.classes as cls, i}
-        <span class="classchip">
-          <span class="cname">{cls.name}</span>
-          <input
-            class="lvl"
-            type="number"
-            min="1"
-            max="20"
-            value={cls.level}
-            title="{cls.name} level"
-            onchange={(e) => setClassLevel(i, Number((e.target as HTMLInputElement).value) || 1)}
-          />
-          <select
-            class="sub"
-            value={cls.subclass ?? ''}
-            title="Subclass"
-            onchange={(e) => setSubclass(i, (e.target as HTMLSelectElement).value || undefined)}
-          >
-            <option value="">subclass…</option>
-            {#each ($catalogState.catalog?.classData.subclass ?? []).filter((s) => String(s.className).toLowerCase() === cls.name.toLowerCase()) as sc}
-              <option value={String(sc.shortName ?? sc.name)}>{sc.name}</option>
-            {/each}
-          </select>
-          <button class="x" title="Remove class" onclick={() => removeClass(i)}><UiIcon name="close" size="0.85em" /></button>
-        </span>
-      {/each}
-      <button class="choose" onclick={() => openBrowse('class')}>+ Class</button>
-    </div>
-    <div class="line feats">
-      <span class="k">Feats</span>
-      {#each $character.feats as f, i}
-        <span class="ctag">{f.name}<button class="x" aria-label="Remove feat" onclick={() => removeFeat(i)}><UiIcon name="close" size="0.8em" /></button></span>
-      {/each}
-      <button class="choose" onclick={() => openBrowse('feat')}>+ Feat</button>
-    </div>
-    <div class="line custom">
-      <span class="k">Custom</span>
-      {#each $character.customFeatures ?? [] as f (f.id)}
-        <span class="ctag">{f.name}<button class="x" aria-label="Remove feature" onclick={() => removeCustomFeature(f.id)}><UiIcon name="close" size="0.8em" /></button></span>
-      {/each}
-      <button class="choose" onclick={addFeature}>+ Feature</button>
-    </div>
-  </div>
 
   {#if sources.length > 0}
     <div class="srcfilter">
@@ -424,7 +360,7 @@
             <label class="vtoggle">
               <input
                 type="checkbox"
-                checked={f.variantEnabled}
+                        checked={f.variantEnabled}
                 onchange={(e) => setFeatureVariant(f.variantKey!, (e.target as HTMLInputElement).checked)}
               />
               <span class="fname">{f.name}</span>
@@ -440,6 +376,8 @@
   {#if features.length === 0 && !$catalogState.catalog}
     <p class="empty">Load game data to see class features.</p>
   {/if}
+
+  <QuickAdd kind="feature" />
 </section>
 
 <style>
@@ -447,17 +385,8 @@
   .bhead { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.6rem; }
   h3 { margin: 0; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
   .hdr-pending { font-size: 0.72rem; font-weight: 600; color: #fff; background: var(--accent); border-radius: 999px; padding: 0.05rem 0.5rem; }
-  .setup { display: flex; flex-direction: column; gap: 0.3rem; padding-bottom: 0.5rem; margin-bottom: 0.5rem; border-bottom: 1px solid var(--line); }
-  .line { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
-  .k { font-size: 0.7rem; text-transform: uppercase; color: var(--muted); min-width: 6rem; }
-  .v { font-weight: 600; }
-  .choose, select { font: inherit; font-size: 0.78rem; padding: 0.15rem 0.5rem; border: 1px solid var(--line); background: var(--bg); color: var(--fg); border-radius: 6px; cursor: pointer; }
-  .choose { color: var(--accent); border-color: var(--accent); }
+  select { font: inherit; font-size: 0.78rem; padding: 0.15rem 0.5rem; border: 1px solid var(--line); background: var(--bg); color: var(--fg); border-radius: 6px; cursor: pointer; }
   .ctag { display: inline-flex; align-items: center; gap: 0.1rem; font-size: 0.72rem; padding: 0.05rem 0.4rem; border: 1px solid var(--line); border-radius: 999px; }
-  .classchip { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.1rem 0.3rem 0.1rem 0.5rem; border: 1px solid var(--line); border-radius: 8px; }
-  .classchip .cname { font-weight: 600; font-size: 0.78rem; }
-  .classchip .lvl { width: 6ch; min-width: 6ch; font: inherit; font-size: 0.76rem; text-align: center; padding: 0.05rem 0.25rem; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--fg); }
-  .classchip .sub { font-size: 0.72rem; max-width: 11rem; }
   .x { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.95rem; line-height: 1; padding: 0; }
   .x:hover { color: var(--accent); }
 
@@ -477,6 +406,7 @@
   .spacer { flex: 1; }
   .mini { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.85rem; opacity: 0.7; padding: 0 0.1rem; }
   .mini:hover { opacity: 1; }
+  .remove:hover { color: var(--accent); }
   .choices { display: flex; flex-wrap: wrap; gap: 0.3rem; padding: 0.15rem 0 0.25rem 0.2rem; }
   .opt { font-size: 0.74rem; }
   .grantlabel { font-size: 0.72rem; color: var(--muted); align-self: center; }

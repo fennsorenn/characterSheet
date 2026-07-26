@@ -152,11 +152,58 @@ export function assertEqual(actual, expected, message) {
 
 export const cell = (page, title) => page.locator('.cell', { hasText: title });
 
-/** Add a race or feat via the Features block's browse overlay. */
+/** The dock: one edge-anchored surface holding what three bars used to. */
+export const dock = (page) => page.locator('aside.dock');
+
+/** Open the dock (side rail widened / mobile panel up). Idempotent. */
+export async function openDock(page) {
+  const d = dock(page);
+  if (!(await d.evaluate((el) => el.classList.contains('open')))) {
+    await d.locator('button[title="More"]').click();
+    await page.waitForTimeout(200);
+  }
+}
+
+export async function closeDock(page) {
+  const d = dock(page);
+  if (await d.evaluate((el) => el.classList.contains('open'))) {
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(200);
+  }
+}
+
+/**
+ * Click one of the dock's always-visible controls by its label (Dice, Buff,
+ * Notes, Add). These need no expansion — that is the point of the first layer.
+ */
+export async function dockControl(page, label) {
+  await dock(page).locator('button', { has: page.locator(`.lb:text-is("${label}")`) }).first().click();
+  await page.waitForTimeout(200);
+}
+
+/** Click something that lives in the dock's expanded menu, opening it first. */
+export async function dockMenu(page, label) {
+  await openDock(page);
+  await dock(page).locator('button', { hasText: label }).first().click();
+  await page.waitForTimeout(250);
+}
+
+/** Choose a layout template (the select lives in the dock's menu). */
+export async function selectTemplate(page, value) {
+  await openDock(page);
+  await dock(page).locator('select.preset').selectOption(value);
+  await page.waitForTimeout(300);
+  await closeDock(page);
+}
+
+/** The block holding the race/background/class/feat selectors. */
+export const buildCell = (page) => cell(page, 'Race, Class & Feats');
+
+/** Add a race or feat via the build block's browse overlay. */
 export async function browseAdd(page, kind, name) {
-  const features = cell(page, 'Features & Traits');
-  if (kind === 'race') await features.locator('.line', { hasText: 'Race' }).locator('.choose').click();
-  else await features.locator('.line.feats .choose', { hasText: 'Feat' }).click();
+  const build = buildCell(page);
+  if (kind === 'race') await build.locator('.line', { hasText: 'Race' }).locator('.choose').click();
+  else await build.locator('.line.feats .choose', { hasText: 'Feat' }).click();
   await page.waitForSelector('.overlay', { timeout: 5000 });
   await page.fill('.overlay input.search', name);
   await page.waitForTimeout(350);
@@ -167,9 +214,9 @@ export async function browseAdd(page, kind, name) {
   await page.waitForTimeout(150);
 }
 
-/** Add a class from the catalog via the Features block's "+ Class" browse. */
+/** Add a class from the catalog via the build block's "+ Class" browse. */
 export async function addClassFromCatalog(page, name) {
-  const line = cell(page, 'Features & Traits').locator('.line.classes');
+  const line = buildCell(page).locator('.line.classes');
   await line.locator('.choose', { hasText: 'Class' }).click();
   await page.waitForSelector('.overlay', { timeout: 5000 });
   await page.fill('.overlay input.search', name);

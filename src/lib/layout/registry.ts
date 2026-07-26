@@ -12,6 +12,7 @@ import Effects from '../components/Effects.svelte';
 import Conditions from '../components/Conditions.svelte';
 import RestLevelUp from '../components/RestLevelUp.svelte';
 import Attacks from '../components/Attacks.svelte';
+import CharacterBuild from '../components/CharacterBuild.svelte';
 import Features from '../components/Features.svelte';
 import Traits from '../components/Traits.svelte';
 import Notes from '../components/Notes.svelte';
@@ -23,6 +24,8 @@ import Notes from '../components/Notes.svelte';
  */
 export type BlockComponent = Component<{
   variant?: string;
+  /** Resolved content switches for this instance (see `resolveOptions`). */
+  options?: Record<string, boolean>;
   /** Scrollable list blocks: the persisted height cap and edit/resize wiring. */
   height?: number;
   editing?: boolean;
@@ -43,6 +46,7 @@ const COMPONENTS: Record<string, BlockComponent> = {
   conditions: Conditions as BlockComponent,
   restLevelUp: RestLevelUp as BlockComponent,
   attacks: Attacks as BlockComponent,
+  characterBuild: CharacterBuild as BlockComponent,
   features: Features as BlockComponent,
   traits: Traits as BlockComponent,
   notes: Notes as BlockComponent

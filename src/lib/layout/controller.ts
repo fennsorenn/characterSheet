@@ -16,6 +16,8 @@ export interface LayoutController {
   moveBlock(id: string, dir: -1 | 1): void;
   reorderBlock(fromId: string, toId: string): void;
   setVariant(id: string, variant: string): void;
+  /** Turn one of a block's content options on or off. */
+  setOption(id: string, key: string, on: boolean): void;
   cycleSize(id: string): void;
   setSize(id: string, size: BlockSize): void;
   /** Toggle stacking this block below the previous one (split cell). */

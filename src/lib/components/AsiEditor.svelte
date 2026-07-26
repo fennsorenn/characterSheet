@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { canEditBuild } from '../stores/mode.js';
   import { setAbilityChoice } from '../stores/character.js';
   import { ABILITIES, ABILITY_NAMES, type Ability } from '../character/index.js';
 
@@ -30,16 +31,16 @@
 </script>
 
 <div class="asi">
-  <select value={mode} onchange={(e) => commit((e.target as HTMLSelectElement).value as 'one' | 'two', aVal, bVal)}>
+  <select disabled={!$canEditBuild} value={mode} onchange={(e) => commit((e.target as HTMLSelectElement).value as 'one' | 'two', aVal, bVal)}>
     <option value="one">+2 to one</option>
     <option value="two">+1 to two</option>
   </select>
-  <select value={aVal} onchange={(e) => commit(mode, (e.target as HTMLSelectElement).value as Ability | '', bVal)}>
+  <select disabled={!$canEditBuild} value={aVal} onchange={(e) => commit(mode, (e.target as HTMLSelectElement).value as Ability | '', bVal)}>
     <option value="">—</option>
     {#each ABILITIES as ab}<option value={ab}>{ABILITY_NAMES[ab].slice(0, 3)}</option>{/each}
   </select>
   {#if mode === 'two'}
-    <select value={bVal} onchange={(e) => commit(mode, aVal, (e.target as HTMLSelectElement).value as Ability | '')}>
+    <select disabled={!$canEditBuild} value={bVal} onchange={(e) => commit(mode, aVal, (e.target as HTMLSelectElement).value as Ability | '')}>
       <option value="">—</option>
       {#each ABILITIES as ab}<option value={ab}>{ABILITY_NAMES[ab].slice(0, 3)}</option>{/each}
     </select>

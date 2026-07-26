@@ -13,6 +13,8 @@ export function labelForNode(id: string): string {
     'ac.maxDex': 'Max Dex Bonus',
     initiative: 'Initiative',
     'passive.perception': 'Passive Perception',
+    'passive.investigation': 'Passive Investigation',
+    'passive.insight': 'Passive Insight',
     'spell.dc': 'Spell Save DC',
     'spell.attack': 'Spell Attack Bonus'
   };

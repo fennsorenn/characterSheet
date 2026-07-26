@@ -1,4 +1,4 @@
-import { cell, multiclass, assert, assertEqual } from '../harness.mjs';
+import { cell, buildCell, multiclass, assert, assertEqual } from '../harness.mjs';
 
 async function litSaves(page) {
   const saves = cell(page, 'Saving Throws');
@@ -32,7 +32,7 @@ export default async function ({ page }) {
   // Multiclass into Cleric: gains its armor subset, but NO new saving throws.
   await multiclass(page, 'Cleric', 'PHB');
   assert(
-    (await cell(page, 'Features & Traits').locator('.line', { hasText: 'Cleric subclass' }).count()) === 1,
+    (await buildCell(page).locator('.line', { hasText: 'Cleric subclass' }).count()) === 1,
     'Cleric was added as a second class'
   );
   assertEqual(await litSaves(page), ['Strength', 'Constitution'], 'multiclassing adds no saving-throw proficiencies');
