@@ -1,6 +1,6 @@
 import { ABILITIES, ABILITY_NAMES, SKILLS, type Ability } from './abilities.js';
 import type { Character, CharacterModifier } from './schema.js';
-import { allFeatRefs } from './schema.js';
+import { allFeatRefs, CUSTOM_SOURCE } from './schema.js';
 import type { Catalog, NamedEntry } from '../data/catalog.js';
 
 /**
@@ -310,7 +310,34 @@ export function gatherGrants(character: Character, catalog: Catalog): GrantPool 
     const entry = findRef(catalog.entries.class, cls);
     if (entry) gatherClass(entry, character, pool, i === 0);
   });
+  gatherCustom(character, pool);
   return pool;
+}
+
+/**
+ * The player's own movement, senses and proficiencies, merged into the same
+ * pool as everything a race or feat grants.
+ *
+ * Doing it here rather than in each block means a hand-added weapon proficiency
+ * reaches the attack rows, a hand-added skill proficiency reaches the graph, and
+ * a hand-added swim speed reaches the traits row — none of which know it was
+ * typed rather than granted.
+ */
+export function gatherCustom(character: Character, pool: GrantPool): void {
+  for (const g of character.customGrants ?? []) {
+    if (g.kind === 'set') {
+      if (!g.member.trim()) continue;
+      pool.sets.push({ category: g.category as SetCategory, member: g.member.trim(), source: CUSTOM_SOURCE });
+    } else if (Number.isFinite(g.feet)) {
+      const prefix = g.kind === 'speed' ? 'speed' : 'sense';
+      pool.numeric.push({
+        target: `${prefix}.${g.name.trim().toLowerCase()}`,
+        source: CUSTOM_SOURCE,
+        value: g.feet,
+        combine: 'max'
+      });
+    }
+  }
 }
 
 /** Numeric grants as graph modifiers (sum-combined targets; max ones are skipped by the graph). */

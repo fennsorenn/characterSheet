@@ -53,3 +53,15 @@ export const PROFICIENCY_MULTIPLIER: Record<ProficiencyLevel, number> = {
 export function skillNodeId(skill: string): string {
   return `skill.${skill.replace(/\s+/g, '.')}`;
 }
+
+/**
+ * Nodes for the player's own skills and attacks, keyed by the entry's id rather
+ * than its name: a custom skill can be renamed, and a node id that moved would
+ * strand every reminder and modifier pointing at it.
+ */
+export function customSkillNode(id: string): string {
+  return `skill.custom.${id}`;
+}
+export function customAttackNode(id: string): string {
+  return `attack.custom.${id}.hit`;
+}

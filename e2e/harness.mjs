@@ -152,6 +152,15 @@ export function assertEqual(actual, expected, message) {
 
 export const cell = (page, title) => page.locator('.cell', { hasText: title });
 
+/**
+ * One block by its heading. Narrower than `cell`: a split cell holds two blocks,
+ * and `cell` matches on text anywhere inside it — so "Skills" also matches the
+ * traits block's "Choose 2 skills", and Inventory's cell may lead with Attacks.
+ * Use this whenever the assertion is about one block's own controls.
+ */
+export const block = (page, title) =>
+  page.locator('section.block', { has: page.locator(`h3:text-is("${title}")`) }).first();
+
 /** The dock: one edge-anchored surface holding what three bars used to. */
 export const dock = (page) => page.locator('aside.dock');
 

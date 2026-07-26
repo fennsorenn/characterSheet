@@ -24,6 +24,10 @@ import {
   type Buff,
   type CatalogRef,
   type Character,
+  type CustomGrant,
+  type NewCustomGrant,
+  type CustomSkill,
+  type CustomAttack,
   type GrantPool,
   type LevelUpPlan,
   type NoteDoc,
@@ -543,6 +547,79 @@ export function addCustomFeature(name: string) {
   }));
 }
 
+/**
+ * Movement, senses and proficiencies added by hand. They join the same grant
+ * pool a race feeds, so nothing downstream has to know they were typed.
+ */
+export function addCustomGrant(grant: NewCustomGrant) {
+  update((c) => ({
+    ...c,
+    customGrants: [...(c.customGrants ?? []), { ...grant, id: crypto.randomUUID() } as CustomGrant]
+  }));
+}
+
+export function removeCustomGrant(id: string) {
+  update((c) => ({ ...c, customGrants: (c.customGrants ?? []).filter((g) => g.id !== id) }));
+}
+
+/** A skill the game doesn't have — it names its own ability and tier. */
+export function addCustomSkill(name: string, ability: Ability = 'int') {
+  const trimmed = name.trim();
+  if (!trimmed) return;
+  update((c) => ({
+    ...c,
+    customSkills: [
+      ...(c.customSkills ?? []),
+      { id: crypto.randomUUID(), name: trimmed, ability, proficiency: 'proficient' as ProficiencyLevel }
+    ]
+  }));
+}
+
+export function updateCustomSkill(id: string, patch: Partial<Omit<CustomSkill, 'id'>>) {
+  update((c) => ({
+    ...c,
+    customSkills: (c.customSkills ?? []).map((s) => (s.id === id ? { ...s, ...patch } : s))
+  }));
+}
+
+export function removeCustomSkill(id: string) {
+  update((c) => ({ ...c, customSkills: (c.customSkills ?? []).filter((s) => s.id !== id) }));
+}
+
+/** Cycle a custom skill through the same tiers as a real one. */
+export function cycleCustomSkillProficiency(id: string) {
+  update((c) => ({
+    ...c,
+    customSkills: (c.customSkills ?? []).map((s) =>
+      s.id === id ? { ...s, proficiency: nextProficiency(s.proficiency) } : s
+    )
+  }));
+}
+
+/** An attack that isn't a weapon in the pack. */
+export function addCustomAttack(name: string) {
+  const trimmed = name.trim();
+  if (!trimmed) return;
+  update((c) => ({
+    ...c,
+    customAttacks: [
+      ...(c.customAttacks ?? []),
+      { id: crypto.randomUUID(), name: trimmed, ability: 'str' as Ability, proficient: true }
+    ]
+  }));
+}
+
+export function updateCustomAttack(id: string, patch: Partial<Omit<CustomAttack, 'id'>>) {
+  update((c) => ({
+    ...c,
+    customAttacks: (c.customAttacks ?? []).map((a) => (a.id === id ? { ...a, ...patch } : a))
+  }));
+}
+
+export function removeCustomAttack(id: string) {
+  update((c) => ({ ...c, customAttacks: (c.customAttacks ?? []).filter((a) => a.id !== id) }));
+}
+
 /** Remove a custom feature, and the overrides that were keyed to its name. */
 export function removeCustomFeature(id: string) {
   update((c) => {
@@ -588,12 +665,16 @@ export function toggleSaveProficiency(ability: Ability) {
   });
 }
 
+/** The tiers a proficiency dot cycles through, in order. */
+const PROF_CYCLE: ProficiencyLevel[] = ['none', 'proficient', 'expertise'];
+const nextProficiency = (current: ProficiencyLevel): ProficiencyLevel =>
+  PROF_CYCLE[(PROF_CYCLE.indexOf(current) + 1) % PROF_CYCLE.length];
+
 /** Cycle a skill through none → proficient → expertise → none. */
 export function cycleSkillProficiency(skill: Skill) {
-  const order: ProficiencyLevel[] = ['none', 'proficient', 'expertise'];
   update((c) => {
     const current = c.skillProficiencies[skill] ?? 'none';
-    const next = order[(order.indexOf(current) + 1) % order.length];
+    const next = nextProficiency(current);
     const skillProficiencies = { ...c.skillProficiencies };
     if (next === 'none') delete skillProficiencies[skill];
     else skillProficiencies[skill] = next;
