@@ -4,7 +4,7 @@
   import { reminderMode, toggleReminderMode } from '../stores/reminders.js';
   import { diceOpen } from '../stores/dice.js';
   import { catalogState } from '../stores/catalog.js';
-  import { pinned } from '../stores/detail.js';
+  import { pinned, openDetail } from '../stores/detail.js';
   import { editMode, toggleEdit, layoutList, selectLayout } from '../stores/layout.js';
   import { screenCategory } from '../stores/screen.js';
   import { SCREEN_LABELS } from '../layout/screen.js';
@@ -71,6 +71,21 @@
     wasDiceOpen = isOpen;
     wasDiceShown = isShown;
   });
+
+  /**
+   * Expanding a pinned creature. On a phone the statblock unfolds in the dock's
+   * panel, because there is nowhere else for it; anywhere wider it goes to the
+   * detail window, which can be dragged and read at a sensible width. The
+   * creature's own params travel with it so a summon keeps the caster stats it
+   * was pinned at.
+   */
+  function expandCreature(c: (typeof $pinned)[number], el?: HTMLElement) {
+    if (bottom) {
+      toggleDockView({ kind: 'creature', id: c.id });
+      return;
+    }
+    openDetail('creature', c.entry, el ?? null, c.params?.spellLevel, c.params);
+  }
 
   function onBrowse() {
     closeDock();
@@ -213,7 +228,7 @@
           <button
             class="cb"
             class:on={openCreature === c.id}
-            onclick={() => toggleDockView({ kind: 'creature', id: c.id })}
+            onclick={(e) => expandCreature(c, e.currentTarget)}
           >
             <span class="top">
               <span class="nm">{c.entry.name}</span>
@@ -246,13 +261,13 @@
         {#if open}<div class="sec">Open creatures</div>{:else}<div class="hair"></div>{/if}
         {#each $pinned as c (c.id)}
           {#if open}
-            <PinnedCreature
-              {c}
-              open={openCreature === c.id}
-              onToggle={() => toggleDockView({ kind: 'creature', id: c.id })}
-            />
+            <PinnedCreature {c} onToggle={(el) => expandCreature(c, el)} />
           {:else}
-            <button class="stub" title="{c.entry.name} — {c.hp.current}/{c.hp.max} HP" onclick={() => toggleDockView({ kind: 'creature', id: c.id })}>
+            <button
+              class="stub"
+              title="{c.entry.name} — {c.hp.current}/{c.hp.max} HP"
+              onclick={(e) => expandCreature(c, e.currentTarget)}
+            >
               <span class="sn">{c.entry.name.slice(0, 4)}</span>
               <small>{c.hp.current}/{c.hp.max}</small>
             </button>

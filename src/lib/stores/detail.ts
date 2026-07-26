@@ -11,17 +11,30 @@ export interface DetailTarget {
   anchor: { x: number; y: number; width: number; height: number } | null;
   /** For a summon creature: the chosen spell level (defaults to its minimum). */
   spellLevel?: number;
+  /**
+   * Statblock params to render with, when the caller has its own. A pinned
+   * creature keeps the caster stats it was pinned at, so reopening it must not
+   * silently re-resolve against whatever the caster looks like now.
+   */
+  params?: StatblockParams;
 }
 
 export const detail = writable<DetailTarget | null>(null);
 
 /** Open the detail window for a catalog entry, anchored to the clicked element. */
-export function openDetail(kind: DetailKind, entry: NamedEntry, el?: Element | null, spellLevel?: number) {
+export function openDetail(
+  kind: DetailKind,
+  entry: NamedEntry,
+  el?: Element | null,
+  spellLevel?: number,
+  params?: StatblockParams
+) {
   const r = el?.getBoundingClientRect();
   detail.set({
     kind,
     entry,
     spellLevel,
+    params,
     anchor: r ? { x: r.x, y: r.y, width: r.width, height: r.height } : null
   });
 }

@@ -14,13 +14,19 @@
   import Statblock from './Statblock.svelte';
 
   /**
-   * One pinned creature: HP pool, damage/heal, legendary actions and recharges,
-   * with the full statblock behind a toggle. Lives in the dock — this used to be
-   * inline in a fixed dock of its own, which competed with everything else for
-   * the bottom of the screen.
+   * One pinned creature: HP pool, damage/heal, legendary actions and recharges.
+   *
+   * The full statblock only unfolds *inside* the card on a phone, where there is
+   * nowhere else to put it. Anywhere with room, the dock hands it to the detail
+   * window instead — a statblock in a 310px rail is a column of two-word lines.
+   * `onToggle` is what the caller does with a click; `open` is whether this card
+   * is the one showing it inline.
    */
-  let { c, open = false, onToggle }: { c: PinnedCreature; open?: boolean; onToggle?: () => void } =
-    $props();
+  let {
+    c,
+    open = false,
+    onToggle
+  }: { c: PinnedCreature; open?: boolean; onToggle?: (el: HTMLElement) => void } = $props();
 
   let amount = $state<number>(0);
 
@@ -50,7 +56,7 @@
 
 <div class="card" class:open>
   <header class="chead">
-    <button class="cname" title="Expand statblock" onclick={() => onToggle?.()}>{sb.name}</button>
+    <button class="cname" title="Expand statblock" onclick={(e) => onToggle?.(e.currentTarget)}>{sb.name}</button>
     {#if sb.acValue != null}<span class="ac" title={sb.ac}>AC {sb.acValue}</span>{/if}
     <button class="unpin" title="Unpin" aria-label="Unpin" onclick={() => unpinCreature(c.id)}>×</button>
   </header>

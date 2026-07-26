@@ -16,7 +16,10 @@
   const content = $derived(
     $detail && !isCreature ? detailContent($detail.kind as 'spell' | 'item', $detail.entry) : null
   );
-  const params = $derived<StatblockParams>({ ...$casterSummonParams, spellLevel: $detail?.spellLevel });
+  // A caller with its own params (a pinned creature) wins over the live ones.
+  const params = $derived<StatblockParams>(
+    $detail?.params ?? { ...$casterSummonParams, spellLevel: $detail?.spellLevel }
+  );
   const sb = $derived($detail && isCreature ? buildStatblock($detail.entry, params) : null);
   const title = $derived(isCreature ? sb?.name ?? '' : content?.title ?? '');
   // Effective summon level (chosen or the creature's minimum), for the control + pin.

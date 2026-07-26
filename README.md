@@ -53,7 +53,9 @@ in this repo.
   — dice, buff mode, reminders, quick add — and everything to do with building
   or exporting the sheet sits one expand away. Pinned creatures live in it too,
   so an open statblock and the controls share a surface instead of competing for
-  the same corner. Turning buff mode on opens it onto the list of buffs it is
+  the same corner — though the statblock itself only unfolds *inside* the dock
+  on a phone; anywhere wider it opens in the draggable detail window, since a
+  statblock in a 310px rail is a column of two-word lines. Turning buff mode on opens it onto the list of buffs it is
   applying, each clearable on its own. On a phone the dice roller opens in the
   dock as well — a 300px floating window on a 420px screen spent its life over
   the dock beneath it — while on wider screens it stays a window you can drag
