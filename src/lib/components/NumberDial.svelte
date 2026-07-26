@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { dialTarget, closeDial, coarsePointer } from '../stores/dial.js';
+  import { dialTarget, closeDial } from '../stores/dial.js';
   import {
     canBeNegative,
     digitCells,
@@ -115,20 +115,18 @@
       </div>
 
       <div class="readout">
-        <!-- A keyboard is still the fastest way in when there is one: on a fine
-             pointer the value itself stays typeable, dial or no dial. -->
-        {#if $coarsePointer}
-          <span class="val" aria-label="New value">{draft}</span>
-        {:else}
-          <input
-            class="val"
-            aria-label="New value"
-            inputmode="numeric"
-            value={typed ?? String(draft)}
-            oninput={(e) => (typed = (e.target as HTMLInputElement).value)}
-            onblur={commitTyped}
-          />
-        {/if}
+        <!-- The value stays a real field on every device: the dial is there so
+             the keyboard doesn't come up unasked, not to lock it away. Tapping
+             the number is the way back to typing, including "+7" deltas. -->
+        <input
+          class="val"
+          aria-label="New value"
+          inputmode="numeric"
+          value={typed ?? String(draft)}
+          oninput={(e) => (typed = (e.target as HTMLInputElement).value)}
+          onfocus={(e) => (e.target as HTMLInputElement).select()}
+          onblur={commitTyped}
+        />
         <span class="delta" class:up={draft > started} class:down={draft < started}>{delta}</span>
       </div>
       <p class="from">was {started}</p>
@@ -208,8 +206,12 @@
     color: var(--fg);
     padding: 0.1rem 0.2rem;
   }
-  input.val:hover { background: var(--field-hover); }
-  input.val:focus { outline: none; border-color: var(--accent); background: var(--bg); }
+  .val:hover { background: var(--field-hover); }
+  .val:focus { outline: none; border-color: var(--accent); background: var(--bg); }
+  /* Same field, a finger-sized target: a 5ch box is a fiddly thing to tap. */
+  @media (pointer: coarse) {
+    .val { padding: 0.3rem 0.5rem; border-color: var(--line); }
+  }
   .delta { font-variant-numeric: tabular-nums; font-size: 0.95rem; font-weight: 600; color: var(--muted); }
   .delta.up { color: #3fa45b; }
   .delta.down { color: #d2645a; }

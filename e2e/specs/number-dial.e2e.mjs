@@ -94,14 +94,32 @@ export default async function ({ page }) {
   assertEqual(await dial(page).count(), 0, 'Escape closes the dial');
   assertEqual(await storedHp(page), before + 10, 'without applying the change');
 
-  // --- A keyboard still works where there is one ---
+  // --- The value inside the dial stays a field, on every device ---
+  // The dial exists so a keyboard doesn't come up unasked, not to lock it away:
+  // tapping the number is the way back to typing.
   await hpCurrent(page).click();
   await page.waitForSelector('.dial[role=dialog]', { timeout: 5000 });
-  const field = dial(page).locator('input.val');
+  const field = dial(page).locator('.val');
+  assertEqual(await field.evaluate((el) => el.tagName.toLowerCase()), 'input', 'the readout is a field');
+  assertEqual(
+    await field.getAttribute('inputmode'),
+    'numeric',
+    'asking for the numeric keyboard rather than the full one'
+  );
   await field.fill('33');
   await dial(page).locator('button.primary').click();
   await page.waitForTimeout(400);
-  assertEqual(await storedHp(page), 33, 'typing into the dial works on a desktop');
+  assertEqual(await storedHp(page), 33, 'typing into the dial applies that value');
+
+  // It takes a delta the same way the plain field does.
+  await hpCurrent(page).click();
+  await page.waitForSelector('.dial[role=dialog]', { timeout: 5000 });
+  await dial(page).locator('.val').fill('+7');
+  await dial(page).locator('.arrow.up').first().click(); // blur commits the delta
+  await page.waitForTimeout(200);
+  assertEqual(await dial(page).locator('.delta').innerText(), '+107', 'a typed delta lands, arrows keep working');
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(200);
 
   // --- Bounds are respected, and dead arrows say so ---
   const score = cell(page, 'Ability Scores').locator('.ability', { hasText: 'Str' }).locator('.number-field').first();
