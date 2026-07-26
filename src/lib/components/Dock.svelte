@@ -10,7 +10,8 @@
   import { SCREEN_LABELS } from '../layout/screen.js';
   import { openPrint } from '../stores/print.js';
   import { navigate } from '../stores/router.js';
-  import { dockView, toggleDockView, closeDock, focusQuickAdd } from '../stores/dock.js';
+  import { dockView, toggleDockView, closeDock } from '../stores/dock.js';
+  import { openBrowse } from '../stores/browse.js';
   import { activeBuffs } from '../character/buffs.js';
   import { sheetMode, cycleSheetMode, setSheetMode, SHEET_MODES, MODE_LABELS, MODE_HINTS } from '../stores/mode.js';
   import DiceBody from './DiceBody.svelte';
@@ -41,7 +42,6 @@
   /** Which creature's statblock is expanded, if any. */
   const openCreature = $derived($dockView?.kind === 'creature' ? $dockView.id : null);
   const menuShown = $derived($dockView?.kind === 'menu');
-  const buffsShown = $derived($dockView?.kind === 'buffs');
   const diceShown = $derived($dockView?.kind === 'dice');
 
   /** Whether this character pins the active template to the current screen size. */
@@ -72,17 +72,12 @@
     wasDiceShown = isShown;
   });
 
-  function onBuff() {
-    const turningOn = !$buffMode;
-    toggleBuffMode();
-    // Turning it on opens onto the buffs, so the mode always shows what it is
-    // doing rather than leaving you to go looking. Turning it off puts it away.
-    dockView.set(turningOn ? { kind: 'buffs' } : null);
-  }
-
-  function onQuickAdd() {
+  function onBrowse() {
     closeDock();
-    focusQuickAdd();
+    // Browsing the catalog is a lookup, so it opens in any mode; whether a
+    // result can be added to the character is the mode's business, not this
+    // control's.
+    openBrowse('item');
   }
 
   function onEditLayout() {
@@ -106,7 +101,7 @@
   <button class="db" class:on={$diceOpen} title="Dice roller" onclick={() => diceOpen.update((v) => !v)}>
     <span class="g"><Icon name="dice" /></span><span class="lb">Dice</span>
   </button>
-  <button class="db" class:on={$buffMode} disabled={$sheetMode === 'read'} title="Apply edits as temporary buffs/debuffs" onclick={onBuff}>
+  <button class="db" class:on={$buffMode} disabled={$sheetMode === 'read'} title="Apply edits as temporary buffs/debuffs" onclick={toggleBuffMode}>
     <span class="g">✦</span><span class="lb">Buff</span>
     {#if buffs.length}<span class="ct">{buffs.length}</span>{/if}
   </button>
@@ -114,11 +109,11 @@
     <!-- Under the toggle it belongs to, not in a section of its own. -->
     {@render buffList()}
   {/if}
-  <button class="db" class:on={$reminderMode} disabled={$sheetMode !== 'edit'} title="Pin short notes next to skills, items, spells or whole blocks" onclick={toggleReminderMode}>
+  <button class="db" class:on={$reminderMode} title="Pin short notes next to skills, items, spells or whole blocks" onclick={toggleReminderMode}>
     <span class="g">◎</span><span class="lb">Notes</span>
     {#if reminderCount}<span class="ct">{reminderCount}</span>{/if}
   </button>
-  <button class="db" disabled={$sheetMode !== 'edit'} title="Search items, spells and feats" onclick={onQuickAdd}>
+  <button class="db" title="Browse &amp; filter the catalog" onclick={onBrowse}>
     <span class="g">⌕</span><span class="lb">Add</span>
   </button>
   <button
@@ -202,9 +197,8 @@
       <div class="panel">
         {#if diceShown}
           <DiceBody />
-        {:else if buffsShown}
-          {@render buffList()}
         {:else if menuShown}
+          {#if $buffMode}{@render buffList()}{/if}
           {@render menu()}
         {:else if openCreature}
           {@const c = $pinned.find((p) => p.id === openCreature)}
@@ -242,7 +236,7 @@
     {#if open}
       <div class="sec">
         In play
-        <button class="clr collapse" title="Collapse" aria-label="Collapse the dock" onclick={closeDock}>›</button>
+        <button class="collapse" title="Collapse" aria-label="Collapse the dock" onclick={closeDock}>›</button>
       </div>
     {/if}
     {@render controls(open)}
@@ -348,7 +342,18 @@
   }
   .clr { margin-left: auto; text-transform: none; letter-spacing: 0; font: inherit; font-size: 0.68rem; color: var(--accent); cursor: pointer; background: none; border: none; padding: 0; }
   .clr:disabled { color: var(--muted); cursor: not-allowed; }
-  .collapse { font-size: 1rem; line-height: 1; padding: 0 0.2rem; }
+  .collapse {
+    margin-left: auto;
+    font: inherit;
+    font-size: 1rem;
+    line-height: 1;
+    padding: 0 0.2rem;
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .collapse:hover { color: var(--accent); }
   .hint { margin: 0; font-size: 0.68rem; color: var(--muted); padding: 0.1rem 0.2rem 0.25rem; }
   .empty { margin: 0; font-size: 0.72rem; color: var(--muted); font-style: italic; padding: 0.2rem 0.3rem 0.4rem; }
   .hair { height: 1px; background: var(--line); margin: 0.25rem 0.1rem; width: 100%; }

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { quickAddFocus } from '../stores/dock.js';
+  import { canEditBuild } from '../stores/mode.js';
   import { searchIndex, catalogState } from '../stores/catalog.js';
   import { addInventoryItem, addSpell } from '../stores/character.js';
   import { openBrowse } from '../stores/browse.js';
@@ -46,23 +46,12 @@
     return text.length > 110 ? text.slice(0, 110) + '…' : text;
   }
 
-  // The dock's quick-add control has no field of its own; it points here.
-  let field = $state<HTMLInputElement | null>(null);
-  let lastFocusRequest = $quickAddFocus;
-  $effect(() => {
-    if ($quickAddFocus !== lastFocusRequest) {
-      lastFocusRequest = $quickAddFocus;
-      field?.focus();
-      field?.scrollIntoView({ block: 'nearest' });
-    }
-  });
 </script>
 
 {#if $searchIndex}
   <section class="search">
     <div class="bar">
       <input
-        bind:this={field}
         placeholder="Quick import — search items, spells, feats…"
         bind:value={query}
       />
@@ -86,12 +75,14 @@
             <span class="cat">{hit.category}</span>
             <span class="name">{hit.entry.name}</span>
             <span class="src">{hit.entry.source}</span>
-            {#if ADDABLE[hit.category]}
+            <!-- Searching is looking something up; only adding it changes the
+                 character, so that is what the mode gates. -->
+            {#if ADDABLE[hit.category] && $canEditBuild}
               <button class="add" title="Add to {ADDABLE[hit.category]}" onclick={() => add(hit)}>
                 + Add
               </button>
             {/if}
-            {#if hit.category === 'item' && $catalogState.catalog && hasVariants($catalogState.catalog.entries.item, hit.entry.name, String(hit.entry.source))}
+            {#if $canEditBuild && hit.category === 'item' && $catalogState.catalog && hasVariants($catalogState.catalog.entries.item, hit.entry.name, String(hit.entry.source))}
               <button
                 class="variant"
                 title="Add a magic variant of {hit.entry.name}"
@@ -105,7 +96,7 @@
         {:else}
           <li class="empty">No matches</li>
         {/each}
-        {#if category === 'item' || category === 'spell' || category === 'all'}
+        {#if $canEditBuild && (category === 'item' || category === 'spell' || category === 'all')}
           <li class="verbatim">
             <span class="hint">Not in the catalog?</span>
             {#if category === 'item' || category === 'all'}

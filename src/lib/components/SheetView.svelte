@@ -5,7 +5,6 @@
   import { browseOpen } from '../stores/browse.js';
   import { navigate } from '../stores/router.js';
   import { dataPanelOpen } from '../stores/ui.js';
-  import { canEditBuild } from '../stores/mode.js';
   import { screenCategory } from '../stores/screen.js';
   import DataImport from './DataImport.svelte';
   import QuickSearch from './QuickSearch.svelte';
@@ -42,9 +41,7 @@
     <hr />
   {/if}
 
-  <!-- The import bar only adds things, so it goes with the rest of the
-       build affordances rather than sitting there refusing input. -->
-  {#if $catalogState.catalog && $canEditBuild}
+  {#if $catalogState.catalog}
     <QuickSearch />
   {/if}
 

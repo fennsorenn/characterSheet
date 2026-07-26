@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { canEditBuild } from '../../stores/mode.js';
   import { get } from 'svelte/store';
   import { catalogState } from '../../stores/catalog.js';
   import { browseCategory, closeBrowse } from '../../stores/browse.js';
@@ -150,7 +151,7 @@
               {/if}
             </div>
             {#if ADDABLE.has(category)}
-              <button class="add" class:done={added.has(key(e))} onclick={() => add(e)}>
+              <button class="add" class:done={added.has(key(e))} disabled={!$canEditBuild} onclick={() => add(e)}>
                 {added.has(key(e)) ? (ADD_VERB[category] ?? '✓ Added') : '+ Add'}
               </button>
             {/if}

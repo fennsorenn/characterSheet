@@ -78,7 +78,25 @@ export default async function ({ page }) {
 
   // Affordances you cannot use are gone rather than greyed out.
   assertEqual(await page.locator('.cell .quickadd').count(), 0, 'no quick-add bars in play');
-  assertEqual(await page.locator('.search .bar input').count(), 0, 'and no import bar either');
+  // Looking something up is not editing, so the import bar and the dock's
+  // Notes and Add controls work in every mode; only adding is gated.
+  assertEqual(await page.locator('.search .bar input').count(), 1, 'the import bar stays');
+  for (const label of ['Notes', 'Add']) {
+    assert(
+      !(await dock(page).locator('.db', { has: page.locator(`.lb:text-is("${label}")`) }).first().isDisabled()),
+      `${label} works in play mode`
+    );
+  }
+  // Add opens the browse overlay, which is a catalog reference in any mode.
+  await dockControl(page, 'Add');
+  await page.waitForSelector('.overlay', { timeout: 5000 });
+  assert(true, 'browse opens in play mode');
+  assert(
+    await page.locator('.overlay button.add').first().isDisabled(),
+    'though its add buttons stay locked outside edit mode'
+  );
+  await page.locator('.overlay .close').click();
+  await page.waitForSelector('.overlay', { state: 'detached', timeout: 5000 });
   assertEqual(await page.locator('.cell button.rm').count(), 0, 'no remove buttons in play');
   assertEqual(await page.locator('.cell .mini.describe').count(), 0, 'no per-feature edit buttons');
   assert(

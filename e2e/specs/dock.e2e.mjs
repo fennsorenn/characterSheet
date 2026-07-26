@@ -28,9 +28,20 @@ export default async function ({ page }) {
   await dockControl(page, 'Notes');
   assertEqual(await page.locator('.reminder-banner').count(), 0, 'and off again');
 
-  // --- Buff mode lists the buffs it is applying ---
+  // --- Buff mode is a mode, not a panel ---
   await dockControl(page, 'Buff');
   const buffs = () => dock(page).locator('.buff');
+  assertEqual(
+    await dock(page).evaluate((el) => el.classList.contains('open')),
+    false,
+    'turning buff mode on leaves the dock as it was'
+  );
+  assert(
+    await dock(page).locator('.db', { hasText: 'Buff' }).first().evaluate((el) => el.classList.contains('on')),
+    'but the control is lit'
+  );
+  // The list shows wherever the dock happens to be open.
+  await openDock(page);
   assert((await dock(page).locator('.empty').count()) === 1, 'it says when nothing is buffed yet');
 
   // Type a delta into AC: buff mode turns that into a modifier on the node.
@@ -56,10 +67,15 @@ export default async function ({ page }) {
   await page.waitForTimeout(300);
   assertEqual(await buffs().count(), before - 1, 'the × clears just that buff');
 
-  await dock(page).locator('.clr').first().click(); // Clear all
+  await dock(page).locator('button.clr', { hasText: 'Clear all' }).first().click();
   await page.waitForTimeout(300);
   assertEqual(await buffs().count(), 0, 'clear all empties the list');
   await dockControl(page, 'Buff'); // back off
+  assert(
+    await dock(page).evaluate((el) => el.classList.contains('open')),
+    'and turning it off leaves the dock open too'
+  );
+  await closeDock(page);
 
   // --- The rest is one expand away ---
   assertEqual(await dock(page).locator('select.preset').count(), 0, 'the menu is closed to start');

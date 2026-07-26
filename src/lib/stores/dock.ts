@@ -10,7 +10,6 @@ import { writable } from 'svelte/store';
 export type DockView =
   | { kind: 'menu' }
   | { kind: 'dice' }
-  | { kind: 'buffs' }
   | { kind: 'creature'; id: string }
   | null;
 
@@ -33,14 +32,4 @@ export function openDockView(view: DockView) {
 
 export function closeDock() {
   dockView.set(null);
-}
-
-/**
- * Bumped to ask the quick-import field to take focus. A counter rather than a
- * boolean so asking twice in a row still fires the second time.
- */
-export const quickAddFocus = writable(0);
-
-export function focusQuickAdd() {
-  quickAddFocus.update((n) => n + 1);
 }
