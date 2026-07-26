@@ -1,4 +1,4 @@
-import { cell, assert } from '../harness.mjs';
+import { cell, assert, waitForData } from '../harness.mjs';
 
 // Floating dice roller: roll-all on an attack (advantage d20 + damage together),
 // detailed/concise toggle, and the log.
@@ -13,7 +13,7 @@ export default async function ({ page, baseUrl }) {
     localStorage.setItem('cs.char.test', JSON.stringify(c));
   });
   await page.goto(baseUrl + '/local/test', { waitUntil: 'networkidle' });
-  await page.waitForSelector('.data-toggle:has-text("Data ✓")', { timeout: 60000 });
+  await waitForData(page);
 
   // Open the roller and set advantage.
   await page.locator('header.top button', { hasText: 'Dice' }).click();
@@ -63,7 +63,7 @@ export default async function ({ page, baseUrl }) {
     localStorage.setItem('cs.char.test', JSON.stringify(c));
   });
   await page.goto(baseUrl + '/local/test', { waitUntil: 'networkidle' });
-  await page.waitForSelector('.data-toggle:has-text("Data ✓")', { timeout: 60000 });
+  await waitForData(page);
   await page.locator('header.top button', { hasText: 'Dice' }).click();
   await cell(page, 'Rest & Level Up').locator('button.roll', { hasText: 'Roll' }).first().click();
   await page.waitForTimeout(150);

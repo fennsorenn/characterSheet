@@ -7,6 +7,7 @@
   import { buildStatblock, type StatblockParams } from '../render/statblock.js';
   import Statblock from './Statblock.svelte';
   import UiIcon from './UiIcon.svelte';
+  import { placeWindow, createDrag } from './windowShell.js';
 
   const isCreature = $derived($detail?.kind === 'creature');
   const WIDTH = $derived(isCreature ? 420 : 360);
@@ -33,37 +34,14 @@
   });
 
   function place(anchor: { x: number; y: number; width: number; height: number } | null) {
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    const h = Math.min(vh * 0.7, 520);
-    if (!anchor) return { x: vw - WIDTH - 24, y: vh - h - 24 };
-    const right = anchor.x + anchor.width;
-    let x: number;
-    if (vw - right >= WIDTH + 24) x = right + 12;
-    else if (anchor.x >= WIDTH + 24) x = anchor.x - WIDTH - 12;
-    else x = vw - WIDTH - 12;
-    const y = Math.min(Math.max(anchor.y, 8), Math.max(8, vh - h - 8));
-    return { x: Math.max(8, x), y };
+    const view = { width: window.innerWidth, height: window.innerHeight };
+    return placeWindow(anchor, { width: WIDTH, height: Math.min(view.height * 0.7, 520) }, view);
   }
 
-  // --- drag ---
-  let drag: { dx: number; dy: number } | null = null;
-  function down(e: PointerEvent) {
-    if ((e.target as HTMLElement).closest('button, input, select')) return;
-    drag = { dx: e.clientX - pos.x, dy: e.clientY - pos.y };
-    (e.currentTarget as Element).setPointerCapture(e.pointerId);
-  }
-  function move(e: PointerEvent) {
-    if (!drag) return;
-    pos = {
-      x: Math.min(Math.max(0, e.clientX - drag.dx), window.innerWidth - 60),
-      y: Math.min(Math.max(0, e.clientY - drag.dy), window.innerHeight - 32)
-    };
-  }
-  function up(e: PointerEvent) {
-    drag = null;
-    (e.currentTarget as Element).releasePointerCapture?.(e.pointerId);
-  }
+  const drag = createDrag(
+    () => pos,
+    (p) => (pos = p)
+  );
 
   function popOut() {
     if (!content) return;
@@ -116,10 +94,13 @@
   }
 </script>
 
+<!-- Escape closes it, as it does every other overlay on the sheet. -->
+<svelte:window onkeydown={(e) => e.key === 'Escape' && $detail && closeDetail()} />
+
 {#if $detail}
   <div class="win" style="left:{pos.x}px; top:{pos.y}px; width:{WIDTH}px;" role="dialog" aria-label={title}>
     <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <header class="bar" onpointerdown={down} onpointermove={move} onpointerup={up}>
+    <header class="bar" onpointerdown={drag.down} onpointermove={drag.move} onpointerup={drag.up}>
       <span class="title">{title}</span>
       {#if isCreature}
         <button class="ic" title="Pin to the tracker dock" aria-label="Pin" onclick={pin}><UiIcon name="pin" size="0.95em" /></button>

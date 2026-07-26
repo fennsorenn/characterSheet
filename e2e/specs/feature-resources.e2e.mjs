@@ -1,4 +1,4 @@
-import { cell, assert } from '../harness.mjs';
+import { cell, assert, waitForData } from '../harness.mjs';
 
 // Implicit class/subclass resources (Channel Divinity, Rage, …) auto-appear with
 // the right pool size and recharge, and rest resets the right ones.
@@ -10,7 +10,7 @@ export default async function ({ page, baseUrl }) {
       localStorage.setItem('cs.char.test', JSON.stringify(c));
     }, patch);
     await page.goto(baseUrl + '/local/test', { waitUntil: 'networkidle' });
-    await page.waitForSelector('.data-toggle:has-text("Data ✓")', { timeout: 60000 });
+    await waitForData(page);
   }
 
   await setC({
@@ -44,7 +44,7 @@ export default async function ({ page, baseUrl }) {
     localStorage.setItem('cs.char.test', JSON.stringify(c));
   });
   await page.goto(baseUrl + '/local/test', { waitUntil: 'networkidle' });
-  await page.waitForSelector('.data-toggle:has-text("Data ✓")', { timeout: 60000 });
+  await waitForData(page);
   const bi = res.locator('li.auto', { hasText: 'Bardic Inspiration' });
   assert((await bi.count()) === 1, 'Bardic Inspiration auto-resource present (Bard)');
   assert((await bi.locator('.max').innerText()).trim() === '3', 'Bardic Inspiration max = CHA mod (+3 at 16)');
@@ -55,7 +55,7 @@ export default async function ({ page, baseUrl }) {
     localStorage.setItem('cs.char.test', JSON.stringify(c));
   });
   await page.goto(baseUrl + '/local/test', { waitUntil: 'networkidle' });
-  await page.waitForSelector('.data-toggle:has-text("Data ✓")', { timeout: 60000 });
+  await waitForData(page);
   assert(
     (await res.locator('li.auto', { hasText: 'Bardic Inspiration' }).locator('.max').innerText()).trim() === '5',
     'Bardic Inspiration tracks CHA (5 at 20)'

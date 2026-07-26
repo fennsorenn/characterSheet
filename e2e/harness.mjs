@@ -92,11 +92,20 @@ export async function ensureServer() {
 const TEST_SLUG = 'test';
 const sheetUrl = (baseUrl) => `${baseUrl.replace(/\/$/, '')}/local/${TEST_SLUG}`;
 
+/**
+ * Wait until a dataset is loaded. The import panel only renders while there is
+ * no catalog, so its file input detaching is the signal — and unlike the "Data"
+ * button's label, that doesn't change when the button's markup does.
+ */
+export async function waitForData(page, timeout = 120000) {
+  await page.waitForSelector('input[type=file]', { state: 'detached', timeout });
+}
+
 /** Open a fresh local character sheet at /local/test and load the dataset into it. */
 export async function seed(page, baseUrl, zipPath) {
   await page.goto(sheetUrl(baseUrl), { waitUntil: 'networkidle' });
   await page.setInputFiles('input[type=file]', zipPath);
-  await page.waitForSelector('.data-toggle:has-text("Data ✓")', { timeout: 60000 });
+  await waitForData(page);
   await page.waitForSelector('.cell', { timeout: 10000 });
 }
 
@@ -110,7 +119,7 @@ export async function seedCharacter(page, baseUrl, doc) {
     { slug: TEST_SLUG, d: doc }
   );
   await page.goto(sheetUrl(baseUrl), { waitUntil: 'networkidle' });
-  await page.waitForSelector('.data-toggle:has-text("Data ✓")', { timeout: 60000 });
+  await waitForData(page);
 }
 
 /** Merge a patch into the test character (abilities merged) and reopen its sheet. */
@@ -125,7 +134,7 @@ export async function patchCharacter(page, baseUrl, patch) {
     { slug: TEST_SLUG, pt: patch }
   );
   await page.goto(sheetUrl(baseUrl), { waitUntil: 'networkidle' });
-  await page.waitForSelector('.data-toggle:has-text("Data ✓")', { timeout: 60000 });
+  await waitForData(page);
 }
 
 // --- assertions -------------------------------------------------------------

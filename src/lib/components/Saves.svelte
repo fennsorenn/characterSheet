@@ -2,6 +2,8 @@
   import { ABILITIES, ABILITY_NAMES, setMembers } from '../character/index.js';
   import { character, grantPool, toggleSaveProficiency } from '../stores/character.js';
   import StatValue from './StatValue.svelte';
+  import Reminders from './Reminders.svelte';
+  import { anchors } from '../character/index.js';
 
   let { variant = 'full' }: { variant?: string } = $props();
   const proficient = $derived(new Set($character.saveProficiencies));
@@ -15,6 +17,7 @@
     {#each ABILITIES as abil}
       {@const grantedBy = granted.get(abil)}
       <li>
+        <div class="row">
         <button
           class="dot"
           class:on={proficient.has(abil) || !!grantedBy}
@@ -25,6 +28,8 @@
         ></button>
         <span class="name">{ABILITY_NAMES[abil]}</span>
         <span class="val"><StatValue node={`save.${abil}`} signed /></span>
+        </div>
+        <Reminders anchor={anchors.save(abil)} />
       </li>
     {/each}
   </ul>
@@ -34,7 +39,8 @@
   .block { border: 1px solid var(--line); border-radius: 8px; padding: 0.75rem 1rem; }
   h3 { margin: 0 0 0.6rem; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
   ul { list-style: none; margin: 0; padding: 0; }
-  li { display: flex; align-items: center; gap: 0.55rem; padding: 0.18rem 0; }
+  li { padding: 0.18rem 0; }
+  .row { display: flex; align-items: center; gap: 0.55rem; }
   .dot {
     width: 0.8rem;
     height: 0.8rem;

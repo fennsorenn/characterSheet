@@ -8,9 +8,17 @@
     onchange: (value: number) => void;
     min?: number;
     max?: number;
-    width?: string;
+    /**
+     * How many digits the field must show without clipping. The component adds
+     * the slack, so callers never have to guess how much a `ch` really buys.
+     */
+    digits?: number;
   }
-  let { value, onchange, min = -Infinity, max = Infinity, width = '2.5ch' }: Props = $props();
+  let { value, onchange, min = -Infinity, max = Infinity, digits = 2 }: Props = $props();
+
+  // `ch` is the advance of "0", and the digits are tabular, so N digits are
+  // exactly N ch; half a character of slack keeps them off the edges.
+  const width = $derived(`calc(${digits}ch + 0.5ch)`);
 
   import { applyNumberEdit, clampValue } from './numberEdit.js';
 
@@ -76,6 +84,10 @@
     border-radius: 4px;
     color: var(--fg);
     padding: 0.1rem 0.15rem;
+    /* The app is border-box, which would make the width include the padding and
+       focus border and leave the field ~7px short — enough to clip a two-digit
+       score. Here the width covers the digits alone. */
+    box-sizing: content-box;
   }
   .number-field:hover { background: var(--field-hover); }
   .number-field:focus {

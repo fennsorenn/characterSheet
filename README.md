@@ -34,6 +34,51 @@ in this repo.
   editable; computed nodes derive from dependencies and layer typed modifiers.
   `explain()` returns the full computation tree behind any number. Reactive
   Svelte wrappers sit on top; the framework owns the UI, not the math.
+- **`src/lib/layout/`** — a sheet is data, not markup: an ordered list of sized
+  block instances. Arrangements are named **templates**. Eight are built in —
+  one per screen-size category (mobile / tablet / desktop / ultrawide) × play
+  style (martial / caster), each built for that breakpoint's column arithmetic.
+  Built-ins are fixed: they live in code rather than in the saved library, so
+  they can't be renamed, deleted or drifted, and editing blocks while one is
+  active silently forks it into a copy of your own that the edit lands on. A
+  template — built-in or yours — can be designated the preferred one per
+  screen-size category, either for every character or for one character alone,
+  and the sheet follows the viewport as it resizes. Signed in, your own
+  templates sync to the server (last-write-wins on `updatedAt`) so they follow
+  you between devices; signed out they live in localStorage.
+- **Custom entries** — an item, spell or feature added by hand has no catalog
+  text behind it, so its window holds a description you write instead, stored on
+  the character. A description you have written always wins over catalog content,
+  so your own text is never hidden; clearing it hands the entry back to the
+  catalog. Features are otherwise derived from race/class/background/feats, so
+  custom ones are the only features the document carries.
+- **`src/lib/character/reminders.ts`** — short notes pinned to an exact spot on
+  the sheet ("disadv. in armor" under Stealth). A reminder names an *anchor* —
+  a skill, save, ability, attack, item, spell, or a whole block — rather than a
+  position, so it stays attached through a template switch or a reflow to one
+  column. A reminder can carry a longer explanation behind its one-liner, opened
+  in a small floating window — from a button in reminder mode, or by clicking the
+  note itself. They live on the character document, since what they say is
+  usually a fact about that character's build or gear.
+
+## CI & deployment
+
+`.github/workflows/ci.yml` type-checks, unit-tests and builds every push and
+pull request. The browser suite runs in the same job, but only where a dataset
+is available: the repo ships without 5e content, so the step is a no-op unless
+an `E2E_DATA_ZIP` repository secret points at a data zip.
+
+Deployment is pull-based. A systemd timer on the server follows the **`deploy`**
+branch and rebuilds when it moves, so pushing there ships it:
+
+```sh
+git push origin main:deploy
+```
+
+Nothing pushes to the server — no webhook, no runner, and no credentials to it
+held by GitHub. A commit that fails to build never displaces the running site,
+and one that builds but comes up unhealthy is rolled back automatically. Setup
+and operating notes are in [`deploy/README.md`](deploy/README.md).
 
 ### Planned phases
 

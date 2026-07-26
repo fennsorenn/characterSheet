@@ -2,6 +2,7 @@
   import { character, graph, setSpellStatus, setSpellGranted, removeSpell } from '../stores/character.js';
   import { catalogLookup, catalogState } from '../stores/catalog.js';
   import { openDetail } from '../stores/detail.js';
+  import { openCustomEntry } from '../stores/customEntry.js';
   import { get } from 'svelte/store';
   import { rollParts, diceMode } from '../stores/dice.js';
   import { rollD20, rollTerms, parseDice } from '../dice/dice.js';
@@ -17,6 +18,8 @@
   } from '../character/index.js';
   import Icon from './Icon.svelte';
   import UiIcon from './UiIcon.svelte';
+  import Reminders from './Reminders.svelte';
+  import { anchors } from '../character/index.js';
   import QuickAdd from './QuickAdd.svelte';
   import { scrollStyle, resizePersist } from './scrollCell.js';
 
@@ -182,10 +185,17 @@
     rollParts(r.name, parts);
   }
 
+  /**
+   * A description you wrote wins over catalog text, so your own is never hidden;
+   * failing that the catalog entry; and for a spell the catalog doesn't know —
+   * anything added by typing a name — an empty description to write.
+   */
   function openSpellDetail(r: Row, el: Element) {
+    const anchor = el.closest('.cell') ?? el;
+    const own = $character.spells[r.index ?? -1]?.description;
     const entry = $catalogLookup.getSpell(r.name, r.source);
-    // Anchor to the whole block so the window opens beside the list, not over it.
-    if (entry) openDetail('spell', entry, el.closest('.cell') ?? el);
+    if (entry && !own) openDetail('spell', entry, anchor);
+    else openCustomEntry('spell', r.name, r.source, anchor);
   }
 
   function toggleTag(id: string) {
@@ -314,6 +324,7 @@
               {#each r.tags as t (t.id)}<span class="tag" title={t.label}><Icon name={t.icon} /></span>{/each}
             </div>
           {/if}
+          <Reminders anchor={anchors.spell(r)} />
         </li>
       {:else}
         <li class="empty">No spells match.</li>

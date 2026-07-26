@@ -1,4 +1,5 @@
 import { ABILITIES, type Ability, type ProficiencyLevel, type Skill } from './abilities.js';
+import type { Reminder } from './reminders.js';
 
 /**
  * The serializable character document.
@@ -43,6 +44,12 @@ export interface InventoryItem extends CatalogRef {
   proficient?: boolean;
   /** User-chosen display name overriding the catalog name (rename). */
   label?: string;
+  /**
+   * The player's own description. Custom entries have no catalog text behind
+   * them, so this is the only place their rules can live; it is written in the
+   * item's window and shown there in place of catalog content.
+   */
+  description?: string;
 }
 
 /** Max items a character can be attuned to at once (5e). */
@@ -58,6 +65,8 @@ export interface SpellRef extends CatalogRef {
   grantedBy?: string;
   /** @deprecated legacy flag, migrated to `status` on read. */
   prepared?: boolean;
+  /** The player's own description — see {@link InventoryItem.description}. */
+  description?: string;
 }
 
 /** Effective status, migrating the legacy `prepared` flag. */
@@ -180,12 +189,45 @@ export interface Character {
   notes?: NoteNode[];
   /** Open note tabs + active tab, so the notes view is restored on reload. */
   noteTabs?: { open: string[]; active: string | null };
+  /** Features the player wrote themselves; everything else is derived. */
+  customFeatures?: CustomFeature[];
+  /** Short notes pinned to exact spots on the sheet (see reminders.ts). */
+  reminders?: Reminder[];
+  /**
+   * This character's preferred layout template per screen-size category
+   * (`{ mobile: <templateId>, … }`), overriding the library-wide preference.
+   * Lives on the document so the choice travels with the character.
+   */
+  layoutPrefs?: Record<string, string>;
 }
 
 export interface FeatureMeta {
   hidden?: boolean;
   tags?: string[];
+  /**
+   * The player's own description of the feature, shown when it is expanded in
+   * place of the catalog text. A custom feature has no catalog text at all, so
+   * for one of those this is the only description there is.
+   */
+  description?: string;
 }
+
+/**
+ * A feature the player wrote themselves — a homebrew ability, a boon from the
+ * DM, anything the catalog has never heard of. Everything else in the Features
+ * block is derived from race/class/background/feats, so these are the only ones
+ * the document has to carry. Their text lives in `featureMeta`, keyed
+ * `name|Custom` like every other feature's overrides.
+ */
+export interface CustomFeature {
+  id: string;
+  name: string;
+  /** Optional context line, e.g. "Session 12 boon". */
+  subtitle?: string;
+}
+
+/** The source recorded on custom features, and the second half of their key. */
+export const CUSTOM_SOURCE = 'Custom';
 
 /** A single notes document (markdown content). */
 export interface NoteDoc {
@@ -256,7 +298,10 @@ export function createCharacter(partial: Partial<Character> = {}): Character {
     featureMeta: partial.featureMeta ?? {},
     variantChoices: partial.variantChoices ?? {},
     notes: partial.notes,
-    noteTabs: partial.noteTabs
+    noteTabs: partial.noteTabs,
+    customFeatures: partial.customFeatures,
+    reminders: partial.reminders,
+    layoutPrefs: partial.layoutPrefs
   };
 }
 

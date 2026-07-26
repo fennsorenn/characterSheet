@@ -1,0 +1,16 @@
+[Unit]
+Description=Check the character sheet deploy branch for new commits
+Documentation=https://github.com/fennsorenn/charactersheet/blob/main/deploy/README.md
+
+[Timer]
+# A push is live within a couple of minutes. The check is one `git fetch` when
+# nothing has changed, so a short interval costs close to nothing.
+OnBootSec=2min
+OnUnitActiveSec=2min
+# Catch up after downtime rather than waiting for the next whole interval.
+Persistent=true
+AccuracySec=30s
+Unit=charactersheet-deploy.service
+
+[Install]
+WantedBy=timers.target

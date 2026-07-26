@@ -51,7 +51,7 @@
           <span data-volatile="frequent">
             <PipTracker max={r.max} used={r.used} onSet={(u) => adjustResource(r.id, u - r.used)} />
           </span>
-          <span class="max">max <NumberField value={r.max} min={0} onchange={(v) => setResourceMax(r.id, v)} width="2ch" /></span>
+          <span class="max">max <NumberField value={r.max} min={0} onchange={(v) => setResourceMax(r.id, v)} /></span>
           <span class="tag">{r.recharge}</span>
           <button class="rm" aria-label="Remove" onclick={() => removeResource(r.id)}>×</button>
         </li>
@@ -61,7 +61,7 @@
 
   <form class="add" onsubmit={(e) => { e.preventDefault(); add(); }}>
     <input placeholder="Feature name" bind:value={name} />
-    <NumberField value={max} min={1} onchange={(v) => (max = v)} width="2ch" />
+    <NumberField value={max} min={1} onchange={(v) => (max = v)} />
     <select bind:value={recharge}>
       <option value="short">short rest</option>
       <option value="long">long rest</option>

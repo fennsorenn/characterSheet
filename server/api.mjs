@@ -57,7 +57,9 @@ export function apiMiddleware(req, res, next) {
     proxyFetch(req, res, url).catch((e) => sendJson(res, 502, { error: `Proxy fetch failed: ${e?.message ?? e}` }));
     return;
   }
-  if (!path.startsWith('/api/auth') && !path.startsWith('/api/characters')) return next();
+  if (!path.startsWith('/api/auth') && !path.startsWith('/api/characters') && path !== '/api/templates') {
+    return next();
+  }
   handle(req, res, path).catch((e) => sendJson(res, 500, { error: String(e?.message ?? e) }));
 }
 
@@ -114,6 +116,18 @@ async function handle(req, res, path) {
     store.deleteSession(getCookie(req, 'sid'));
     clearSession(res);
     return sendJson(res, 200, {});
+  }
+
+  // --- layout templates (auth required) ---
+  if (path === '/api/templates') {
+    if (!me) return sendJson(res, 401, { error: 'Not signed in.' });
+    if (method === 'GET') return sendJson(res, 200, { templates: store.getTemplates(me) });
+    if (method === 'PUT') {
+      const { templates } = await readBody(req);
+      const r = store.putTemplates(me, templates);
+      return r.error ? sendJson(res, 400, r) : sendJson(res, 200, r);
+    }
+    return sendJson(res, 405, { error: 'Method not allowed.' });
   }
 
   // --- characters (auth required) ---

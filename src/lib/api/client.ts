@@ -36,3 +36,22 @@ export const apiPutCharacter = (slug: string, name: string, doc: Character) =>
   });
 export const apiDeleteCharacter = (slug: string) =>
   req<object>(`/api/characters/${encodeURIComponent(slug)}`, { method: 'DELETE' });
+
+/**
+ * The layout-template library, stored per user so templates follow you between
+ * devices. The document is opaque to the server; `updatedAt` is what the client
+ * compares to decide whether the local or the remote copy is newer.
+ */
+export interface TemplateDoc<T = unknown> {
+  version: number;
+  updatedAt: number;
+  library: T;
+}
+
+export const apiGetTemplates = <T>() =>
+  req<{ templates: TemplateDoc<T> | null; error?: string }>('/api/templates');
+export const apiPutTemplates = <T>(templates: TemplateDoc<T>) =>
+  req<{ ok?: boolean; stale?: boolean; templates?: TemplateDoc<T>; error?: string }>('/api/templates', {
+    method: 'PUT',
+    body: JSON.stringify({ templates })
+  });

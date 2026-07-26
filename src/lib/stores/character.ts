@@ -1,4 +1,4 @@
-import { writable, derived, get } from 'svelte/store';
+import { writable, derived, readable, get } from 'svelte/store';
 import {
   ABILITIES,
   applyRest,
@@ -31,9 +31,18 @@ import {
   isNoteFolder,
   type ProficiencyLevel,
   type Resource,
+  type Reminder,
   type RestType,
   type Skill,
-  type SpellStatus
+  type SpellStatus,
+  uniqueCustomFeatureName,
+  featureMetaKey,
+  CUSTOM_SOURCE,
+  addReminder as addReminderPure,
+  updateReminder as updateReminderPure,
+  setReminderDetail as setReminderDetailPure,
+  removeReminder as removeReminderPure,
+  moveReminder as moveReminderPure
 } from '../character/index.js';
 import {
   classifyAbility,
@@ -296,6 +305,68 @@ export type { OverrideKind };
 
 export const character = { subscribe: store.subscribe };
 
+/**
+ * This character's preferred layout template per screen-size category. Emits
+ * only when the preferences themselves change, so subscribers aren't woken by
+ * every unrelated edit to the document.
+ */
+export const characterLayoutPrefs = readable<Record<string, string>>({}, (set) => {
+  let last = '';
+  return store.subscribe((c) => {
+    const prefs = c.layoutPrefs ?? {};
+    const key = JSON.stringify(prefs);
+    if (key === last) return;
+    last = key;
+    set(prefs);
+  });
+});
+
+/** Designate (or clear, with undefined) this character's template for a category. */
+export function setCharacterLayoutPref(category: string, id: string | undefined) {
+  update((c) => {
+    const layoutPrefs = { ...c.layoutPrefs };
+    if (id) layoutPrefs[category] = id;
+    else delete layoutPrefs[category];
+    return { ...c, layoutPrefs: Object.keys(layoutPrefs).length ? layoutPrefs : undefined };
+  });
+}
+
+// --- Reminders (short notes pinned to a row or block on the sheet) ---
+
+/** Pin a reminder at an anchor. Blank text is ignored. */
+export function addReminder(anchor: string, text: string) {
+  update((c) => withReminders(c, addReminderPure(c.reminders, anchor, text, crypto.randomUUID())));
+}
+
+/** Edit a reminder's text; blanking it deletes the reminder. */
+export function setReminderText(id: string, text: string) {
+  update((c) => withReminders(c, updateReminderPure(c.reminders, id, text)));
+}
+
+/** Set the longer explanation behind a reminder; blank text clears it. */
+export function setReminderDetail(id: string, detail: string) {
+  update((c) => withReminders(c, setReminderDetailPure(c.reminders, id, detail)));
+}
+
+export function removeReminder(id: string) {
+  update((c) => withReminders(c, removeReminderPure(c.reminders, id)));
+}
+
+/** Reorder a reminder among the others pinned at the same anchor. */
+export function moveReminder(id: string, dir: -1 | 1) {
+  update((c) => withReminders(c, moveReminderPure(c.reminders, id, dir)));
+}
+
+/** Drop the field entirely when the last reminder goes, keeping documents lean. */
+function withReminders(c: Character, reminders: Reminder[]): Character {
+  return { ...c, reminders: reminders.length ? reminders : undefined };
+}
+
+/** Replace this character's template preferences wholesale (empty clears them). */
+export function setCharacterLayoutPrefs(prefs: Record<string, string>) {
+  update((c) => ({ ...c, layoutPrefs: Object.keys(prefs).length ? { ...prefs } : undefined }));
+}
+
 function update(fn: (c: Character) => Character) {
   store.update(fn);
 }
@@ -423,14 +494,46 @@ export function setOptionalChoice(key: string, ref: CatalogRef | undefined) {
 
 function mergeMeta(c: Character, key: string, patch: Partial<Character['featureMeta'][string]>): Character {
   const featureMeta = { ...c.featureMeta, [key]: { ...c.featureMeta[key], ...patch } };
-  // Drop empty meta entries.
+  // Drop empty meta entries, and any field that was cleared.
   const m = featureMeta[key];
-  if (!m.hidden && (!m.tags || m.tags.length === 0)) delete featureMeta[key];
+  if (m.description === undefined) delete m.description;
+  if (!m.hidden && !m.description && (!m.tags || m.tags.length === 0)) delete featureMeta[key];
   return { ...c, featureMeta };
 }
 
 export function setFeatureHidden(key: string, hidden: boolean) {
   update((c) => mergeMeta(c, key, { hidden }));
+}
+
+/**
+ * Set (or clear, when blank) the player's own description of a feature. Shown
+ * in place of the catalog text when the feature is expanded — and the only text
+ * a custom feature has.
+ */
+export function setFeatureDescription(key: string, description: string) {
+  update((c) => mergeMeta(c, key, { description: description.trim() || undefined }));
+}
+
+/** Add a feature the player wrote themselves, under a name no other one uses. */
+export function addCustomFeature(name: string) {
+  update((c) => ({
+    ...c,
+    customFeatures: [
+      ...(c.customFeatures ?? []),
+      { id: crypto.randomUUID(), name: uniqueCustomFeatureName(c, name) }
+    ]
+  }));
+}
+
+/** Remove a custom feature, and the overrides that were keyed to its name. */
+export function removeCustomFeature(id: string) {
+  update((c) => {
+    const gone = (c.customFeatures ?? []).find((f) => f.id === id);
+    const customFeatures = (c.customFeatures ?? []).filter((f) => f.id !== id);
+    const featureMeta = { ...c.featureMeta };
+    if (gone) delete featureMeta[featureMetaKey({ name: gone.name, source: CUSTOM_SOURCE })];
+    return { ...c, featureMeta, customFeatures: customFeatures.length ? customFeatures : undefined };
+  });
 }
 
 /** Enable/disable an optional class-feature variant (e.g. Blessed Strikes). */
@@ -532,6 +635,33 @@ export function renameInventoryItem(index: number, label: string) {
       n === index ? { ...i, label: trimmed || undefined } : i
     )
   }));
+}
+
+/**
+ * Set (or clear, when blank) the player's own description of an inventory item.
+ * Custom entries have no catalog text, so this is where their rules live.
+ */
+export function setItemDescription(index: number, description: string) {
+  update((c) => ({
+    ...c,
+    inventory: c.inventory.map((i, n) => (n === index ? withDescription(i, description) : i))
+  }));
+}
+
+/** Set (or clear, when blank) the player's own description of a spell. */
+export function setSpellDescription(index: number, description: string) {
+  update((c) => ({
+    ...c,
+    spells: c.spells.map((s, n) => (n === index ? withDescription(s, description) : s))
+  }));
+}
+
+/** Attach a description, dropping the field entirely when it is blank. */
+function withDescription<T extends { description?: string }>(entry: T, description: string): T {
+  const trimmed = description.trim();
+  if (trimmed) return { ...entry, description: trimmed };
+  const { description: _drop, ...rest } = entry;
+  return rest as T;
 }
 
 /** Toggle attunement, refusing to exceed the attunement limit. */

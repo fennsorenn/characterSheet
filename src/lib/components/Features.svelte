@@ -16,8 +16,11 @@
     setFeatureHidden,
     setFeatureVariant,
     addFeatureTag,
-    removeFeatureTag
+    removeFeatureTag,
+    addCustomFeature,
+    removeCustomFeature
   } from '../stores/character.js';
+  import { openCustomEntry } from '../stores/customEntry.js';
   import { catalogState } from '../stores/catalog.js';
   import { openBrowse } from '../stores/browse.js';
   import { openSpellPicker } from '../stores/spellPicker.js';
@@ -25,6 +28,7 @@
   import { openFeatPicker } from '../stores/featPicker.js';
   import {
     resolveFeatures,
+    customFeatures,
     featureChoices,
     featureOptionalProgressions,
     type Feature,
@@ -55,9 +59,10 @@
   let showHidden = $state(false);
   let showVariants = $state(false);
 
-  const features = $derived<Feature[]>(
-    $catalogState.catalog ? resolveFeatures($character, $catalogState.catalog) : []
-  );
+  const features = $derived<Feature[]>([
+    ...($catalogState.catalog ? resolveFeatures($character, $catalogState.catalog) : []),
+    ...customFeatures($character)
+  ]);
   const choices = $derived(
     $catalogState.catalog ? featureChoices($character, $catalogState.catalog) : { options: [], spells: [] }
   );
@@ -90,6 +95,12 @@
   const featKey = (f: Feature) => `${f.group}:${f.name}:${f.subtitle ?? ''}`;
   const autoHidden = (f: Feature) => /ability score improvement/i.test(f.name);
   const customTags = (f: Feature) => $character.featureMeta[metaKey(f)]?.tags ?? [];
+  const ownText = (f: Feature) => $character.featureMeta[metaKey(f)]?.description;
+
+  function addFeature() {
+    const name = window.prompt('Name of the feature');
+    if (name?.trim()) addCustomFeature(name.trim());
+  }
 
   // --- ASI + pending-choice tracking ---
   const isAsi = (f: Feature) => /ability score improvement/i.test(f.name);
@@ -190,6 +201,13 @@
         <span class="ctag">{t}<button class="x" title="Remove tag" onclick={() => removeFeatureTag(metaKey(f), t)}><UiIcon name="close" size="0.8em" /></button></span>
       {/each}
       <span class="spacer"></span>
+      <button
+        class="mini describe"
+        class:has={!!ownText(f)}
+        title={ownText(f) ? 'Edit your description' : 'Write your own description'}
+        aria-label="Describe feature"
+        onclick={(e) => openCustomEntry('feature', f.name, f.source, e.currentTarget)}
+      >⋯</button>
       <button class="mini" title="Add tag" onclick={() => addTag(f)}>#</button>
       <button class="mini" title={hideable ? 'Hide' : 'Unhide'} onclick={() => setFeatureHidden(metaKey(f), hideable)}><UiIcon name={hideable ? 'eye-off' : 'eye'} /></button>
       <button class="mini" title={expanded.has(featKey(f)) ? 'Collapse' : 'Expand'} onclick={() => toggleExpand(f)}><UiIcon name={expanded.has(featKey(f)) ? 'chevron-down' : 'chevron-right'} /></button>
@@ -242,7 +260,15 @@
       </div>
     {/if}
 
-    {#if expanded.has(featKey(f))}<div class="fbody">{@html body(f.entries)}</div>{/if}
+    {#if expanded.has(featKey(f))}
+      {#if ownText(f)}
+        <div class="fbody own">{ownText(f)}</div>
+      {:else if f.entries.length}
+        <div class="fbody">{@html body(f.entries)}</div>
+      {:else}
+        <p class="fbody empty">No description yet — use ⋯ to write one.</p>
+      {/if}
+    {/if}
   </li>
 {/snippet}
 
@@ -343,6 +369,13 @@
         <span class="ctag">{f.name}<button class="x" aria-label="Remove feat" onclick={() => removeFeat(i)}><UiIcon name="close" size="0.8em" /></button></span>
       {/each}
       <button class="choose" onclick={() => openBrowse('feat')}>+ Feat</button>
+    </div>
+    <div class="line custom">
+      <span class="k">Custom</span>
+      {#each $character.customFeatures ?? [] as f (f.id)}
+        <span class="ctag">{f.name}<button class="x" aria-label="Remove feature" onclick={() => removeCustomFeature(f.id)}><UiIcon name="close" size="0.8em" /></button></span>
+      {/each}
+      <button class="choose" onclick={addFeature}>+ Feature</button>
     </div>
   </div>
 
@@ -452,6 +485,10 @@
   .pill.empty { padding: 0.1rem 0.5rem; border: 1px dashed var(--accent); background: var(--bg); color: var(--accent); }
   .pill.picked { padding: 0.1rem 0.2rem 0.1rem 0.5rem; border: 1px solid var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
   .pname { background: none; border: none; color: var(--accent); cursor: pointer; font: inherit; font-weight: 600; }
+  .describe.has { color: var(--accent); }
+  /* A description you wrote reads as prose, not as rendered reference text. */
+  .fbody.own { white-space: pre-wrap; }
+  .fbody.empty { color: var(--muted); font-style: italic; }
   .fbody { font-size: 0.85rem; padding: 0 0 0.4rem 0.2rem; }
   .fbody :global(p) { margin: 0.25rem 0; }
   .hidetoggle { font: inherit; font-size: 0.78rem; background: none; border: none; color: var(--muted); cursor: pointer; padding: 0.4rem 0 0; }

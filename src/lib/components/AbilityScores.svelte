@@ -3,6 +3,8 @@
   import { character, setAbilityScore, abilityOverrides, abilityScores } from '../stores/character.js';
   import { buffMode } from '../stores/ui.js';
   import NumberField from './NumberField.svelte';
+  import Reminders from './Reminders.svelte';
+  import { anchors } from '../character/index.js';
   import StatValue from './StatValue.svelte';
   import BuffField from './BuffField.svelte';
   import EffectiveScore from './EffectiveScore.svelte';
@@ -39,6 +41,7 @@
               onchange={(v) => setAbilityScore(abil, v)}
             />
           {/if}
+          <Reminders anchor={anchors.ability(abil)} />
         </div>
       {/each}
     </div>
@@ -56,7 +59,7 @@
             {:else if persistentOnly(abil)}
               <div class="persistent-full" title={`Effective ${$abilityScores[abil]} (base ${$character.abilities[abil]})`}>
                 <span class="persistent">{$abilityScores[abil]}</span>
-                <span class="base">base <NumberField value={$character.abilities[abil]} min={1} max={30} onchange={(v) => setAbilityScore(abil, v)} width="3ch" /></span>
+                <span class="base">base <NumberField value={$character.abilities[abil]} min={1} max={30} onchange={(v) => setAbilityScore(abil, v)} /></span>
               </div>
             {:else}
               <NumberField
@@ -67,6 +70,7 @@
               />
             {/if}
           </div>
+          <Reminders anchor={anchors.ability(abil)} />
         </div>
       {/each}
     </div>
