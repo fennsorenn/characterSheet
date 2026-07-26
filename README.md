@@ -63,12 +63,10 @@ in this repo.
 
 ## CI & deployment
 
-The CI workflow type-checks, unit-tests and builds every push and pull request.
-The browser suite runs in the same job, but only where a dataset is available:
-the repo ships without 5e content, so the step is a no-op unless an
-`E2E_DATA_ZIP` repository secret points at a data zip. It ships as
-[`deploy/ci.yml`](deploy/ci.yml) and needs moving to `.github/workflows/ci.yml`
-once to take effect — see [`deploy/README.md`](deploy/README.md).
+`.github/workflows/ci.yml` type-checks, unit-tests and builds every push and
+pull request. The browser suite runs in the same job, but only where a dataset
+is available: the repo ships without 5e content, so the step is a no-op unless
+an `E2E_DATA_ZIP` repository secret points at a data zip.
 
 Deployment is pull-based. A systemd timer on the server follows the **`deploy`**
 branch and rebuilds when it moves, so pushing there ships it:
