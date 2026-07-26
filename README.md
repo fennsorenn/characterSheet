@@ -46,12 +46,19 @@ in this repo.
   and the sheet follows the viewport as it resizes. Signed in, your own
   templates sync to the server (last-write-wins on `updatedAt`) so they follow
   you between devices; signed out they live in localStorage.
+- **Choosing vs. reading** — picking what a character *is* and reading what that
+  gave them are separate blocks. **Race, Class & Feats** holds the selectors;
+  **Features & Traits** lists what they granted, with the choices each feature
+  still wants. A finished character can shrink or drop the former without losing
+  the latter.
 - **Custom entries** — an item, spell or feature added by hand has no catalog
   text behind it, so its window holds a description you write instead, stored on
   the character. A description you have written always wins over catalog content,
   so your own text is never hidden; clearing it hands the entry back to the
-  catalog. Features are otherwise derived from race/class/background/feats, so
-  custom ones are the only features the document carries.
+  catalog. All three lists take one the same way — type a name into the quick-add
+  bar at the foot of the list and press Enter. Features are otherwise derived
+  from race/class/background/feats, so custom ones are the only features the
+  document carries, and the only ones a row offers to delete.
 - **`src/lib/character/reminders.ts`** — short notes pinned to an exact spot on
   the sheet ("disadv. in armor" under Stealth). A reminder names an *anchor* —
   a skill, save, ability, attack, item, spell, or a whole block — rather than a

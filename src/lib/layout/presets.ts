@@ -90,9 +90,8 @@ export function printDefaultLayout(): SheetLayout {
 /**
  * Scroll caps for the list blocks. A grid cell is as tall as its content, so an
  * uncapped list next to a short block leaves a band of dead space in the row —
- * these keep the blocks that share a row roughly the same height. Features runs
- * shorter than the others because its header (race/class/feats) sits above the
- * scrolling part.
+ * these keep the blocks that share a row roughly the same height. Features gets
+ * the most room: it is the block whose rows carry inline choices to make.
  */
 const PHONE_LIST = 300;
 const PHONE_SHORT_LIST = 240;
@@ -118,6 +117,7 @@ const SPECS: Record<ScreenCategory, Record<TemplateStyle, Spec[]>> = {
       ['skills', 'compact'],
       ['inventory', 'full', 'full', { height: PHONE_LIST }],
       ['restLevelUp'],
+      ['characterBuild'],
       ['features', 'full', 'full', { height: PHONE_LIST }],
       ['traits'],
       ['spells', 'full', 'full', { height: PHONE_SHORT_LIST }],
@@ -136,6 +136,7 @@ const SPECS: Record<ScreenCategory, Record<TemplateStyle, Spec[]>> = {
       ['skills', 'compact'],
       ['inventory', 'full', 'full', { height: PHONE_SHORT_LIST }],
       ['restLevelUp'],
+      ['characterBuild'],
       ['features', 'full', 'full', { height: PHONE_LIST }],
       ['traits'],
       ['attacks'],
@@ -159,6 +160,7 @@ const SPECS: Record<ScreenCategory, Record<TemplateStyle, Spec[]>> = {
       ['saves', 'full', 'narrow'],
       ['skills', 'full', 'wide'],
       ['inventory', 'full', 'wide', { height: TABLET_LIST }],
+      ['characterBuild', 'full', 'wide'],
       ['features', 'full', 'wide', { height: TABLET_FEATURES }],
       ['traits', 'full', 'wide'],
       ['spells', 'full', 'narrow', { height: TABLET_LIST }],
@@ -178,6 +180,7 @@ const SPECS: Record<ScreenCategory, Record<TemplateStyle, Spec[]>> = {
       ['saves', 'full', 'narrow'],
       ['skills', 'full', 'wide'],
       ['inventory', 'full', 'wide', { height: TABLET_LIST }],
+      ['characterBuild', 'full', 'wide'],
       ['features', 'full', 'wide', { height: TABLET_FEATURES }],
       ['traits', 'full', 'wide'],
       ['attacks', 'full', 'wide'],
@@ -203,6 +206,7 @@ const SPECS: Record<ScreenCategory, Record<TemplateStyle, Spec[]>> = {
       ['skills', 'full', 'wide'],
       ['inventory', 'full', 'wide', { height: DESK_LIST }],
       ['traits', 'full', 'wide'],
+      ['characterBuild', 'full', 'full'],
       ['features', 'full', 'full', { height: DESK_FEATURES }],
       ['spells', 'full', 'narrow', { height: DESK_LIST }],
       ['spellSlots', 'grid', 'narrow'],
@@ -225,6 +229,7 @@ const SPECS: Record<ScreenCategory, Record<TemplateStyle, Spec[]>> = {
       ['skills', 'full', 'wide'],
       ['inventory', 'full', 'wide', { height: DESK_LIST }],
       ['traits', 'full', 'wide'],
+      ['characterBuild', 'full', 'full'],
       ['features', 'full', 'full', { height: DESK_FEATURES }],
       ['notes', 'full', 'full']
     ]
@@ -249,6 +254,7 @@ const SPECS: Record<ScreenCategory, Record<TemplateStyle, Spec[]>> = {
       ['resources', 'full', 'wide'],
       ['inventory', 'full', 'wide', { height: WIDE_LIST }],
       ['spells', 'full', 'wide', { height: WIDE_LIST }],
+      ['characterBuild', 'full', 'full'],
       ['features', 'full', 'full', { height: WIDE_FEATURES }],
       ['skills', 'full', 'wide'],
       ['traits', 'full', 'wide'],
@@ -270,6 +276,9 @@ const SPECS: Record<ScreenCategory, Record<TemplateStyle, Spec[]>> = {
       ['skills', 'full', 'wide'],
       ['traits', 'full', 'wide'],
       ['attacks', 'full', 'wide'],
+      // Full width and last: the caster's rows above already tile to twelve
+      // columns, so a half-width setup block here would strand a gap.
+      ['characterBuild', 'full', 'full'],
       ['notes', 'full', 'full']
     ]
   }

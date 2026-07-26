@@ -38,6 +38,12 @@ export const BLOCK_META: Record<string, BlockMeta> = {
     defaultVariant: 'full',
     defaultSize: 'narrow'
   },
+  characterBuild: {
+    label: 'Race, Class & Feats',
+    variants: [{ key: 'full', label: 'Full', verbosity: 'full' }],
+    defaultVariant: 'full',
+    defaultSize: 'wide'
+  },
   features: {
     label: 'Features & Traits',
     variants: [{ key: 'full', label: 'Full', verbosity: 'full' }],

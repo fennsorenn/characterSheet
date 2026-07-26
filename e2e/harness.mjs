@@ -152,11 +152,14 @@ export function assertEqual(actual, expected, message) {
 
 export const cell = (page, title) => page.locator('.cell', { hasText: title });
 
-/** Add a race or feat via the Features block's browse overlay. */
+/** The block holding the race/background/class/feat selectors. */
+export const buildCell = (page) => cell(page, 'Race, Class & Feats');
+
+/** Add a race or feat via the build block's browse overlay. */
 export async function browseAdd(page, kind, name) {
-  const features = cell(page, 'Features & Traits');
-  if (kind === 'race') await features.locator('.line', { hasText: 'Race' }).locator('.choose').click();
-  else await features.locator('.line.feats .choose', { hasText: 'Feat' }).click();
+  const build = buildCell(page);
+  if (kind === 'race') await build.locator('.line', { hasText: 'Race' }).locator('.choose').click();
+  else await build.locator('.line.feats .choose', { hasText: 'Feat' }).click();
   await page.waitForSelector('.overlay', { timeout: 5000 });
   await page.fill('.overlay input.search', name);
   await page.waitForTimeout(350);
@@ -167,9 +170,9 @@ export async function browseAdd(page, kind, name) {
   await page.waitForTimeout(150);
 }
 
-/** Add a class from the catalog via the Features block's "+ Class" browse. */
+/** Add a class from the catalog via the build block's "+ Class" browse. */
 export async function addClassFromCatalog(page, name) {
-  const line = cell(page, 'Features & Traits').locator('.line.classes');
+  const line = buildCell(page).locator('.line.classes');
   await line.locator('.choose', { hasText: 'Class' }).click();
   await page.waitForSelector('.overlay', { timeout: 5000 });
   await page.fill('.overlay input.search', name);

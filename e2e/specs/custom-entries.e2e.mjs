@@ -107,10 +107,16 @@ export default async function ({ page, baseUrl }) {
   await win().waitFor();
   assert(/level|evocation|dart/i.test(await win().innerText()), 'and the catalog entry is back');
 
-  // --- Features: the same, for something the catalog has never heard of ---
+  // --- Features: the same, for something the catalog has never heard of.
+  // It goes in from the quick-add bar at the foot of the list, exactly like an
+  // item or a spell — no prompt dialog, and nothing in the block's header.
   await page.keyboard.press('Escape');
-  page.once('dialog', (d) => d.accept('Oath of the Long Road'));
-  await feats().locator('.line.custom button.choose').click();
+  assert(
+    (await feats().locator('.line.custom').count()) === 0,
+    'the custom-feature control has left the header'
+  );
+  await feats().locator('.quickadd input').fill('Oath of the Long Road');
+  await feats().locator('.quickadd input').press('Enter');
   await page.waitForTimeout(400);
   assert((await doc()).customFeatures?.length === 1, 'the custom feature is on the character');
 
@@ -160,8 +166,10 @@ export default async function ({ page, baseUrl }) {
     'and the emptied override is dropped from the document'
   );
 
-  // --- Removing a custom feature takes its description with it ---
-  await feats().locator('.line.custom .ctag .x').first().click();
+  // --- Removing a custom feature takes its description with it. Only the
+  // player's own features offer this; the rest go with whatever grants them.
+  assert((await known.locator('button.remove').count()) === 0, 'a granted feature has no delete');
+  await own.locator('button.remove').click();
   await page.waitForTimeout(350);
   const end = await doc();
   assert(!end.customFeatures, 'the feature is gone');
