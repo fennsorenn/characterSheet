@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { canEditBuild } from '../stores/mode.js';
   import {
     character,
     grantPool,
@@ -186,23 +187,25 @@
       {#if f.subtitle}<span class="sub">{f.subtitle}</span>{/if}
       {#if pending > 0}<span class="pbadge" title="{pending} choice{pending === 1 ? '' : 's'} to make">{pending}</span>{/if}
       {#each customTags(f) as t}
-        <span class="ctag">{t}<button class="x" title="Remove tag" onclick={() => removeFeatureTag(metaKey(f), t)}><UiIcon name="close" size="0.8em" /></button></span>
+        <span class="ctag">{t}<button class="x" title="Remove tag" disabled={!$canEditBuild} onclick={() => removeFeatureTag(metaKey(f), t)}><UiIcon name="close" size="0.8em" /></button></span>
       {/each}
       <span class="spacer"></span>
       <button
         class="mini describe"
+        disabled={!$canEditBuild}
         class:has={!!ownText(f)}
         title={ownText(f) ? 'Edit your description' : 'Write your own description'}
         aria-label="Describe feature"
         onclick={(e) => openCustomEntry('feature', f.name, f.source, e.currentTarget)}
       >⋯</button>
-      <button class="mini" title="Add tag" onclick={() => addTag(f)}>#</button>
-      <button class="mini" title={hideable ? 'Hide' : 'Unhide'} onclick={() => setFeatureHidden(metaKey(f), hideable)}><UiIcon name={hideable ? 'eye-off' : 'eye'} /></button>
+      <button class="mini" disabled={!$canEditBuild} title="Add tag" onclick={() => addTag(f)}>#</button>
+      <button class="mini" disabled={!$canEditBuild} title={hideable ? 'Hide' : 'Unhide'} onclick={() => setFeatureHidden(metaKey(f), hideable)}><UiIcon name={hideable ? 'eye-off' : 'eye'} /></button>
       {#if f.customId}
         <!-- Only the player's own features can be deleted; the rest go when
              whatever grants them goes. -->
         <button
           class="mini remove"
+          disabled={!$canEditBuild}
           title="Remove this feature"
           aria-label="Remove feature"
           onclick={() => removeCustomFeature(f.customId!)}
@@ -218,7 +221,7 @@
           <GrantChoiceEditor choice={field} />
         {/each}
         {#if isAsi(f)}
-          <select class="opt" value={asiMode(f)} title="Ability increase or feat"
+          <select class="opt" value={asiMode(f)} disabled={!$canEditBuild} title="Ability increase or feat"
             onchange={(e) => setAsiMode(f, (e.target as HTMLSelectElement).value)}>
             <option value="ability">Ability increase</option>
             <option value="feat">Feat</option>
@@ -229,16 +232,16 @@
             {@const feat = featValue(f)}
             {#if feat}
               <span class="pill picked">
-                <button class="pname" title="Change" onclick={() => openFeatPicker({ key: asiKey(f), label: `${f.name}: choose a feat` })}>{feat.name}</button>
-                <button class="x" aria-label="Clear" onclick={() => setFeatChoice(asiKey(f), undefined)}><UiIcon name="close" size="0.85em" /></button>
+                <button class="pname" title="Change" disabled={!$canEditBuild} onclick={() => openFeatPicker({ key: asiKey(f), label: `${f.name}: choose a feat` })}>{feat.name}</button>
+                <button class="x" aria-label="Clear" disabled={!$canEditBuild} onclick={() => setFeatChoice(asiKey(f), undefined)}><UiIcon name="close" size="0.85em" /></button>
               </span>
             {:else}
-              <button class="pill empty" onclick={() => openFeatPicker({ key: asiKey(f), label: `${f.name}: choose a feat` })}>+ choose feat</button>
+              <button class="pill empty" disabled={!$canEditBuild} onclick={() => openFeatPicker({ key: asiKey(f), label: `${f.name}: choose a feat` })}>+ choose feat</button>
             {/if}
           {/if}
         {/if}
         {#each optionsFor(f) as opt (opt.key)}
-          <select class="opt" value={$character.featureOptions[opt.key] ?? ''} title={opt.label}
+          <select class="opt" value={$character.featureOptions[opt.key] ?? ''} disabled={!$canEditBuild} title={opt.label}
             onchange={(e) => setFeatureOption(opt.key, (e.target as HTMLSelectElement).value || undefined)}>
             <option value="">{opt.label}…</option>
             {#each opt.options as o}<option value={o.value}>{o.label}</option>{/each}
@@ -248,11 +251,11 @@
           {@const picked = $character.spellChoices[field.key]}
           {#if picked}
             <span class="pill picked">
-              <button class="pname" title="Change" onclick={() => openSpellPicker(field)}>{picked.name}</button>
-              <button class="x" aria-label="Clear" onclick={() => setSpellChoice(field.key, undefined)}><UiIcon name="close" size="0.85em" /></button>
+              <button class="pname" title="Change" disabled={!$canEditBuild} onclick={() => openSpellPicker(field)}>{picked.name}</button>
+              <button class="x" aria-label="Clear" disabled={!$canEditBuild} onclick={() => setSpellChoice(field.key, undefined)}><UiIcon name="close" size="0.85em" /></button>
             </span>
           {:else}
-            <button class="pill empty" title={field.label} onclick={() => openSpellPicker(field)}>+ choose spell</button>
+            <button class="pill empty" disabled={!$canEditBuild} title={field.label} onclick={() => openSpellPicker(field)}>+ choose spell</button>
           {/if}
         {/each}
       </div>
@@ -285,11 +288,11 @@
         {@const picked = $character.optionalChoices[slotKey(p, i)]}
         {#if picked}
           <span class="pill picked">
-            <button class="pname" title="Change" onclick={() => openOptionalPicker({ key: slotKey(p, i), types: p.featureType, label: `Choose ${slotNoun(p)}` })}>{picked.name}</button>
-            <button class="x" aria-label="Clear" onclick={() => setOptionalChoice(slotKey(p, i), undefined)}><UiIcon name="close" size="0.85em" /></button>
+            <button class="pname" title="Change" disabled={!$canEditBuild} onclick={() => openOptionalPicker({ key: slotKey(p, i), types: p.featureType, label: `Choose ${slotNoun(p)}` })}>{picked.name}</button>
+            <button class="x" aria-label="Clear" disabled={!$canEditBuild} onclick={() => setOptionalChoice(slotKey(p, i), undefined)}><UiIcon name="close" size="0.85em" /></button>
           </span>
         {:else}
-          <button class="pill empty" onclick={() => openOptionalPicker({ key: slotKey(p, i), types: p.featureType, label: `Choose ${slotNoun(p)}` })}>+ choose {slotNoun(p)}</button>
+          <button class="pill empty" disabled={!$canEditBuild} onclick={() => openOptionalPicker({ key: slotKey(p, i), types: p.featureType, label: `Choose ${slotNoun(p)}` })}>+ choose {slotNoun(p)}</button>
         {/if}
       {/each}
     </div>
@@ -357,6 +360,7 @@
             <label class="vtoggle">
               <input
                 type="checkbox"
+                disabled={!$canEditBuild}
                 checked={f.variantEnabled}
                 onchange={(e) => setFeatureVariant(f.variantKey!, (e.target as HTMLInputElement).checked)}
               />

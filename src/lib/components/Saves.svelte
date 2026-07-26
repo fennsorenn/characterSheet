@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { canEditBuild } from '../stores/mode.js';
   import { ABILITIES, ABILITY_NAMES, setMembers } from '../character/index.js';
   import { character, grantPool, toggleSaveProficiency } from '../stores/character.js';
   import StatValue from './StatValue.svelte';
@@ -20,6 +21,7 @@
         <div class="row">
         <button
           class="dot"
+          disabled={!$canEditBuild}
           class:on={proficient.has(abil) || !!grantedBy}
           class:granted={!!grantedBy && !proficient.has(abil)}
           aria-label="Toggle {ABILITY_NAMES[abil]} save proficiency"

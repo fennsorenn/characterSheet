@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { canEditBuild, canEditPlay } from '../stores/mode.js';
   import {
     character,
     featureResourceList,
@@ -39,7 +40,7 @@
         <li class="auto">
           <span class="name">{r.name} <span class="owner">{r.owner}{r.scaledBy ? ` · ${r.scaledBy === 'prof' ? 'PB' : r.scaledBy.toUpperCase()}` : ''}</span></span>
           <span data-volatile="frequent">
-            <PipTracker max={r.max} used={r.used} onSet={(u) => setFeatureResourceUsed(r.key, u, r.max)} />
+            <PipTracker max={r.max} used={r.used} locked={!$canEditPlay} onSet={(u) => setFeatureResourceUsed(r.key, u, r.max)} />
           </span>
           <span class="max">{r.max}</span>
           <span class="tag">{r.recharge}</span>
@@ -49,24 +50,24 @@
         <li>
           <span class="name">{r.name}</span>
           <span data-volatile="frequent">
-            <PipTracker max={r.max} used={r.used} onSet={(u) => adjustResource(r.id, u - r.used)} />
+            <PipTracker max={r.max} used={r.used} locked={!$canEditPlay} onSet={(u) => adjustResource(r.id, u - r.used)} />
           </span>
-          <span class="max">max <NumberField value={r.max} min={0} onchange={(v) => setResourceMax(r.id, v)} /></span>
+          <span class="max">max <NumberField value={r.max} min={0} locked={!$canEditBuild} onchange={(v) => setResourceMax(r.id, v)} /></span>
           <span class="tag">{r.recharge}</span>
-          <button class="rm" aria-label="Remove" onclick={() => removeResource(r.id)}>×</button>
+          <button class="rm" aria-label="Remove" disabled={!$canEditBuild} onclick={() => removeResource(r.id)}>×</button>
         </li>
       {/each}
     </ul>
   {/if}
 
   <form class="add" onsubmit={(e) => { e.preventDefault(); add(); }}>
-    <input placeholder="Feature name" bind:value={name} />
-    <NumberField value={max} min={1} onchange={(v) => (max = v)} />
-    <select bind:value={recharge}>
+    <input placeholder="Feature name" disabled={!$canEditBuild} bind:value={name} />
+    <NumberField value={max} min={1} locked={!$canEditBuild} onchange={(v) => (max = v)} />
+    <select bind:value={recharge} disabled={!$canEditBuild}>
       <option value="short">short rest</option>
       <option value="long">long rest</option>
     </select>
-    <button type="submit">Add</button>
+    <button type="submit" disabled={!$canEditBuild}>Add</button>
   </form>
 </section>
 

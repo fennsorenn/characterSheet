@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { canEditPlay } from '../stores/mode.js';
   import { untrack } from 'svelte';
   import { character, addNoteDoc, addNoteFolder, deleteNote, renameNote, saveNoteContent, setNoteTabs } from '../stores/character.js';
   import { isNoteFolder, type NoteDoc, type NoteFolder, type NoteNode } from '../character/index.js';
@@ -211,8 +212,8 @@
           {@render addForm()}
         {:else}
           <div class="tree-actions">
-            <button onclick={() => startAdd(null, 'doc')}>+ Doc</button>
-            <button onclick={() => startAdd(null, 'folder')}>+ Folder</button>
+            <button disabled={!$canEditPlay} onclick={() => startAdd(null, 'doc')}>+ Doc</button>
+            <button disabled={!$canEditPlay} onclick={() => startAdd(null, 'folder')}>+ Folder</button>
           </div>
         {/if}
       </div>
@@ -241,8 +242,8 @@
               <span class="node-name" ondblclick={() => startRename(node.id, node.name)}>{node.name}</span>
             {/if}
             <span class="node-acts">
-              <button class="act-btn" title="Rename" onclick={() => startRename(node.id, node.name)}><UiIcon name="pencil" size="0.85em" /></button>
-              <button class="act-btn del" title="Delete" onclick={() => confirmDelete(node.id, node.name)}><UiIcon name="close" size="0.85em" /></button>
+              <button class="act-btn" disabled={!$canEditPlay} title="Rename" onclick={() => startRename(node.id, node.name)}><UiIcon name="pencil" size="0.85em" /></button>
+              <button class="act-btn del" disabled={!$canEditPlay} title="Delete" onclick={() => confirmDelete(node.id, node.name)}><UiIcon name="close" size="0.85em" /></button>
             </span>
           </div>
           <div class="folder-children">
@@ -251,8 +252,8 @@
               {@render addForm()}
             {:else}
               <div class="tree-actions sub">
-                <button onclick={() => startAdd(node.id, 'doc')}>+ Doc</button>
-                <button onclick={() => startAdd(node.id, 'folder')}>+ Folder</button>
+                <button disabled={!$canEditPlay} onclick={() => startAdd(node.id, 'doc')}>+ Doc</button>
+                <button disabled={!$canEditPlay} onclick={() => startAdd(node.id, 'folder')}>+ Folder</button>
               </div>
             {/if}
           </div>
@@ -333,7 +334,9 @@
        mount; the $effect builds/tears down the live instance. -->
   {#if activeId && activeDoc}
     {#key activeId}
-      <div class="editor-host" bind:this={editorEl}></div>
+      <!-- Milkdown owns this subtree, so the lock is `inert` rather than a
+           prop: it blocks typing, focus and the toolbar in one go. -->
+      <div class="editor-host" bind:this={editorEl} inert={!$canEditPlay}></div>
     {/key}
   {:else}
     <div class="empty-state">

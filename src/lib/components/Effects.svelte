@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { canEditPlay } from '../stores/mode.js';
   import { ABILITIES, ABILITY_NAMES, type Buff } from '../character/index.js';
   import { character, addBuff, removeBuff, toggleBuff } from '../stores/character.js';
 
@@ -75,36 +76,36 @@
       {#each $character.buffs as buff (buff.id)}
         <li class:active={buff.active}>
           <label class="tog">
-            <input type="checkbox" checked={buff.active} onchange={() => toggleBuff(buff.id)} />
+            <input type="checkbox" checked={buff.active} disabled={!$canEditPlay} onchange={() => toggleBuff(buff.id)} />
             <span class="name">{buff.name}</span>
           </label>
           <span class="sum">{summary(buff)}</span>
           {#if buff.concentration}<span class="ctag" title="Concentration">C</span>{/if}
-          <button class="rm" aria-label="Remove" onclick={() => removeBuff(buff.id)}>×</button>
+          <button class="rm" aria-label="Remove" disabled={!$canEditPlay} onclick={() => removeBuff(buff.id)}>×</button>
         </li>
       {/each}
     </ul>
   {/if}
 
   <div class="addrow">
-    <select onchange={addPreset} aria-label="Add preset effect">
+    <select onchange={addPreset} disabled={!$canEditPlay} aria-label="Add preset effect">
       <option value="">+ Add preset…</option>
       {#each PRESETS as preset, i}
         <option value={i}>{preset.name}</option>
       {/each}
     </select>
-    <button class="custom" onclick={() => (showCustom = !showCustom)}>Custom</button>
+    <button class="custom" disabled={!$canEditPlay} onclick={() => (showCustom = !showCustom)}>Custom</button>
   </div>
 
   {#if showCustom}
     <form class="customform" onsubmit={(e) => { e.preventDefault(); addCustom(); }}>
-      <input placeholder="Effect name" bind:value={cName} />
-      <select bind:value={cTarget}>
+      <input placeholder="Effect name" disabled={!$canEditPlay} bind:value={cName} />
+      <select bind:value={cTarget} disabled={!$canEditPlay}>
         {#each TARGETS as t}<option value={t.id}>{t.label}</option>{/each}
       </select>
-      <input class="val" type="number" bind:value={cValue} />
+      <input class="val" type="number" disabled={!$canEditPlay} bind:value={cValue} />
       <label class="cc"><input type="checkbox" bind:checked={cConc} /> Conc.</label>
-      <button type="submit">Add</button>
+      <button type="submit" disabled={!$canEditPlay}>Add</button>
     </form>
   {/if}
 </section>

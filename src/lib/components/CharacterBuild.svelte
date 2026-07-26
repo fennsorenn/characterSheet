@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { canEditBuild } from '../stores/mode.js';
   import {
     character,
     setRace,
@@ -34,7 +35,10 @@
     <h3>Race, Class &amp; Feats</h3>
   </header>
 
-  <div class="setup">
+  <!-- Every control here defines the character, so the whole group locks
+       together outside edit mode. `inert` also takes it out of the tab
+       order, which `disabled` on each control would not do for the chips. -->
+  <div class="setup" class:locked={!$canEditBuild} inert={!$canEditBuild}>
     <div class="line">
       <span class="k">Race</span>
       {#if $character.race}
@@ -102,6 +106,7 @@
   .bhead { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.6rem; }
   h3 { margin: 0; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
   .setup { display: flex; flex-direction: column; gap: 0.3rem; }
+  .setup.locked { opacity: 0.55; }
   .line { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
   .k { font-size: 0.7rem; text-transform: uppercase; color: var(--muted); min-width: 6rem; }
   .v { font-weight: 600; }

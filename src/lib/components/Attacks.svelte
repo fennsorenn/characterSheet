@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { canEditBuild } from '../stores/mode.js';
   import { character, graph, grantPool, setItemProficient } from '../stores/character.js';
   import { catalogLookup } from '../stores/catalog.js';
   import { openDetail } from '../stores/detail.js';
@@ -100,6 +101,7 @@
           <button
             class="prof"
             class:on={a.proficient}
+            disabled={!$canEditBuild}
             title={a.proficient ? 'Proficient' : 'Not proficient'}
             onclick={() => setItemProficient(idx, !a.proficient)}
           >prof</button>

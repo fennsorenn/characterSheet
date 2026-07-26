@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { canEditBuild } from '../stores/mode.js';
   import { SKILLS, SKILL_ABILITY, skillNodeId, setMembers, type ProficiencyLevel, type Skill } from '../character/index.js';
   import { character, grantPool, cycleSkillProficiency } from '../stores/character.js';
   import StatValue from './StatValue.svelte';
@@ -40,6 +41,7 @@
         <div class="row">
         <button
           class="dot {eff.level}"
+          disabled={!$canEditBuild}
           aria-label="Cycle {skill} proficiency"
           title={eff.sources.length ? `${eff.level} (granted by ${eff.sources.join(', ')})` : eff.level}
           onclick={() => cycleSkillProficiency(skill)}

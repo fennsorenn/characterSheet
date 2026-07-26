@@ -12,6 +12,7 @@
   import { navigate } from '../stores/router.js';
   import { dockView, toggleDockView, closeDock, focusQuickAdd } from '../stores/dock.js';
   import { activeBuffs } from '../character/buffs.js';
+  import { sheetMode, cycleSheetMode, setSheetMode, SHEET_MODES, MODE_LABELS, MODE_HINTS } from '../stores/mode.js';
   import DiceBody from './DiceBody.svelte';
   import PinnedCreature from './PinnedCreature.svelte';
   import UiIcon from './UiIcon.svelte';
@@ -93,6 +94,8 @@
     setCharacterLayoutPref($screenCategory, pinnedHere ? undefined : $layoutList.activeId);
   }
 
+  const MODE_ICON = { edit: '✎', play: '▶', read: '👁' } as const;
+
   const hp = (c: { hp: { current: number; max: number } }) =>
     c.hp.max > 0 ? Math.round((c.hp.current / c.hp.max) * 100) : 0;
 </script>
@@ -103,7 +106,7 @@
   <button class="db" class:on={$diceOpen} title="Dice roller" onclick={() => diceOpen.update((v) => !v)}>
     <span class="g"><Icon name="dice" /></span><span class="lb">Dice</span>
   </button>
-  <button class="db" class:on={$buffMode} title="Apply edits as temporary buffs/debuffs" onclick={onBuff}>
+  <button class="db" class:on={$buffMode} disabled={$sheetMode === 'read'} title="Apply edits as temporary buffs/debuffs" onclick={onBuff}>
     <span class="g">✦</span><span class="lb">Buff</span>
     {#if buffs.length}<span class="ct">{buffs.length}</span>{/if}
   </button>
@@ -111,15 +114,19 @@
     <!-- Under the toggle it belongs to, not in a section of its own. -->
     {@render buffList()}
   {/if}
-  <button class="db" class:on={$reminderMode} title="Pin short notes next to skills, items, spells or whole blocks" onclick={toggleReminderMode}>
+  <button class="db" class:on={$reminderMode} disabled={$sheetMode !== 'edit'} title="Pin short notes next to skills, items, spells or whole blocks" onclick={toggleReminderMode}>
     <span class="g">◎</span><span class="lb">Notes</span>
     {#if reminderCount}<span class="ct">{reminderCount}</span>{/if}
   </button>
-  <button class="db" title="Search items, spells and feats" onclick={onQuickAdd}>
+  <button class="db" disabled={$sheetMode !== 'edit'} title="Search items, spells and feats" onclick={onQuickAdd}>
     <span class="g">⌕</span><span class="lb">Add</span>
   </button>
-  <button class="db soon" title="Not built yet" disabled>
-    <span class="g">✎</span><span class="lb">Edit</span>
+  <button
+    class="db mode mode-{$sheetMode}"
+    title="{MODE_LABELS[$sheetMode]} mode — {MODE_HINTS[$sheetMode]} Click to change."
+    onclick={cycleSheetMode}
+  >
+    <span class="g">{MODE_ICON[$sheetMode]}</span><span class="lb">{MODE_LABELS[$sheetMode]}</span>
   </button>
 {/snippet}
 
@@ -145,6 +152,16 @@
 {/snippet}
 
 {#snippet menu()}
+  <div class="sec">Mode</div>
+  <div class="modes" role="group" aria-label="Sheet mode">
+    {#each SHEET_MODES as m}
+      <button class="seg" class:on={$sheetMode === m} title={MODE_HINTS[m]} onclick={() => setSheetMode(m)}>
+        {MODE_ICON[m]} {MODE_LABELS[m]}
+      </button>
+    {/each}
+  </div>
+  <p class="hint">{MODE_HINTS[$sheetMode]}</p>
+
   <div class="sec">Sheet</div>
   <select
     class="preset"
@@ -300,7 +317,23 @@
   .db .ok { margin-left: auto; color: var(--muted); }
   .db.on { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--bg)); font-weight: 600; }
   .db:disabled { color: var(--muted); cursor: not-allowed; }
-  .db.soon .lb::after { content: ' · soon'; font-size: 0.62rem; opacity: 0.7; }
+  /* Play and read are states worth spotting at a glance, so the control is
+     tinted rather than merely labelled. */
+  .db.mode-play { color: #3fa45b; }
+  .db.mode-read { color: var(--muted); }
+  .modes { display: flex; gap: 0.25rem; }
+  .seg {
+    flex: 1;
+    font: inherit;
+    font-size: 0.74rem;
+    padding: 0.25rem 0.2rem;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--fg);
+    cursor: pointer;
+  }
+  .seg.on { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--bg)); font-weight: 600; }
 
   .sec {
     display: flex;
@@ -349,7 +382,6 @@
   .side:not(.open) .db { width: 2.5rem; height: 2.5rem; justify-content: center; padding: 0; }
   .side:not(.open) .db .lb { display: none; }
   .side:not(.open) .db .ct { position: absolute; top: -1px; right: -1px; margin: 0; }
-  .side:not(.open) .db.soon .lb::after { content: none; }
   .stub { border: 1px solid var(--line); border-radius: 8px; width: 2.5rem; padding: 0.18rem; text-align: center; font: inherit; font-size: 0.6rem; font-weight: 700; color: var(--accent); background: var(--bg); cursor: pointer; }
   .stub small { display: block; font-weight: 400; color: var(--muted); font-size: 0.56rem; }
 
@@ -361,7 +393,6 @@
   .tabs .db { flex-direction: column; gap: 0.1rem; align-items: center; justify-content: center; padding: 0.3rem 0.1rem; font-size: 0.58rem; }
   .tabs .db .g { width: auto; font-size: 1.1rem; }
   .tabs .db .ct { position: absolute; top: 0.05rem; right: 18%; margin: 0; }
-  .tabs .db.soon .lb::after { content: none; }
 
   .creatures { display: flex; gap: 0.35rem; padding: 0.3rem 0.45rem; overflow-x: auto; border-bottom: 1px solid var(--line); }
   .cb { flex: none; min-width: 5.6rem; display: flex; flex-direction: column; align-items: flex-start; gap: 0.12rem; padding: 0.25rem 0.45rem; cursor: pointer; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--fg); font: inherit; }

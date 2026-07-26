@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { canEditBuild, canEditPlay } from '../stores/mode.js';
   import {
     character,
     toggleEquipped,
@@ -112,7 +113,7 @@
         <li>
           <div class="row">
           <label class="equip" title="Equipped">
-            <input type="checkbox" checked={item.equipped} onchange={() => toggleEquipped(i)} />
+            <input type="checkbox" checked={item.equipped} disabled={!$canEditPlay} onchange={() => toggleEquipped(i)} />
           </label>
           <span class="qty">
             <NumberField value={item.quantity} min={0} onchange={(v) => setItemQuantity(i, v)} digits={3} />
@@ -134,20 +135,20 @@
               title={readable(item) ? 'Show details' : 'Describe this item'}
               onclick={(e) => openItemDetail(item, e.currentTarget)}
             >{item.label ?? item.name}</button>
-            <button class="edit" title="Rename item" aria-label="Rename item" onclick={() => startRename(i, item.label ?? item.name)}><UiIcon name="pencil" size="0.85em" /></button>
+            <button class="edit" disabled={!$canEditBuild} title="Rename item" aria-label="Rename item" onclick={() => startRename(i, item.label ?? item.name)}><UiIcon name="pencil" size="0.85em" /></button>
           {/if}
           {#if needsAttune(item.name, item.source)}
             <button
               class="attune"
               class:on={item.attuned}
-              disabled={!item.attuned && attunedCount >= ATTUNEMENT_LIMIT}
+              disabled={!$canEditPlay || (!item.attuned && attunedCount >= ATTUNEMENT_LIMIT)}
               title={item.attuned ? 'Attuned' : 'Attune'}
               onclick={() => toggleAttuned(i)}
             ><UiIcon name="star" filled={item.attuned} size="0.9em" /></button>
           {/if}
           <span class="src">{item.source}</span>
           {#if note}<span class="note">{note}</span>{/if}
-          <button class="rm" aria-label="Remove" onclick={() => removeInventoryItem(i)}>×</button>
+          <button class="rm" aria-label="Remove" disabled={!$canEditBuild} onclick={() => removeInventoryItem(i)}>×</button>
           </div>
           <Reminders anchor={anchors.item(item)} />
         </li>

@@ -58,6 +58,15 @@ in this repo.
   dock as well — a 300px floating window on a 420px screen spent its life over
   the dock beneath it — while on wider screens it stays a window you can drag
   wherever you like.
+- **Edit / Play / Read** (`src/lib/stores/mode.ts`) — one control in the dock
+  decides how much of the sheet accepts input. **Edit** is everything. **Play**
+  keeps what the character *is* out of reach — ability scores, max HP, class
+  levels, proficiencies, what is in the pack — while leaving what it currently
+  *has* editable: hit points, expended slots and uses, conditions, effects,
+  notes. **Read** locks the lot, but rolling, tracing a number and expanding an
+  entry still work, because reading a sheet is not editing it. The split is a
+  property of each control, so the two tiers are named in the code
+  (`canEditBuild` / `canEditPlay`) rather than inferred from the block.
 - **Choosing vs. reading** — picking what a character *is* and reading what that
   gave them are separate blocks. **Race, Class & Feats** holds the selectors;
   **Features & Traits** lists what they granted, with the choices each feature

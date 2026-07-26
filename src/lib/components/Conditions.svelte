@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { canEditPlay } from '../stores/mode.js';
   import { CONDITIONS } from '../character/index.js';
   import { character, toggleCondition, setExhaustion } from '../stores/character.js';
 
@@ -11,7 +12,7 @@
 
   <div class="chips">
     {#each CONDITIONS as cond}
-      <button class="chip" class:on={active.has(cond)} onclick={() => toggleCondition(cond)}>
+      <button class="chip" class:on={active.has(cond)} disabled={!$canEditPlay} onclick={() => toggleCondition(cond)}>
         {cond}
       </button>
     {/each}
@@ -22,6 +23,7 @@
     <div class="steps">
       {#each [1, 2, 3, 4, 5, 6] as n}
         <button
+        disabled={!$canEditPlay}
           class="step"
           class:on={$character.exhaustion >= n}
           aria-label="Exhaustion {n}"

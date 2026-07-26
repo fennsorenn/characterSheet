@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { canEditBuild } from '../stores/mode.js';
   import {
     character,
     setName,
@@ -55,6 +56,7 @@
   <div class="head">
     <input
       class="char-name"
+      readonly={!$canEditBuild}
       value={$character.name}
       aria-label="Character name"
       oninput={(e) => setName((e.target as HTMLInputElement).value)}

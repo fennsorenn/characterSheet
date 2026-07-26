@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { canEditBuild } from '../stores/mode.js';
   import { ABILITIES, ABILITY_NAMES, type Ability } from '../character/index.js';
   import { character, setAbilityScore, abilityOverrides, abilityScores } from '../stores/character.js';
   import { buffMode } from '../stores/ui.js';
@@ -39,7 +40,8 @@
               min={1}
               max={30}
               onchange={(v) => setAbilityScore(abil, v)}
-            />
+            locked={!$canEditBuild}
+              />
           {/if}
           <Reminders anchor={anchors.ability(abil)} />
         </div>
@@ -59,7 +61,8 @@
             {:else if persistentOnly(abil)}
               <div class="persistent-full" title={`Effective ${$abilityScores[abil]} (base ${$character.abilities[abil]})`}>
                 <span class="persistent">{$abilityScores[abil]}</span>
-                <span class="base">base <NumberField value={$character.abilities[abil]} min={1} max={30} onchange={(v) => setAbilityScore(abil, v)} /></span>
+                <span class="base">base <NumberField value={$character.abilities[abil]} min={1} max={30} onchange={(v) => setAbilityScore(abil, v)} locked={!$canEditBuild}
+              /></span>
               </div>
             {:else}
               <NumberField
@@ -67,6 +70,7 @@
                 min={1}
                 max={30}
                 onchange={(v) => setAbilityScore(abil, v)}
+              locked={!$canEditBuild}
               />
             {/if}
           </div>

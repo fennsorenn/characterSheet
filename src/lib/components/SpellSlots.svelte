@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { canEditBuild, canEditPlay } from '../stores/mode.js';
   import {
     character,
     computedSlots,
@@ -26,7 +27,7 @@
   <header class="head">
     <h3>Spell Slots</h3>
     <label class="auto" title="Compute slots from class levels (multiclass table)">
-      <input type="checkbox" checked={auto} onchange={(e) => setSpellSlotsAuto((e.target as HTMLInputElement).checked)} />
+      <input type="checkbox" checked={auto} disabled={!$canEditBuild} onchange={(e) => setSpellSlotsAuto((e.target as HTMLInputElement).checked)} />
       auto
     </label>
   </header>
@@ -37,7 +38,7 @@
       {#each LEVELS as l}
         <label class="maxcell">
           <span>{l}</span>
-          <NumberField value={$character.spellSlots[l - 1].max} min={0} max={9} onchange={(v) => setSlotMax(l, v)} digits={1} />
+          <NumberField value={$character.spellSlots[l - 1].max} min={0} max={9} locked={!$canEditBuild} onchange={(v) => setSlotMax(l, v)} digits={1} />
         </label>
       {/each}
     </div>
@@ -53,7 +54,7 @@
         <div class="cell">
           <span class="glvl">{l}</span>
           <span data-volatile="frequent" data-print-pips>
-            <PipTracker {max} used={expended} onSet={(u) => setSlotExpended(l, u)} />
+            <PipTracker {max} used={expended} locked={!$canEditPlay} onSet={(u) => setSlotExpended(l, u)} />
           </span>
         </div>
       {/each}
@@ -62,7 +63,7 @@
         <div class="cell pact" title="Pact Magic (level {pact.level})">
           <span class="glvl">P<small>{pact.level}</small></span>
           <span data-volatile="frequent" data-print-pips>
-            <PipTracker max={pact.count} {used} onSet={(u) => setPactExpended(u)} />
+            <PipTracker max={pact.count} {used} locked={!$canEditPlay} onSet={(u) => setPactExpended(u)} />
           </span>
         </div>
       {/if}
@@ -75,7 +76,7 @@
         <li>
           <span class="lvl">Level {l}</span>
           <span data-volatile="frequent" data-print-pips>
-            <PipTracker {max} used={expended} onSet={(u) => setSlotExpended(l, u)} />
+            <PipTracker {max} used={expended} locked={!$canEditPlay} onSet={(u) => setSlotExpended(l, u)} />
           </span>
         </li>
       {/each}
@@ -84,7 +85,7 @@
         <li class="pact">
           <span class="lvl">Pact <small>(lvl {pact.level})</small></span>
           <span data-volatile="frequent" data-print-pips>
-            <PipTracker max={pact.count} {used} onSet={(u) => setPactExpended(u)} />
+            <PipTracker max={pact.count} {used} locked={!$canEditPlay} onSet={(u) => setPactExpended(u)} />
           </span>
         </li>
       {/if}

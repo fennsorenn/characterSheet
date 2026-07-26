@@ -113,3 +113,17 @@ body {
 }ant;
   }
 }
+
+/* Locked controls. Play and read mode disable a lot of things at once, and a
+   control that looks live but does nothing is worse than one that looks shut —
+   so anything disabled says so, unless a component has styled it itself. */
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+input[readonly] {
+  cursor: default;
+}

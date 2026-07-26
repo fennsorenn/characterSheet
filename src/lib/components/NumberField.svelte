@@ -13,8 +13,20 @@
      * the slack, so callers never have to guess how much a `ch` really buys.
      */
     digits?: number;
+    /** Read-only: the value still shows, but nothing can change it. */
+    locked?: boolean;
+    /** Accessible name — the field is frameless, so its label is elsewhere. */
+    label?: string;
   }
-  let { value, onchange, min = -Infinity, max = Infinity, digits = 2 }: Props = $props();
+  let {
+    value,
+    onchange,
+    min = -Infinity,
+    max = Infinity,
+    digits = 2,
+    locked = false,
+    label = undefined
+  }: Props = $props();
 
   // `ch` is the advance of "0", and the digits are tabular, so N digits are
   // exactly N ch; half a character of slack keeps them off the edges.
@@ -34,10 +46,11 @@
     editing = '';
     focused = false;
     const next = applyNumberEdit(value, raw);
-    if (next !== null) onchange(clamp(next));
+    if (next !== null && !locked) onchange(clamp(next));
   }
 
   function nudge(delta: number) {
+    if (locked) return;
     onchange(clamp(value + delta));
   }
 
@@ -57,7 +70,11 @@
 
 <input
   class="number-field"
+  class:locked
+  aria-label={label}
   style="width: {width}"
+  readonly={locked}
+  tabindex={locked ? -1 : 0}
   value={display}
   inputmode="numeric"
   onfocus={(e) => {
@@ -69,12 +86,14 @@
   onblur={commit}
   onkeydown={onKey}
   onwheel={(e) => {
+    if (locked) return;
     e.preventDefault();
     nudge(Math.sign(-e.deltaY) * (e.shiftKey ? 5 : 1));
   }}
 />
 
 <style>
+  .number-field.locked { cursor: default; }
   .number-field {
     font: inherit;
     font-variant-numeric: tabular-nums;

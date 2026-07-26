@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { canEditBuild } from '../stores/mode.js';
   import { character, setAcBase, setClassLevel, acOverride } from '../stores/character.js';
   import { totalLevel } from '../character/index.js';
   import NumberField from './NumberField.svelte';
@@ -27,7 +28,7 @@
         {/if}
       </span>
       {#if full}
-        <span class="sub">base <NumberField value={$character.acBase} min={0} max={30} onchange={setAcBase} /></span>
+        <span class="sub">base <NumberField label="Base armour class" value={$character.acBase} min={0} max={30} locked={!$canEditBuild} onchange={setAcBase} /></span>
       {/if}
     </div>
     <div class="stat">
@@ -46,7 +47,7 @@
       <div class="stat">
         <span class="k">Level</span>
         <span class="v" data-volatile="occasional">
-          <NumberField value={level} min={1} max={20} onchange={(v) => setClassLevel(0, v)} />
+          <NumberField label="Class level" value={level} min={1} max={20} locked={!$canEditBuild} onchange={(v) => setClassLevel(0, v)} />
         </span>
       </div>
       {#if $character.spellcasting}

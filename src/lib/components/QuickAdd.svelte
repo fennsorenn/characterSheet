@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { canEditBuild } from '../stores/mode.js';
   import { searchIndex } from '../stores/catalog.js';
   import { addInventoryItem, addSpell, addCustomFeature } from '../stores/character.js';
   import type { Category, SearchHit } from '../data/index.js';
@@ -54,6 +55,7 @@
 
 <div class="quickadd">
   <input
+    disabled={!$canEditBuild}
     placeholder={`Quick add ${NOUN[kind]}…`}
     bind:value={query}
     onfocus={() => (open = true)}

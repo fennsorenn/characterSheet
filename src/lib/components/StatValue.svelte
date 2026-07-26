@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { canEditPlay } from '../stores/mode.js';
   import { graph } from '../stores/character.js';
   import { openExplain, buffMode } from '../stores/ui.js';
   import { labelForNode } from '../character/index.js';
@@ -21,7 +22,7 @@
   const display = $derived(signed && value >= 0 ? `+${value}` : `${value}`);
 </script>
 
-{#if $buffMode && adjustable}
+{#if $buffMode && adjustable && $canEditPlay}
   <BuffField {node} {signed} />
 {:else}
   <button
