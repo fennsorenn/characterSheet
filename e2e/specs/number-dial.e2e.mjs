@@ -94,6 +94,52 @@ export default async function ({ page }) {
   assertEqual(await dial(page).count(), 0, 'Escape closes the dial');
   assertEqual(await storedHp(page), before + 10, 'without applying the change');
 
+  // --- The digits themselves are fields: tapping one raises the keyboard ---
+  await hpCurrent(page).click();
+  await page.waitForSelector('.dial[role=dialog]', { timeout: 5000 });
+  const cellsAre = await dial(page)
+    .locator('.col .digit')
+    .evaluateAll((els) => els.map((e) => `${e.tagName.toLowerCase()}:${e.getAttribute('inputmode')}`));
+  assertEqual(
+    cellsAre,
+    ['input:numeric', 'input:numeric', 'input:numeric'],
+    'every digit is a numeric field'
+  );
+  assertEqual(
+    await dial(page).locator('.col .digit').nth(1).getAttribute('aria-label'),
+    'Tens digit',
+    'and says which place it is'
+  );
+
+  // Typing into a digit replaces that place — it does not add to it.
+  await dial(page).locator('.col .digit').first().type('1');
+  await page.waitForTimeout(150);
+  await dial(page).locator('.col .digit').nth(1).type('4');
+  await page.waitForTimeout(150);
+  await dial(page).locator('.col .digit').nth(2).type('2');
+  await page.waitForTimeout(200);
+  assertEqual(Number(await dial(page).locator('.val').inputValue()), 142, 'the typed digits are the number');
+  // The caret moved on by itself, so three digits took three keystrokes.
+  assertEqual(
+    await dial(page).evaluate(() => document.activeElement?.getAttribute('aria-label')),
+    'Ones digit',
+    'focus lands on the last digit typed'
+  );
+  await dial(page).locator('button.primary').click();
+  await page.waitForTimeout(400);
+  assertEqual(await storedHp(page), 142, 'and Apply writes it');
+
+  // A digit is a digit, not a step: 9 in the tens of a 1–30 score is 90, which
+  // the ceiling answers rather than the tens becoming "+90".
+  const str = cell(page, 'Ability Scores').locator('.ability', { hasText: 'Str' }).locator('.number-field').first();
+  await str.click();
+  await page.waitForSelector('.dial[role=dialog]', { timeout: 5000 });
+  await dial(page).locator('.col .digit').first().type('9');
+  await page.waitForTimeout(200);
+  assertEqual(Number(await dial(page).locator('.val').inputValue()), 30, 'clamped to the ceiling');
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(200);
+
   // --- The value inside the dial stays a field, on every device ---
   // The dial exists so a keyboard doesn't come up unasked, not to lock it away:
   // tapping the number is the way back to typing.

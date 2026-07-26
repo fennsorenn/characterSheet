@@ -6,6 +6,7 @@
     flipSign,
     formatDelta,
     placeOf,
+    setDigit,
     stepDigit
   } from './numberDial.js';
   import { applyNumberEdit, clampValue } from './numberEdit.js';
@@ -42,6 +43,64 @@
     if (!target) return;
     draft = stepDigit(draft, placeOf(index, digits), dir, target.min, target.max);
     typed = null;
+  }
+
+  let cellEls = $state<(HTMLInputElement | null)[]>([]);
+
+  const focusCell = (i: number) => {
+    const el = cellEls[i];
+    if (el) {
+      el.focus();
+      el.select();
+    }
+  };
+
+  /**
+   * A digit typed into a cell replaces that place, and the caret moves on by
+   * itself — otherwise entering "142" would mean three separate taps.
+   *
+   * Caught at `beforeinput` and cancelled, rather than read back off the field
+   * afterwards. A cell already holds one character, and the click that focused
+   * it leaves the caret next to that character rather than over it, so the
+   * browser refuses the insertion against `maxlength` and no `input` event ever
+   * arrives. Taking the character from the event sidesteps the field's state
+   * entirely: each cell is a view of `draft`, never a place text accumulates.
+   */
+  function typeDigit(index: number, e: Event) {
+    const char = (e as InputEvent).data;
+    if (!char || !/^\d$/.test(char)) return;
+    e.preventDefault();
+    if (!target) return;
+    draft = setDigit(draft, placeOf(index, digits), Number(char), target.min, target.max);
+    typed = null;
+    if (index < digits - 1) focusCell(index + 1);
+  }
+
+  /** Belt and braces: whatever happened, a cell shows the digit `draft` has. */
+  function syncCell(index: number, el: HTMLInputElement) {
+    const want = String(digitCells(draft, digits)[index] ?? 0);
+    if (el.value !== want) el.value = want;
+  }
+
+  function digitKey(index: number, e: KeyboardEvent) {
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      step(index, 1);
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      step(index, -1);
+    } else if (e.key === 'ArrowLeft' && index > 0) {
+      e.preventDefault();
+      focusCell(index - 1);
+    } else if (e.key === 'ArrowRight' && index < digits - 1) {
+      e.preventDefault();
+      focusCell(index + 1);
+    } else if (e.key === 'Backspace') {
+      // Backspace clears this digit to zero and steps back, the way a keypad does.
+      e.preventDefault();
+      if (target) draft = setDigit(draft, placeOf(index, digits), 0, target.min, target.max);
+      if (index > 0) focusCell(index - 1);
+    }
   }
 
   /** Whether an arrow would move anything — a dead arrow is dimmed, not silent. */
@@ -103,7 +162,21 @@
               disabled={!canStep(i, 1)}
               onclick={() => step(i, 1)}
             >▲</button>
-            <span class="cell digit">{digit}</span>
+            <!-- Each digit is its own field: tapping one raises the numeric
+                 keyboard, and what you type there *is* that digit. Same metrics
+                 as the text it replaces, so the row does not move. -->
+            <input
+              class="cell digit"
+              inputmode="numeric"
+              maxlength="1"
+              aria-label="{['Ones', 'Tens', 'Hundreds', 'Thousands'][digits - 1 - i] ?? `Place ${placeOf(i, digits)}`} digit"
+              value={digit}
+              bind:this={cellEls[i]}
+              onbeforeinput={(e) => typeDigit(i, e)}
+              oninput={(e) => syncCell(i, e.target as HTMLInputElement)}
+              onblur={(e) => syncCell(i, e.target as HTMLInputElement)}
+              onkeydown={(e) => digitKey(i, e)}
+            />
             <button
               class="arrow down"
               aria-label="Decrease by {placeOf(i, digits)}"
@@ -181,14 +254,26 @@
   }
   .arrow:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); }
   .arrow:disabled { opacity: 0.25; cursor: default; }
+  /* The digit cells are fields, but must read as the big plain numbers they
+     replaced: no chrome until one is being edited. */
   .cell {
+    font: inherit;
     font-variant-numeric: tabular-nums;
     font-size: 1.7rem;
     font-weight: 700;
     line-height: 1.2;
     min-width: 2.4rem;
+    width: 2.4rem;
     text-align: center;
+    color: var(--fg);
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    padding: 0;
+    box-sizing: border-box;
   }
+  input.cell:hover { background: var(--field-hover); }
+  input.cell:focus { outline: none; background: var(--bg); box-shadow: inset 0 -2px 0 var(--accent); }
   .sign .cell { font: inherit; font-size: 1.5rem; border: none; background: none; color: var(--fg); cursor: pointer; }
   .sign .spacer { height: 2.05rem; }
 
