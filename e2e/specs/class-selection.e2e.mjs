@@ -1,7 +1,7 @@
-import { cell, addClassFromCatalog, assert, assertEqual } from '../harness.mjs';
+import { cell, buildCell, addClassFromCatalog, assert, assertEqual } from '../harness.mjs';
 
 async function classNames(page) {
-  return cell(page, 'Features & Traits').locator('.line.classes .classchip .cname').allInnerTexts();
+  return buildCell(page).locator('.line.classes .classchip .cname').allInnerTexts();
 }
 async function litSaves(page) {
   const saves = cell(page, 'Saving Throws');
@@ -22,7 +22,7 @@ export default async function ({ page }) {
   assertEqual(await classNames(page), ['Fighter', 'Cleric'], 'Cleric added as a second class');
 
   // Remove Fighter → only Cleric remains; saves switch to Cleric's Wis/Cha.
-  const line = cell(page, 'Features & Traits').locator('.line.classes');
+  const line = buildCell(page).locator('.line.classes');
   await line.locator('.classchip', { hasText: 'Fighter' }).locator('.x').click();
   await page.waitForTimeout(200);
   assertEqual(await classNames(page), ['Cleric'], 'Fighter removed — no longer stuck on it');

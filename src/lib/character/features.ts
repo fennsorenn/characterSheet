@@ -27,6 +27,12 @@ export interface Feature {
   variantKey?: string;
   /** For a variant: whether it is currently enabled by the character. */
   variantEnabled?: boolean;
+  /**
+   * Set only on the player's own features: the id to remove them by. Every other
+   * feature is derived from race/class/background/feats and can only be removed
+   * by dropping what grants it, so the row offers no delete.
+   */
+  customId?: string;
 }
 
 /** Key into `featureMeta` for a feature's overrides — tags, hidden, description. */
@@ -46,7 +52,8 @@ export function customFeatures(character: Character): Feature[] {
     name: f.name,
     source: CUSTOM_SOURCE,
     subtitle: f.subtitle,
-    entries: []
+    entries: [],
+    customId: f.id
   }));
 }
 

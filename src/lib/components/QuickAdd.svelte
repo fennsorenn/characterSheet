@@ -1,29 +1,36 @@
 <script lang="ts">
   import { searchIndex } from '../stores/catalog.js';
-  import { addInventoryItem, addSpell } from '../stores/character.js';
+  import { addInventoryItem, addSpell, addCustomFeature } from '../stores/character.js';
   import type { Category, SearchHit } from '../data/index.js';
 
   // A compact quick-import bar for the bottom of a specific list (Inventory /
-  // Spells). It searches only the relevant catalog category and can also add the
-  // typed text verbatim as a custom entry, so homebrew or off-catalog things go
-  // straight in without leaving the list.
-  let { kind }: { kind: 'item' | 'spell' } = $props();
+  // Spells / Features). It searches only the relevant catalog category and can
+  // also add the typed text verbatim as a custom entry, so homebrew or
+  // off-catalog things go straight in without leaving the list.
+  //
+  // Features are the verbatim-only case: every catalog feature arrives via a
+  // race, class, background or feat, so there is nothing to search here — a
+  // feature typed in is by definition one of the player's own.
+  type Kind = 'item' | 'spell' | 'feature';
+  let { kind }: { kind: Kind } = $props();
 
-  const CATEGORY: Record<'item' | 'spell', Category> = { item: 'item', spell: 'spell' };
-  const NOUN = { item: 'item', spell: 'spell' } as const;
+  const CATEGORY: Record<Kind, Category | null> = { item: 'item', spell: 'spell', feature: null };
+  const NOUN = { item: 'item', spell: 'spell', feature: 'feature' } as const;
 
   let query = $state('');
   let open = $state(false);
 
   const hits = $derived.by((): SearchHit[] => {
     const index = $searchIndex;
-    if (!index || !query.trim()) return [];
-    return index.search(query, { categories: [CATEGORY[kind]], limit: 8 });
+    const category = CATEGORY[kind];
+    if (!index || !category || !query.trim()) return [];
+    return index.search(query, { categories: [category], limit: 8 });
   });
 
   function addRef(name: string, source: string) {
     if (kind === 'item') addInventoryItem({ name, source });
-    else addSpell({ name, source });
+    else if (kind === 'spell') addSpell({ name, source });
+    else addCustomFeature(name);
     query = '';
     open = false;
   }

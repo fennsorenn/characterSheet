@@ -38,9 +38,10 @@ const LEGACY_KEY = 'charactersheet.layout';
 /**
  * v8 introduced per-screen-size preferences; v9 made the shipped templates fixed
  * built-ins that live in code rather than stored copies, so the persisted
- * library holds only what the user made.
+ * library holds only what the user made. v10 split the race/class/feat selector
+ * out of Features into its own block.
  */
-const LIBRARY_VERSION = 9;
+export const LIBRARY_VERSION = 10;
 
 /**
  * Block types introduced in each library version. On upgrade these are appended
@@ -49,7 +50,8 @@ const LIBRARY_VERSION = 9;
  * new block ships.
  */
 const BLOCKS_INTRODUCED: Record<number, string[]> = {
-  7: ['traits']
+  7: ['traits'],
+  10: ['characterBuild']
 };
 
 /** Each screen size pointed at its built-in for a play style. */

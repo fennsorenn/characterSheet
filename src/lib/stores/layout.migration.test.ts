@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { appendNewBlocks, adoptLibrary, unstoreBuiltins } from './layout.js';
+import { appendNewBlocks, adoptLibrary, unstoreBuiltins, LIBRARY_VERSION } from './layout.js';
 import { defaultTemplate } from '../layout/presets.js';
 import { addBlock } from '../layout/operations.js';
 import type { LayoutLibrary } from '../layout/library.js';
@@ -23,11 +23,22 @@ describe('appendNewBlocks', () => {
       expect(l.blocks.some((b) => b.type === 'traits')).toBe(true);
     }
     // Existing blocks are preserved and the new one is appended at the end.
-    expect(out.layouts[1].blocks.map((b) => b.type)).toEqual(['skills', 'traits']);
+    expect(out.layouts[1].blocks.map((b) => b.type).slice(0, 2)).toEqual(['skills', 'traits']);
+  });
+
+  it('adds characterBuild to layouts missing it when upgrading from before v10', () => {
+    // v10 split the race/class/feat selector out of Features into its own block;
+    // a template made before that has no way to pick a class without it.
+    const out = appendNewBlocks(lib(), 9);
+    for (const l of out.layouts) {
+      expect(l.blocks.some((b) => b.type === 'characterBuild')).toBe(true);
+    }
+    // Only the blocks introduced *after* the stored version are added.
+    expect(out.layouts[1].blocks.map((b) => b.type)).toEqual(['skills', 'characterBuild']);
   });
 
   it('does nothing when already at/after the introducing version', () => {
-    const out = appendNewBlocks(lib(), 7);
+    const out = appendNewBlocks(lib(), 10);
     expect(out.layouts.flatMap((l) => l.blocks.map((b) => b.type))).toEqual(['abilityScores', 'skills']);
   });
 
@@ -134,7 +145,9 @@ describe('unstoreBuiltins', () => {
     };
     expect(unstoreBuiltins(mine, 8)).toEqual(mine);
     // At the current version there is nothing to retire, even if ids collide.
+    // Pinned to LIBRARY_VERSION rather than a literal so a later bump doesn't
+    // silently turn this into a test of the upgrade path.
     const current = stored(defaultTemplate('desktop', 'martial'));
-    expect(unstoreBuiltins(current, 9)).toEqual(current);
+    expect(unstoreBuiltins(current, LIBRARY_VERSION)).toEqual(current);
   });
 });

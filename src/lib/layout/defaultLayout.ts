@@ -17,6 +17,7 @@ export function defaultLayout(): SheetLayout {
     'saves',
     'skills',
     'attacks',
+    'characterBuild',
     'features',
     'traits',
     'inventory',
