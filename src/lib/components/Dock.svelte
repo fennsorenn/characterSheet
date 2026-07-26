@@ -12,6 +12,7 @@
   import { navigate } from '../stores/router.js';
   import { dockView, toggleDockView, closeDock, focusQuickAdd } from '../stores/dock.js';
   import { activeBuffs } from '../character/buffs.js';
+  import DiceBody from './DiceBody.svelte';
   import PinnedCreature from './PinnedCreature.svelte';
   import UiIcon from './UiIcon.svelte';
   import Icon from './Icon.svelte';
@@ -40,9 +41,35 @@
   const openCreature = $derived($dockView?.kind === 'creature' ? $dockView.id : null);
   const menuShown = $derived($dockView?.kind === 'menu');
   const buffsShown = $derived($dockView?.kind === 'buffs');
+  const diceShown = $derived($dockView?.kind === 'dice');
 
   /** Whether this character pins the active template to the current screen size. */
   const pinnedHere = $derived($characterLayoutPrefs[$screenCategory] === $layoutList.activeId);
+
+  // On a phone the roller lives in the dock's panel, so the two have to agree.
+  // Which way the sync runs depends on what changed — hence the previous
+  // values: reacting to the current state alone gives two rules that undo each
+  // other (open the panel because dice is on / turn dice off because the panel
+  // is not dice).
+  let wasDiceOpen = false;
+  let wasDiceShown = false;
+  $effect(() => {
+    const isOpen = $diceOpen;
+    const isShown = diceShown;
+    if (bottom) {
+      if (isOpen && !wasDiceOpen) {
+        // Opened by the Dice control, or by a roll fired from an attack.
+        if (!isShown) dockView.set({ kind: 'dice' });
+      } else if (!isOpen && wasDiceOpen && isShown) {
+        closeDock();
+      } else if (isOpen && !isShown && wasDiceShown) {
+        // The panel moved to something else; the roller is no longer showing.
+        diceOpen.set(false);
+      }
+    }
+    wasDiceOpen = isOpen;
+    wasDiceShown = isShown;
+  });
 
   function onBuff() {
     const turningOn = !$buffMode;
@@ -156,7 +183,9 @@
     {#if open}
       <div class="grab"></div>
       <div class="panel">
-        {#if buffsShown}
+        {#if diceShown}
+          <DiceBody />
+        {:else if buffsShown}
           {@render buffList()}
         {:else if menuShown}
           {@render menu()}

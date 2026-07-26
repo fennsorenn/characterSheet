@@ -86,6 +86,29 @@ export default async function ({ page }) {
     'a phone viewport docks to the bottom'
   );
   assert((await dock(page).locator('.tabs .db').count()) >= 5, 'with the controls as a tab row');
+
+  // --- On a phone the roller is *in* the dock, not floating over it ---
+  await dockControl(page, 'Dice');
+  assertEqual(await page.locator('.roller').count(), 0, 'no floating window on a phone');
+  assert((await dock(page).locator('.quick button').count()) > 0, 'the dice live in the dock panel');
+  assert((await dock(page).locator('.modes button[title="Advantage"]').count()) === 1, 'with its modes');
+
+  await dockControl(page, 'Dice');
+  assertEqual(await dock(page).locator('.quick').count(), 0, 'closing puts it away');
+  // Opening another panel takes the roller down with it, so the tab is honest.
+  await dockControl(page, 'Dice');
+  assert((await dock(page).locator('.quick button').count()) > 0, 'roller showing again');
+  await dock(page).locator('.db', { hasText: 'More' }).first().click();
+  await page.waitForTimeout(300);
+  assertEqual(await dock(page).locator('.quick').count(), 0, 'switching panels closes the roller');
+  assert(
+    !(await dock(page).locator('.db', { hasText: 'Dice' }).first().evaluate((el) => el.classList.contains('on'))),
+    'and the Dice tab stops looking lit'
+  );
+
   await page.setViewportSize({ width: 1200, height: 2100 });
   await page.waitForTimeout(400);
+  await dockControl(page, 'Dice');
+  assert((await page.locator('.roller').count()) === 1, 'back on a desktop it floats again');
+  await dockControl(page, 'Dice');
 }

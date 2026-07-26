@@ -54,7 +54,10 @@ in this repo.
   or exporting the sheet sits one expand away. Pinned creatures live in it too,
   so an open statblock and the controls share a surface instead of competing for
   the same corner. Turning buff mode on opens it onto the list of buffs it is
-  applying, each clearable on its own.
+  applying, each clearable on its own. On a phone the dice roller opens in the
+  dock as well — a 300px floating window on a 420px screen spent its life over
+  the dock beneath it — while on wider screens it stays a window you can drag
+  wherever you like.
 - **Choosing vs. reading** — picking what a character *is* and reading what that
   gave them are separate blocks. **Race, Class & Feats** holds the selectors;
   **Features & Traits** lists what they granted, with the choices each feature

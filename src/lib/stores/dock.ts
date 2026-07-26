@@ -9,6 +9,7 @@ import { writable } from 'svelte/store';
  */
 export type DockView =
   | { kind: 'menu' }
+  | { kind: 'dice' }
   | { kind: 'buffs' }
   | { kind: 'creature'; id: string }
   | null;
