@@ -1,4 +1,4 @@
-import { assert, assertEqual, cell, dock, dockControl } from '../harness.mjs';
+import { assert, assertEqual, cell, dock, dockControl, openDock, closeDock } from '../harness.mjs';
 
 /** Every field inside the sheet that is still editable, by block. */
 async function openFields(page) {
@@ -105,9 +105,16 @@ export default async function ({ page }) {
     await cell(page, 'Skills').locator('button.dot').first().isDisabled(),
     'skill proficiency cannot'
   );
+  // The build block reads as a summary rather than a disabled form.
+  const build = cell(page, 'Race, Class & Feats');
+  assertEqual(
+    await build.locator('input, select').count(),
+    0,
+    'the build block has no fields outside edit mode'
+  );
   assert(
-    await cell(page, 'Race, Class & Feats').locator('.setup').getAttribute('inert') !== null,
-    'and neither can the build block'
+    (await build.locator('.classchip .lvltext').first().innerText()).trim().length > 0,
+    'the class level shows as text'
   );
 
   // --- The mode sticks across a reload ---
@@ -144,4 +151,36 @@ export default async function ({ page }) {
   assert(!rail.dockScrolls, 'the rail itself does not scroll');
   assert(rail.pinned >= 5, `the controls stay put (${rail.pinned} pinned)`);
   assert(rail.railScrolls, 'the overflow goes to the scrolling section instead');
+
+  // --- No phantom scrollbars anywhere on the page ---
+  // Naming one overflow axis leaves the other computing to `auto`, so a couple
+  // of stray pixels render a scrollbar nobody asked for — invisible under
+  // overlay scrollbars, obvious on Windows and Linux. It bit the dock rail, the
+  // notes tab bar and the notes editor. A real scrolling region overflows by
+  // far more than a few pixels, so a tiny overflow is always a mistake.
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.waitForTimeout(400);
+  const scan = () =>
+    page.evaluate(() => {
+      const bad = [];
+      for (const el of document.querySelectorAll('body *')) {
+        const s = getComputedStyle(el);
+        const name = `${el.tagName.toLowerCase()}.${(el.className || '').toString().split(' ')[0]}`;
+        const dx = el.scrollWidth - el.clientWidth;
+        const dy = el.scrollHeight - el.clientHeight;
+        if ((s.overflowX === 'auto' || s.overflowX === 'scroll') && dx > 0 && dx <= 4) bad.push(`${name} x+${dx}`);
+        if ((s.overflowY === 'auto' || s.overflowY === 'scroll') && dy > 0 && dy <= 4) bad.push(`${name} y+${dy}`);
+      }
+      return bad;
+    });
+
+  // Both dock states: the rail's narrow column only exists while it is shut,
+  // which is exactly where its phantom scrollbar was.
+  await closeDock(page);
+  const shutPhantoms = await scan();
+  assertEqual(shutPhantoms, [], `dock shut: ${shutPhantoms.join(', ')}`);
+  await openDock(page);
+  await page.waitForTimeout(300);
+  const openPhantoms = await scan();
+  assertEqual(openPhantoms, [], `dock open: ${openPhantoms.join(', ')}`);
 }

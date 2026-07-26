@@ -200,7 +200,7 @@
   .filter { flex: 1; min-width: 10rem; }
   .toggle { display: flex; align-items: center; gap: 0.3rem; color: var(--muted); font-size: 0.85rem; }
   .count { color: var(--muted); font-size: 0.8rem; }
-  .list { list-style: none; padding: 0; margin: 0; max-height: 20rem; overflow-y: auto; border: 1px solid var(--line); border-radius: 6px; }
+  .list { list-style: none; padding: 0; margin: 0; max-height: 20rem; overflow-x: hidden; overflow-y: auto; border: 1px solid var(--line); border-radius: 6px; }
   .list li { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--line); }
   .list li:last-child { border-bottom: none; }
   .s-main { display: flex; align-items: baseline; gap: 0.4rem; flex: 1; min-width: 0; }

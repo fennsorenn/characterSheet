@@ -361,6 +361,7 @@
     border-bottom: 1px solid var(--line);
     padding: 0.25rem 0.5rem;
     overflow-x: auto;
+    overflow-y: hidden;
     flex-shrink: 0;
   }
 
@@ -381,6 +382,7 @@
     display: flex;
     gap: 0.15rem;
     overflow-x: auto;
+    overflow-y: hidden;
     flex: 1;
   }
 
@@ -432,6 +434,7 @@
      dark mode. `.editor-host .milkdown` outranks the theme's bare `.milkdown`. */
   .editor-host {
     flex: 1;
+    overflow-x: hidden;
     overflow-y: auto;
     min-height: 0;
   }
@@ -539,6 +542,7 @@
   .close-btn:hover { color: var(--fg); background: var(--field-hover); }
 
   .tree-body {
+    overflow-x: hidden;
     overflow-y: auto;
     padding: 0.5rem;
     flex: 1;

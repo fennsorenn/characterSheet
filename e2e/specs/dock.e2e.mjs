@@ -74,6 +74,26 @@ export default async function ({ page }) {
   await dockMenu(page, 'Done editing layout');
   assertEqual(await page.locator('.editbar').count(), 0, 'and off again');
 
+  // --- Nothing in the dock scrolls sideways ---
+  // Setting only `overflow-y` leaves `overflow-x` computing to `auto`, which
+  // put a horizontal scrollbar under the expand button on platforms that draw
+  // classic scrollbars. Invisible under overlay scrollbars, so assert it.
+  for (const state of ['shut', 'open']) {
+    if (state === 'open') await openDock(page);
+    const sideways = await page.evaluate(() =>
+      [...document.querySelectorAll('aside.dock, aside.dock *')]
+        .filter((el) => {
+          const ox = getComputedStyle(el).overflowX;
+          return (ox === 'auto' || ox === 'scroll') && el.scrollWidth > el.clientWidth;
+        })
+        .map((el) => `${el.className || el.tagName} (${el.scrollWidth} in ${el.clientWidth})`)
+    );
+    // The creature strip scrolls sideways on purpose; nothing else may.
+    const unexpected = sideways.filter((s) => !s.includes('creatures'));
+    assertEqual(unexpected, [], `${state}: nothing scrolls sideways, got ${unexpected.join(', ')}`);
+  }
+  await closeDock(page);
+
   // --- The edge follows the viewport ---
   assert(
     await dock(page).evaluate((el) => el.classList.contains('side')),

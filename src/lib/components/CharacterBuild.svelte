@@ -35,64 +35,84 @@
     <h3>Race, Class &amp; Feats</h3>
   </header>
 
-  <!-- Every control here defines the character, so the whole group locks
-       together outside edit mode. `inert` also takes it out of the tab
-       order, which `disabled` on each control would not do for the chips. -->
-  <div class="setup" class:locked={!$canEditBuild} inert={!$canEditBuild}>
+  <!-- Outside edit mode this reads as a summary rather than a form: what the
+       character is, in text. Everything here defines the character, so there is
+       nothing worth leaving as a field. -->
+  <div class="setup">
     <div class="line">
       <span class="k">Race</span>
       {#if $character.race}
         <span class="v">{$character.race.name}</span>
-        <button class="x" onclick={() => setRace(undefined)} aria-label="Clear race"><UiIcon name="close" size="0.85em" /></button>
-      {:else}
+        {#if $canEditBuild}
+          <button class="x" onclick={() => setRace(undefined)} aria-label="Clear race"><UiIcon name="close" size="0.85em" /></button>
+        {/if}
+      {:else if $canEditBuild}
         <button class="choose" onclick={() => openBrowse('race')}>Choose…</button>
+      {:else}
+        <span class="none">—</span>
       {/if}
     </div>
     <div class="line">
       <span class="k">Background</span>
       {#if $character.background}
         <span class="v">{$character.background.name}</span>
-        <button class="x" onclick={() => setBackground(undefined)} aria-label="Clear background"><UiIcon name="close" size="0.85em" /></button>
-      {:else}
+        {#if $canEditBuild}
+          <button class="x" onclick={() => setBackground(undefined)} aria-label="Clear background"><UiIcon name="close" size="0.85em" /></button>
+        {/if}
+      {:else if $canEditBuild}
         <button class="choose" onclick={() => openBrowse('background')}>Choose…</button>
+      {:else}
+        <span class="none">—</span>
       {/if}
     </div>
     <div class="line classes">
       <span class="k">Classes</span>
       {#each $character.classes as cls, i}
-        <span class="classchip">
+        <span class="classchip" class:plain={!$canEditBuild}>
           <span class="cname">{cls.name}</span>
-          <input
-            class="lvl"
-            type="number"
-            min="1"
-            max="20"
-            value={cls.level}
-            title="{cls.name} level"
-            onchange={(e) => setClassLevel(i, Number((e.target as HTMLInputElement).value) || 1)}
-          />
-          <select
-            class="sub"
-            value={cls.subclass ?? ''}
-            title="Subclass"
-            onchange={(e) => setSubclass(i, (e.target as HTMLSelectElement).value || undefined)}
-          >
-            <option value="">subclass…</option>
-            {#each subclassesFor(cls.name) as sc}
-              <option value={String(sc.shortName ?? sc.name)}>{sc.name}</option>
-            {/each}
-          </select>
-          <button class="x" title="Remove class" onclick={() => removeClass(i)}><UiIcon name="close" size="0.85em" /></button>
+          {#if $canEditBuild}
+            <input
+              class="lvl"
+              type="number"
+              min="1"
+              max="20"
+              value={cls.level}
+              aria-label="{cls.name} level"
+              title="{cls.name} level"
+              onchange={(e) => setClassLevel(i, Number((e.target as HTMLInputElement).value) || 1)}
+            />
+            <select
+              class="sub"
+              value={cls.subclass ?? ''}
+              title="Subclass"
+              onchange={(e) => setSubclass(i, (e.target as HTMLSelectElement).value || undefined)}
+            >
+              <option value="">subclass…</option>
+              {#each subclassesFor(cls.name) as sc}
+                <option value={String(sc.shortName ?? sc.name)}>{sc.name}</option>
+              {/each}
+            </select>
+            <button class="x" title="Remove class" onclick={() => removeClass(i)}><UiIcon name="close" size="0.85em" /></button>
+          {:else}
+            <span class="lvltext" aria-label="{cls.name} level">{cls.level}</span>
+            {#if cls.subclass}<span class="subtext">{cls.subclass}</span>{/if}
+          {/if}
         </span>
       {/each}
-      <button class="choose" onclick={() => openBrowse('class')}>+ Class</button>
+      {#if $canEditBuild}
+        <button class="choose" onclick={() => openBrowse('class')}>+ Class</button>
+      {/if}
     </div>
     <div class="line feats">
       <span class="k">Feats</span>
       {#each $character.feats as f, i}
-        <span class="ctag">{f.name}<button class="x" aria-label="Remove feat" onclick={() => removeFeat(i)}><UiIcon name="close" size="0.8em" /></button></span>
+        <span class="ctag">{f.name}{#if $canEditBuild}<button class="x" aria-label="Remove feat" onclick={() => removeFeat(i)}><UiIcon name="close" size="0.8em" /></button>{/if}</span>
       {/each}
-      <button class="choose" onclick={() => openBrowse('feat')}>+ Feat</button>
+      {#if $canEditBuild}
+        <button class="choose" onclick={() => openBrowse('feat')}>+ Feat</button>
+      {:else if !$character.feats.length}
+        <span class="none">—</span>
+      {/if}
     </div>
   </div>
 
@@ -106,7 +126,11 @@
   .bhead { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.6rem; }
   h3 { margin: 0; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
   .setup { display: flex; flex-direction: column; gap: 0.3rem; }
-  .setup.locked { opacity: 0.55; }
+  /* A summary, not a dimmed form — so it stays readable. */
+  .classchip.plain { border-style: dashed; }
+  .lvltext { font-size: 0.78rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .subtext { font-size: 0.72rem; color: var(--muted); }
+  .none { color: var(--muted); font-size: 0.8rem; }
   .line { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
   .k { font-size: 0.7rem; text-transform: uppercase; color: var(--muted); min-width: 6rem; }
   .v { font-weight: 600; }

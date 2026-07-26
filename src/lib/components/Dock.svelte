@@ -393,6 +393,11 @@
     gap: 0.15rem;
     align-items: inherit;
     min-height: 0;
+    /* Both axes named on purpose: setting only `overflow-y` leaves `overflow-x`
+       computing to `auto`, and the buttons overhang their 42px column by two
+       pixels — enough for a horizontal scrollbar under the expand button on
+       any platform that draws classic (non-overlay) scrollbars. */
+    overflow-x: hidden;
     overflow-y: auto;
     width: 100%;
   }
@@ -403,13 +408,13 @@
   /* --- bottom dock (mobile) --- */
   .bottom { left: 0; right: 0; bottom: 0; border-left: 0; border-right: 0; border-bottom: 0; box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.16); }
   .grab { width: 2.2rem; height: 0.25rem; border-radius: 999px; background: var(--line); margin: 0.3rem auto 0.1rem; flex: none; }
-  .panel { padding: 0.5rem; display: flex; flex-direction: column; gap: 0.25rem; max-height: 54vh; overflow-y: auto; border-bottom: 1px solid var(--line); }
+  .panel { padding: 0.5rem; display: flex; flex-direction: column; gap: 0.25rem; max-height: 54vh; overflow-x: hidden; overflow-y: auto; border-bottom: 1px solid var(--line); }
   .tabs { display: flex; align-items: stretch; }
   .tabs .db { flex-direction: column; gap: 0.1rem; align-items: center; justify-content: center; padding: 0.3rem 0.1rem; font-size: 0.58rem; }
   .tabs .db .g { width: auto; font-size: 1.1rem; }
   .tabs .db .ct { position: absolute; top: 0.05rem; right: 18%; margin: 0; }
 
-  .creatures { display: flex; gap: 0.35rem; padding: 0.3rem 0.45rem; overflow-x: auto; border-bottom: 1px solid var(--line); }
+  .creatures { display: flex; gap: 0.35rem; padding: 0.3rem 0.45rem; overflow-x: auto; overflow-y: hidden; border-bottom: 1px solid var(--line); }
   .cb { flex: none; min-width: 5.6rem; display: flex; flex-direction: column; align-items: flex-start; gap: 0.12rem; padding: 0.25rem 0.45rem; cursor: pointer; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--fg); font: inherit; }
   .cb.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--bg)); }
   .cb.on .nm { color: var(--accent); }
