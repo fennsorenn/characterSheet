@@ -1,4 +1,4 @@
-import { cell, assert, waitForData } from '../harness.mjs';
+import { cell, assert, waitForData, selectTemplate } from '../harness.mjs';
 
 // Auto-computed spell slots (multiclass table + separate Warlock pact) and
 // weapon-proficiency presets derived from the character's proficiencies.
@@ -19,7 +19,7 @@ export default async function ({ page, baseUrl }) {
   await waitForData(page);
   // This spec reads the one-level-per-row slot rendering, so pick a template
   // that uses it — the martial built-ins deliberately show the compact grid.
-  await page.selectOption('select.preset', { label: 'Desktop — Caster' });
+  await selectTemplate(page, { label: 'Desktop — Caster' });
   await page.waitForTimeout(300);
 
   // Spell slots: Cleric 5 → levels 1-3, plus a separate Warlock pact row.

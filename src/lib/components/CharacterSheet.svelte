@@ -2,18 +2,13 @@
   import {
     character,
     setName,
-    clearAllManualModifiers,
-    characterLayoutPrefs,
-    setCharacterLayoutPref,
-    MANUAL_SOURCE
+    characterLayoutPrefs
   } from '../stores/character.js';
   import {
     editMode,
-    toggleEdit,
     addBlock,
     resetLayout,
     layoutList,
-    selectLayout,
     applyPreferred,
     forkNotice,
     dismissFork,
@@ -21,21 +16,16 @@
   } from '../stores/layout.js';
   import { screenController } from '../stores/layout.js';
   import { screenCategory } from '../stores/screen.js';
-  import { buffMode, toggleBuffMode } from '../stores/ui.js';
+  import { templateManagerOpen } from '../stores/ui.js';
   import { reminderMode, toggleReminderMode, stranded } from '../stores/reminders.js';
   import { removeReminder } from '../stores/character.js';
   import { anchorLabel } from '../character/index.js';
   import { setLayoutController } from '../layout/controller.js';
   import { BLOCK_META } from '../layout/blocks.js';
-  import { SCREEN_LABELS } from '../layout/screen.js';
   import LayoutRenderer from './layout/LayoutRenderer.svelte';
   import TemplateManager from './TemplateManager.svelte';
   import ExplainPopover from './ExplainPopover.svelte';
 
-  const manualCount = $derived(
-    $character.modifiers.filter((m) => m.source === MANUAL_SOURCE).length
-  );
-  const reminderCount = $derived($character.reminders?.length ?? 0);
 
   // The renderer below edits the active screen template.
   setLayoutController(screenController);
@@ -47,10 +37,7 @@
 
   const blockTypes = Object.entries(BLOCK_META);
   let addType = $state('');
-  let showTemplates = $state(false);
 
-  /** Whether this character pins the active template to the current screen size. */
-  const pinnedHere = $derived($characterLayoutPrefs[$screenCategory] === $layoutList.activeId);
   /** The built-in templates are fixed; editing one lands in a copy instead. */
   const activeIsBuiltin = $derived(
     $layoutList.options.find((o) => o.id === $layoutList.activeId)?.builtin ?? false
@@ -62,9 +49,6 @@
     addType = '';
   }
 
-  function togglePin() {
-    setCharacterLayoutPref($screenCategory, pinnedHere ? undefined : $layoutList.activeId);
-  }
 </script>
 
 <div class="sheet">
@@ -75,42 +59,6 @@
       aria-label="Character name"
       oninput={(e) => setName((e.target as HTMLInputElement).value)}
     />
-    <div class="tools">
-      <button class="buff" class:on={$buffMode} onclick={toggleBuffMode} title="Apply edits as temporary buffs/debuffs">
-        Buff mode{manualCount > 0 ? ` (${manualCount})` : ''}
-      </button>
-      <select
-        class="preset"
-        value={$layoutList.activeId}
-        title="Layout template"
-        onchange={(e) => selectLayout((e.target as HTMLSelectElement).value)}
-      >
-        {#each $layoutList.options as opt}
-          <option value={opt.id}>{opt.name}</option>
-        {/each}
-      </select>
-      <button
-        class="pin"
-        class:on={pinnedHere}
-        onclick={togglePin}
-        title={pinnedHere
-          ? `${$character.name} always opens this template on ${SCREEN_LABELS[$screenCategory]} — click to unpin`
-          : `Always use this template for ${$character.name} on ${SCREEN_LABELS[$screenCategory]}`}
-      >
-        {pinnedHere ? '★' : '☆'} {SCREEN_LABELS[$screenCategory]}
-      </button>
-      <button
-        class:on={$reminderMode}
-        onclick={toggleReminderMode}
-        title="Pin short notes next to skills, items, spells or whole blocks"
-      >Reminders{reminderCount > 0 ? ` (${reminderCount})` : ''}</button>
-      <button class:on={showTemplates} onclick={() => (showTemplates = !showTemplates)}>
-        Templates…
-      </button>
-      <button class="edit" class:on={$editMode} onclick={toggleEdit}>
-        {$editMode ? 'Done' : 'Edit layout'}
-      </button>
-    </div>
   </div>
 
   {#if $forkNotice}
@@ -126,8 +74,8 @@
     </div>
   {/if}
 
-  {#if showTemplates}
-    <TemplateManager onClose={() => (showTemplates = false)} />
+  {#if $templateManagerOpen}
+    <TemplateManager onClose={() => templateManagerOpen.set(false)} />
   {/if}
 
   {#if $reminderMode}
@@ -156,17 +104,6 @@
     </div>
   {/if}
 
-  {#if $buffMode}
-    <div class="buff-banner">
-      <span>
-        <strong>Buff mode</strong> — edits apply as temporary buffs/debuffs on the value
-        (type <code>+2</code>/<code>-1</code>, scroll, or arrow keys), leaving base values untouched.
-      </span>
-      <button onclick={clearAllManualModifiers} disabled={manualCount === 0}>
-        Clear all ({manualCount})
-      </button>
-    </div>
-  {/if}
 
   {#if $editMode}
     <div class="editbar">
@@ -184,7 +121,7 @@
           : "Reset this template's blocks to the built-in arrangement"}
       >Reset blocks</button>
       <span class="spacer"></span>
-      <button onclick={() => (showTemplates = true)}>Manage templates…</button>
+      <button onclick={() => templateManagerOpen.set(true)}>Manage templates…</button>
     </div>
   {/if}
 
@@ -217,7 +154,6 @@
   }
   .char-name:hover { border-bottom-color: var(--line); }
   .char-name:focus { outline: none; border-bottom-color: var(--accent); }
-  .tools { display: flex; gap: 0.5rem; flex-wrap: wrap; }
   .editbar {
     display: flex;
     align-items: center;
@@ -229,20 +165,6 @@
     border-radius: 8px;
   }
   .editbar .spacer { flex: 1; }
-  .tools select, .tools button, .editbar select, .editbar button {
-    font: inherit;
-    font-size: 0.85rem;
-    padding: 0.35rem 0.7rem;
-    border: 1px solid var(--line);
-    background: var(--bg);
-    color: var(--fg);
-    border-radius: 6px;
-    cursor: pointer;
-  }
-  .tools button:disabled, .editbar button:disabled { opacity: 0.45; cursor: not-allowed; }
-  .tools button.on, .edit.on { border-color: var(--accent); color: var(--accent); }
-  .pin { white-space: nowrap; }
-  .buff.on { border-color: var(--accent); background: var(--accent); color: #fff; }
   .fork-banner {
     display: flex;
     align-items: center;

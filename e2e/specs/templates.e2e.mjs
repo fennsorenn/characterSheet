@@ -1,12 +1,23 @@
-import { assert } from '../harness.mjs';
+import { assert, dock, openDock, closeDock, dockMenu, selectTemplate } from '../harness.mjs';
 
 // Layout templates: fixed built-ins that fork on edit, templates of the user's
 // own, a preferred one per screen-size category and per character, and sync
 // between devices once signed in. Self-contained: drives the local sheet and the
 // auth routes (no dataset needed).
 export default async function ({ page, baseUrl }) {
-  const activeName = () => page.locator('select.preset option:checked').innerText();
-  const options = (p = page) => p.locator('select.preset option').allInnerTexts();
+  // The switcher moved into the dock, so every read opens it and puts it back.
+  const activeName = async (p = page) => {
+    await openDock(p);
+    const name = await dock(p).locator('select.preset option:checked').innerText();
+    await closeDock(p);
+    return name;
+  };
+  const options = async (p = page) => {
+    await openDock(p);
+    const names = await dock(p).locator('select.preset option').allInnerTexts();
+    await closeDock(p);
+    return names;
+  };
   const prefRow = (label) => page.locator(`tr:has(th:has-text("${label}")) td select`);
   const serverDoc = (p) =>
     p.evaluate(() => fetch('/api/templates', { credentials: 'same-origin' }).then((r) => r.json()));
@@ -14,7 +25,7 @@ export default async function ({ page, baseUrl }) {
   await page.goto(`${baseUrl}/local`, { waitUntil: 'networkidle' });
   await page.fill('.new input', 'Template Tester');
   await page.click('.new button.primary');
-  await page.waitForSelector('select.preset', { timeout: 10000 });
+  await page.waitForSelector('aside.dock', { timeout: 10000 });
 
   // --- The built-in set is there without anything being stored ---
   const shipped = await options();
@@ -22,7 +33,7 @@ export default async function ({ page, baseUrl }) {
   assert(shipped.includes('Desktop — Martial'), 'built-ins are named per size and style');
   assert((await activeName()) === 'Desktop — Martial', 'a desktop viewport opens the desktop built-in');
 
-  await page.click('.tools button:has-text("Templates…")');
+  await dockMenu(page, 'Templates…');
   await page.waitForSelector('.manager');
   const firstRow = page.locator('.manager .list li').first();
   assert(
@@ -34,7 +45,7 @@ export default async function ({ page, baseUrl }) {
   await page.click('.manager .close');
 
   // --- Editing a built-in forks it instead of changing it ---
-  await page.click('.tools button.edit');
+  await dockMenu(page, 'Edit layout');
   await page.waitForSelector('.editbar');
   await page.selectOption('.editbar select', 'notes'); // add a block → implicit copy
   await page.waitForTimeout(400);
@@ -47,21 +58,19 @@ export default async function ({ page, baseUrl }) {
 
   // The built-in itself is untouched, and the copy carries the extra block.
   const copyBlocks = await page.locator('.cell').count();
-  await page.selectOption('select.preset', { label: 'Desktop — Martial' });
-  await page.waitForTimeout(300);
+  await selectTemplate(page, { label: 'Desktop — Martial' });
   assert((await page.locator('.cell').count()) < copyBlocks, 'the built-in kept its own blocks');
 
   // Undo throws the copy away and puts everything back on the built-in.
-  await page.selectOption('select.preset', { label: 'Desktop — Martial (copy)' });
-  await page.waitForTimeout(200);
+  await selectTemplate(page, { label: 'Desktop — Martial (copy)' });
   await page.click('.fork-banner button:has-text("Undo")');
   await page.waitForTimeout(300);
   assert((await options()).length === shipped.length, 'undo removes the copy');
   assert((await activeName()) === 'Desktop — Martial', 'undo goes back to the built-in');
-  await page.click('.tools button.edit'); // leave edit mode
+  await dockMenu(page, 'Done editing layout'); // leave edit mode
 
   // --- Create templates of your own from the built-ins ---
-  await page.click('.tools button:has-text("Templates…")');
+  await dockMenu(page, 'Templates…');
   await page.waitForSelector('.manager');
   for (const [name, starter] of [['Phone', 'mobile-caster'], ['Big Screen', 'ultrawide-caster']]) {
     await page.fill('.manager .new input', name);
@@ -93,7 +102,7 @@ export default async function ({ page, baseUrl }) {
 
   // --- Both survive a reload ---
   await page.reload({ waitUntil: 'networkidle' });
-  await page.waitForSelector('select.preset');
+  await page.waitForSelector('aside.dock');
   await page.waitForTimeout(300);
   assert((await options()).length === shipped.length + 2, 'templates survive a reload');
   assert((await activeName()) === 'Phone', 'preferences survive a reload');
@@ -122,7 +131,7 @@ export default async function ({ page, baseUrl }) {
     await other.waitForTimeout(800);
     await other.fill('.new input', 'Remote Hero');
     await other.click('.new button.primary');
-    await other.waitForSelector('select.preset', { timeout: 10000 });
+    await other.waitForSelector('aside.dock', { timeout: 10000 });
     await other.waitForTimeout(400);
 
     const remote = await options(other);
@@ -130,12 +139,12 @@ export default async function ({ page, baseUrl }) {
     assert(remote.includes('Desktop — Martial'), 'the built-ins are there without being synced');
     await other.setViewportSize({ width: 500, height: 1400 });
     await other.waitForTimeout(400);
-    const remoteActive = await other.locator('select.preset option:checked').innerText();
+    const remoteActive = await activeName(other);
     assert(remoteActive === 'Phone', 'screen-size preferences follow the user');
 
     // --- An edit there flows back to the server for the first device ---
     await other.setViewportSize({ width: 1200, height: 2100 });
-    await other.click('.tools button:has-text("Templates…")');
+    await dockMenu(other, 'Templates…');
     await other.fill('.manager .new input', 'From Device Two');
     await other.click('.manager .new button');
     await other.waitForTimeout(1500);

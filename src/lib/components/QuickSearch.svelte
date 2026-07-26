@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { quickAddFocus } from '../stores/dock.js';
   import { searchIndex, catalogState } from '../stores/catalog.js';
   import { addInventoryItem, addSpell } from '../stores/character.js';
   import { openBrowse } from '../stores/browse.js';
@@ -44,12 +45,27 @@
     const text = renderToText(parseTaggedString(first));
     return text.length > 110 ? text.slice(0, 110) + '…' : text;
   }
+
+  // The dock's quick-add control has no field of its own; it points here.
+  let field = $state<HTMLInputElement | null>(null);
+  let lastFocusRequest = $quickAddFocus;
+  $effect(() => {
+    if ($quickAddFocus !== lastFocusRequest) {
+      lastFocusRequest = $quickAddFocus;
+      field?.focus();
+      field?.scrollIntoView({ block: 'nearest' });
+    }
+  });
 </script>
 
 {#if $searchIndex}
   <section class="search">
     <div class="bar">
-      <input placeholder="Quick import — search items, spells, feats…" bind:value={query} />
+      <input
+        bind:this={field}
+        placeholder="Quick import — search items, spells, feats…"
+        bind:value={query}
+      />
       <select bind:value={category}>
         <option value="all">All</option>
         <option value="item">Items</option>

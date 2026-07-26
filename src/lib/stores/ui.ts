@@ -28,3 +28,11 @@ export function toggleBuffMode() {
   buffMode.update((v) => !v);
 }
 
+
+/**
+ * Panels the dock opens elsewhere on the page. They live here rather than as
+ * component state because the dock is the only thing that opens them and it is
+ * not their parent.
+ */
+export const templateManagerOpen = writable(false);
+export const dataPanelOpen = writable(false);
