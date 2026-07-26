@@ -1,4 +1,4 @@
-import type { BlockMeta } from './types.js';
+import type { BlockInstance, BlockMeta } from './types.js';
 
 /**
  * Pure metadata for every registered block type — labels, available verbosity
@@ -24,7 +24,21 @@ export const BLOCK_META: Record<string, BlockMeta> = {
       { key: 'compact', label: 'Compact (AC/Init/Prof)', verbosity: 'compact' }
     ],
     defaultVariant: 'full',
-    defaultSize: 'wide'
+    defaultSize: 'wide',
+    // Every stat is its own switch, so a second instance of this block with only
+    // the spell pair on *is* the spellcasting block — no separate type needed.
+    options: [
+      { key: 'ac', label: 'Armor Class', default: true },
+      { key: 'baseAc', label: 'Base AC field', default: true, offIn: ['compact'] },
+      { key: 'initiative', label: 'Initiative', default: true },
+      { key: 'profBonus', label: 'Proficiency bonus', default: true },
+      { key: 'passivePerception', label: 'Passive Perception', default: true, offIn: ['compact'] },
+      { key: 'passiveInvestigation', label: 'Passive Investigation', default: false },
+      { key: 'passiveInsight', label: 'Passive Insight', default: false },
+      { key: 'level', label: 'Level', default: true, offIn: ['compact'] },
+      { key: 'spellDc', label: 'Spell save DC', default: true, offIn: ['compact'] },
+      { key: 'spellAttack', label: 'Spell attack', default: true, offIn: ['compact'] }
+    ]
   },
   hitPoints: {
     label: 'Hit Points',
@@ -130,4 +144,25 @@ export function blockMeta(type: string): BlockMeta | undefined {
 
 export function allBlockTypes(): string[] {
   return Object.keys(BLOCK_META);
+}
+
+/** What a block type's options come out as for a variant, before any instance edits. */
+export function defaultOptions(type: string, variant?: string): Record<string, boolean> {
+  const out: Record<string, boolean> = {};
+  for (const o of BLOCK_META[type]?.options ?? []) {
+    out[o.key] = variant && o.offIn?.includes(variant) ? false : o.default;
+  }
+  return out;
+}
+
+/**
+ * The options a placed block actually renders with: its type's defaults for the
+ * variant it is on, overridden by whatever this instance says.
+ */
+export function resolveOptions(block: BlockInstance): Record<string, boolean> {
+  const out = defaultOptions(block.type, block.variant);
+  for (const [key, value] of Object.entries(block.options ?? {})) {
+    if (key in out) out[key] = value;
+  }
+  return out;
 }

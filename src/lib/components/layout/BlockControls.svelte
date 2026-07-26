@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { blockMeta } from '../../layout/blocks.js';
+  import { blockMeta, resolveOptions } from '../../layout/blocks.js';
   import { getLayoutController } from '../../layout/controller.js';
   import { BLOCK_SIZES, type BlockInstance, type BlockSize } from '../../layout/types.js';
   import UiIcon from '../UiIcon.svelte';
@@ -10,9 +10,17 @@
   let { block }: { block: BlockInstance } = $props();
   const ctrl = getLayoutController();
   const meta = $derived(blockMeta(block.type));
+  const options = $derived(resolveOptions(block));
 
   const SIZE_LABELS: Record<BlockSize, string> = { narrow: 'Narrow', wide: 'Wide', full: 'Full' };
+
+  // The option list is a panel rather than more toolbar: a block can have ten
+  // switches and the bar already carries variant, width, split and reordering.
+  let showOptions = $state(false);
+  const shownCount = $derived(Object.values(options).filter(Boolean).length);
 </script>
+
+<svelte:window onkeydown={(e) => e.key === 'Escape' && (showOptions = false)} />
 
 <div class="controls">
   <span class="handle" title="Drag to reorder">⠿</span>
@@ -43,6 +51,16 @@
     {/each}
   </select>
 
+  {#if meta?.options?.length}
+    <button
+      class="opts"
+      class:on={showOptions}
+      title="Choose what this block shows"
+      aria-expanded={showOptions}
+      onclick={() => (showOptions = !showOptions)}
+    >Shows {shownCount}/{meta.options.length}</button>
+  {/if}
+
   <button
     class="split"
     class:on={block.stack}
@@ -53,6 +71,21 @@
   <button title="Move down" aria-label="Move down" onclick={() => ctrl.moveBlock(block.id, 1)}><UiIcon name="arrow-down" size="0.85em" /></button>
   <button class="rm" title="Remove" aria-label="Remove" onclick={() => ctrl.removeBlock(block.id)}><UiIcon name="close" size="0.85em" /></button>
 </div>
+
+{#if showOptions && meta?.options?.length}
+  <div class="optpanel">
+    {#each meta.options as o (o.key)}
+      <label>
+        <input
+          type="checkbox"
+          checked={options[o.key]}
+          onchange={(e) => ctrl.setOption(block.id, o.key, (e.target as HTMLInputElement).checked)}
+        />
+        {o.label}
+      </label>
+    {/each}
+  </div>
+{/if}
 
 <style>
   .controls {
@@ -77,6 +110,18 @@
     cursor: pointer;
   }
   .rm { color: var(--accent); border-color: var(--accent); }
+  .opts.on { color: var(--accent); border-color: var(--accent); }
+  .optpanel {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.15rem 0.9rem;
+    padding: 0.35rem 0.5rem;
+    background: var(--field-hover);
+    border-bottom: 1px solid var(--line);
+    font-size: 0.75rem;
+  }
+  .optpanel label { display: inline-flex; align-items: center; gap: 0.3rem; color: var(--fg); cursor: pointer; }
+  .optpanel input { margin: 0; cursor: pointer; }
   .split.on { color: var(--accent); border-color: var(--accent); }
   select:disabled { opacity: 0.5; cursor: not-allowed; }
 </style>

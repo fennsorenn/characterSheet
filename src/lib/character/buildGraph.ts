@@ -95,11 +95,13 @@ export function buildGraph(character: Character, lookup?: CatalogLookup, grants:
     );
   }
 
-  // Initiative and passive perception.
+  // Initiative and the passive scores. Perception is the one every sheet shows;
+  // investigation and insight are defined too, since a table that asks for them
+  // asks often and the arithmetic is the same.
   g.define('initiative', ['ability.dex.mod'], (c) => c.get('ability.dex.mod'));
-  g.define('passive.perception', [skillNodeId('perception')], (c) =>
-    10 + c.get(skillNodeId('perception'))
-  );
+  for (const skill of ['perception', 'investigation', 'insight'] as const) {
+    g.define(`passive.${skill}`, [skillNodeId(skill)], (c) => 10 + c.get(skillNodeId(skill)));
+  }
 
   // Armor class: armor base + (dex modifier, capped by armor category). Worn
   // armor overrides the unarmored base; item/buff bonuses layer on as modifiers.

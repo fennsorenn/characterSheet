@@ -24,6 +24,8 @@ import Notes from '../components/Notes.svelte';
  */
 export type BlockComponent = Component<{
   variant?: string;
+  /** Resolved content switches for this instance (see `resolveOptions`). */
+  options?: Record<string, boolean>;
   /** Scrollable list blocks: the persisted height cap and edit/resize wiring. */
   height?: number;
   editing?: boolean;

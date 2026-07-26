@@ -36,6 +36,12 @@ export interface BlockInstance {
    * dragging the resize handle in edit mode. Ignored by non-list blocks.
    */
   height?: number;
+  /**
+   * Per-instance content switches, by option key — see {@link OptionMeta}.
+   * Sparse: only deviations from the type's defaults are stored, so a default
+   * that changes later reaches every layout that never disagreed with it.
+   */
+  options?: Record<string, boolean>;
 }
 
 export interface SheetLayout {
@@ -51,10 +57,31 @@ export interface VariantMeta {
   verbosity: Verbosity;
 }
 
+/**
+ * One thing a block can be told to show or hide, independently of the others.
+ *
+ * Variants are whole arrangements — a row of chips versus a grid of boxes — and
+ * they multiply badly: "full", "full without the passives", "full with passive
+ * investigation" is a combinatorial list nobody wants to pick from. An option is
+ * one line item instead, so the same block covers every combination, and two
+ * instances of it with different options do the work a second block type would
+ * otherwise have to.
+ */
+export interface OptionMeta {
+  key: string;
+  label: string;
+  /** Shown when the option is off in every variant it applies to. */
+  default: boolean;
+  /** Variants where the default flips — e.g. a compact one drops the extras. */
+  offIn?: string[];
+}
+
 /** Pure description of a block type (no UI), used by layout operations. */
 export interface BlockMeta {
   label: string;
   variants: VariantMeta[];
   defaultVariant: string;
   defaultSize: BlockSize;
+  /** Content switches this block honours, if any. */
+  options?: OptionMeta[];
 }

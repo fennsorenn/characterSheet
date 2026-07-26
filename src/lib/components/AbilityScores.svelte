@@ -10,6 +10,7 @@
   import BuffField from './BuffField.svelte';
   import EffectiveScore from './EffectiveScore.svelte';
   import SaveDot from './SaveDot.svelte';
+  import Icon from './Icon.svelte';
 
   let { variant = 'full' }: { variant?: string } = $props();
   const withSaves = $derived(variant === 'withSaves');
@@ -79,9 +80,11 @@
           <!-- The saving throw belongs to the ability, so it rides in the same
                box rather than repeating all six names in a list underneath. -->
           {#if withSaves}
-            <div class="save" data-volatile="occasional">
+            <div class="save" data-volatile="occasional" title="{ABILITY_NAMES[abil]} Saving Throw">
               <SaveDot {abil} />
-              <span class="slabel">save</span>
+              <span class="sicon" role="img" aria-label="{ABILITY_NAMES[abil]} saving throw">
+                <Icon name="save" />
+              </span>
               <span class="sval"><StatValue node={`save.${abil}`} signed /></span>
             </div>
             <Reminders anchor={anchors.save(abil)} />
@@ -123,8 +126,10 @@
     margin-top: 0.25rem;
     padding-top: 0.2rem;
     border-top: 1px solid var(--line);
+    cursor: help;
   }
-  .slabel { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); }
+  .sicon { display: inline-flex; color: var(--muted); }
+  .sicon :global(.icon) { width: 1rem; height: 1rem; }
   .sval { font-weight: 600; font-size: 0.85rem; }
 
   /* Reflow to 3 wide when the cell itself is narrow, not just the viewport. */

@@ -83,7 +83,10 @@ export function editActive(
   }
   const source = findTemplate(lib, lib.activeId);
   if (!source) return lib;
-  const copy = fn(cloneLayout(source, copyName(lib, source.name)));
+  // Edit first, then clone. The other way round mints new block ids before the
+  // edit runs, so an edit aimed at a block by id — every one of them but adding
+  // — lands on nothing and the first click on a built-in appears to do nothing.
+  const copy = cloneLayout(fn(source), copyName(lib, source.name));
   const preferred = { ...lib.preferred };
   for (const [category, target] of Object.entries(preferred)) {
     if (target === source.id) preferred[category as ScreenCategory] = copy.id;

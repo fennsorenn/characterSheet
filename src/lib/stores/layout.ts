@@ -351,6 +351,8 @@ export const reorderBlock = (fromId: string, toId: string) =>
   onActive((l) => ops.reorderBlock(l, fromId, toId));
 export const setVariant = (id: string, variant: string) =>
   onActive((l) => ops.setVariant(l, id, variant));
+export const setOption = (id: string, key: string, on: boolean) =>
+  onActive((l) => ops.setOption(l, id, key, on));
 export const cycleSize = (id: string) => onActive((l) => ops.cycleSize(l, id));
 export const setSize = (id: string, size: BlockSize) => onActive((l) => ops.setSize(l, id, size));
 export const toggleStack = (id: string) => onActive((l) => ops.toggleStack(l, id));
@@ -438,6 +440,7 @@ export const screenController: LayoutController = {
   moveBlock,
   reorderBlock,
   setVariant,
+  setOption,
   cycleSize,
   setSize,
   toggleStack,

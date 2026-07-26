@@ -46,6 +46,16 @@ in this repo.
   and the sheet follows the viewport as it resizes. Signed in, your own
   templates sync to the server (last-write-wins on `updatedAt`) so they follow
   you between devices; signed out they live in localStorage.
+- **Variants vs. options** (`src/lib/layout/types.ts`) — a **variant** is an
+  arrangement (a row of chips instead of a grid of boxes); an **option** is one
+  line item the block shows or hides. Variants multiply badly — "full", "full
+  without the passives", "full plus passive investigation" is a list nobody wants
+  to pick from — so anything that is really just *another row* is an option
+  instead, ticked per placed block. Two instances of one block with different
+  options then cover what a second block type would otherwise be for: Defenses &
+  Core with everything off but the spell pair *is* the spellcasting block. A
+  layout stores only the options its owner disagreed with, so a default that
+  changes later still reaches everyone who never had an opinion about it.
 - **The dock** (`src/lib/components/Dock.svelte`) — one edge-anchored surface
   holding what used to be three separate bars. It takes the right edge on a
   desktop and the bottom on a phone, and slides open in place rather than
