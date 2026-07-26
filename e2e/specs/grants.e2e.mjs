@@ -7,7 +7,10 @@ export default async function ({ page }) {
   assert((await traits.count()) === 1, 'Traits & Proficiencies block is present');
 
   const conInput = page.locator('.ability', { hasText: 'Con' }).first().locator('.base input').first();
-  await browseAdd(page, 'race', 'Dwarf');
+  // A subrace, not "Dwarf": 5e data merges a base race into its subraces, so the
+  // 2014 dwarf is only selectable as Hill or Mountain. Bare "Dwarf" is the 2024
+  // one, which has different numbers (120 ft darkvision, 30 ft walk).
+  await browseAdd(page, 'race', 'Dwarf (Hill)');
 
   // Racial bonuses are PERSISTENT, so the score shows as a plain number (no badge).
   const conCell = page.locator('.ability', { hasText: 'Con' }).first();
