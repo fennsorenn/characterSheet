@@ -49,6 +49,39 @@ export default async function ({ page, baseUrl }) {
     'and nothing unfolds in the dock'
   );
 
+  // --- The pin control is a toggle, not an "add another" button ---
+  const pinBtn = win.locator('button.pin');
+  assertEqual(await pinBtn.getAttribute('aria-label'), 'Unpin', 'a pinned creature offers to unpin');
+  const before = await page.evaluate(
+    () => JSON.parse(localStorage.getItem('charactersheet.pinnedCreatures') || '[]').length
+  );
+  await pinBtn.click();
+  await page.waitForTimeout(400);
+  const after = await page.evaluate(
+    () => JSON.parse(localStorage.getItem('charactersheet.pinnedCreatures') || '[]').length
+  );
+  assertEqual(after, before - 1, 'unpinning removes that sheet rather than adding one');
+  assertEqual(await pinBtn.getAttribute('aria-label'), 'Pin', 'and the control flips back to pin');
+  assertEqual(
+    await dock(page).locator('.card', { hasText: 'Goblin' }).count(),
+    0,
+    'the card is gone from the dock'
+  );
+
+  // Pinning again from the same window adds it back, and can be undone again.
+  await pinBtn.click();
+  await page.waitForTimeout(400);
+  assertEqual(
+    await page.evaluate(() => JSON.parse(localStorage.getItem('charactersheet.pinnedCreatures') || '[]').length),
+    before,
+    'pinning from an unpinned window adds one'
+  );
+  assertEqual(await pinBtn.getAttribute('aria-label'), 'Unpin', 'and it is immediately unpinnable');
+  assert(
+    (await dock(page).locator('.card', { hasText: 'Goblin' }).count()) === 1,
+    'the card is back in the dock'
+  );
+
   // The window is a window: it can be closed, and it is not inside the dock.
   const outside = await page.evaluate(() => {
     const w = document.querySelector('.win[role=dialog]');

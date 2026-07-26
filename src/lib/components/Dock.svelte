@@ -4,7 +4,7 @@
   import { reminderMode, toggleReminderMode } from '../stores/reminders.js';
   import { diceOpen } from '../stores/dice.js';
   import { catalogState } from '../stores/catalog.js';
-  import { pinned, openDetail } from '../stores/detail.js';
+  import { pinned, openPinnedDetail } from '../stores/detail.js';
   import { editMode, toggleEdit, layoutList, selectLayout } from '../stores/layout.js';
   import { screenCategory } from '../stores/screen.js';
   import { SCREEN_LABELS } from '../layout/screen.js';
@@ -77,14 +77,15 @@
    * panel, because there is nowhere else for it; anywhere wider it goes to the
    * detail window, which can be dragged and read at a sensible width. The
    * creature's own params travel with it so a summon keeps the caster stats it
-   * was pinned at.
+   * was pinned at, and so does its id, so the window can unpin it again.
    */
   function expandCreature(c: (typeof $pinned)[number], el?: HTMLElement) {
     if (bottom) {
       toggleDockView({ kind: 'creature', id: c.id });
       return;
     }
-    openDetail('creature', c.entry, el ?? null, c.params?.spellLevel, c.params);
+    // Opened *as* this pinned entry, so the window's pin control can unpin it.
+    openPinnedDetail(c, el ?? null);
   }
 
   function onBrowse() {

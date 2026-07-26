@@ -1,5 +1,14 @@
 <script lang="ts">
-  import { detail, closeDetail, openDetail, setDetailSpellLevel, pinCreature } from '../stores/detail.js';
+  import {
+    detail,
+    closeDetail,
+    openDetail,
+    setDetailSpellLevel,
+    pinCreature,
+    unpinCreature,
+    setDetailPinned,
+    pinned
+  } from '../stores/detail.js';
   import { catalogLookup, catalogState } from '../stores/catalog.js';
   import { casterSummonParams } from '../stores/character.js';
   import { rollExpr } from '../stores/dice.js';
@@ -56,10 +65,31 @@
     }
   }
 
-  function pin() {
+  /**
+   * Whether this window *is* a pinned entry — either it was opened from one, or
+   * it was pinned while open. Checked against the list rather than trusted, so
+   * unpinning the card behind the window flips the control back to "pin".
+   */
+  const pinnedId = $derived(
+    $detail?.pinnedId && $pinned.some((p) => p.id === $detail.pinnedId)
+      ? $detail.pinnedId
+      : undefined
+  );
+
+  /**
+   * Pin adds; unpin removes the entry this window is showing. Without the
+   * second half the control could only ever make another copy — pinning the
+   * same creature twice is meaningful (two goblins are two goblins), so
+   * "already pinned" cannot just be a no-op.
+   */
+  function togglePin() {
     if (!$detail || !sb) return;
-    pinCreature($detail.entry, { ...params, spellLevel: level }, sb.hpValue ?? 0);
-    closeDetail();
+    if (pinnedId) {
+      unpinCreature(pinnedId);
+      setDetailPinned(undefined);
+      return;
+    }
+    setDetailPinned(pinCreature($detail.entry, { ...params, spellLevel: level }, sb.hpValue ?? 0));
   }
 
   // Clicking a {@spell}/{@item}/{@creature} reference opens that entry; clicking a
@@ -106,7 +136,14 @@
     <header class="bar" onpointerdown={drag.down} onpointermove={drag.move} onpointerup={drag.up}>
       <span class="title">{title}</span>
       {#if isCreature}
-        <button class="ic" title="Pin to the tracker dock" aria-label="Pin" onclick={pin}><UiIcon name="pin" size="0.95em" /></button>
+        <button
+          class="ic pin"
+          class:on={pinnedId}
+          title={pinnedId ? 'Unpin from the dock' : 'Pin to the tracker dock'}
+          aria-label={pinnedId ? 'Unpin' : 'Pin'}
+          aria-pressed={!!pinnedId}
+          onclick={togglePin}
+        ><UiIcon name="pin" filled={!!pinnedId} size="0.95em" /></button>
       {:else}
         <button class="ic" title="Open in a new window" aria-label="Pop out" onclick={popOut}>⧉</button>
       {/if}
@@ -173,6 +210,7 @@
   .title { flex: 1; font-weight: 700; font-size: 0.95rem; color: var(--accent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .ic { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1.1rem; line-height: 1; padding: 0 0.2rem; }
   .ic:hover { color: var(--accent); }
+  .ic.pin.on { color: var(--accent); }
   .body { overflow: auto; padding: 0.6rem 0.85rem 0.85rem; font-size: 0.85rem; }
   .sub { font-style: italic; color: var(--muted); margin: 0 0 0.5rem; }
   .notice { margin: 0 0 0.6rem; padding: 0.4rem 0.5rem; border: 1px solid var(--accent); border-radius: 6px; background: var(--field-hover); color: var(--accent); font-size: 0.8rem; }
