@@ -208,10 +208,11 @@ export async function selectTemplate(page, value) {
 /** The block holding the race/background/class/feat selectors. */
 export const buildCell = (page) => cell(page, 'Race, Class & Feats');
 
-/** Add a race or feat via the build block's browse overlay. */
+/** Add a race, background or feat via the build block's browse overlay. */
 export async function browseAdd(page, kind, name) {
   const build = buildCell(page);
   if (kind === 'race') await build.locator('.line', { hasText: 'Race' }).locator('.choose').click();
+  else if (kind === 'background') await build.locator('.line', { hasText: 'Background' }).locator('.choose').click();
   else await build.locator('.line.feats .choose', { hasText: 'Feat' }).click();
   await page.waitForSelector('.overlay', { timeout: 5000 });
   await page.fill('.overlay input.search', name);

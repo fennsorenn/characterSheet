@@ -141,3 +141,83 @@ describe('grants through the graph', () => {
     expect(c.abilities.con).toBe(14); // base untouched
   });
 });
+
+// 2024 backgrounds hand out an uneven, either/or spread: +2 and +1 to two of
+// three abilities, *or* +1 to each of the three. Read as an ordinary `choose`
+// it came out as "+1 to any two abilities" — the wrong sizes, the wrong count,
+// and drawn from the whole six rather than the three the background names.
+describe('weighted ability spreads', () => {
+  function withHermit() {
+    const c = catalog();
+    c.entries.background = [
+      {
+        name: 'Hermit',
+        source: 'XPHB',
+        ability: [
+          { choose: { weighted: { from: ['con', 'wis', 'cha'], weights: [2, 1] } } },
+          { choose: { weighted: { from: ['con', 'wis', 'cha'], weights: [1, 1, 1] } } }
+        ]
+      }
+    ] as never;
+    return c;
+  }
+  const hermit = { name: 'Hermit', source: 'XPHB' };
+  const key = (i: number) => grantKey('Hermit', 'ability', i);
+  const group = grantKey('Hermit', 'ability', 'alt');
+
+  it('offers the spread it actually grants', () => {
+    const pool = gatherGrants(createCharacter({ background: hermit }), withHermit());
+    const choice = pool.choices.find((c) => c.source === 'Hermit')!;
+    expect(choice.count).toBe(2);
+    expect(choice.weights).toEqual([2, 1]);
+    expect(choice.from).toEqual(['con', 'wis', 'cha']);
+  });
+
+  // Two blocks are alternatives, not a sum: applying both would hand out five
+  // points and ask for picks twice.
+  it('carries one alternative at a time, the first by default', () => {
+    const pool = gatherGrants(createCharacter({ background: hermit }), withHermit());
+    const mine = pool.choices.filter((c) => c.source === 'Hermit');
+    expect(mine).toHaveLength(1);
+    expect(mine[0].groupOptions).toEqual(['+2/+1', '+1/+1/+1']);
+    expect(mine[0].group).toBe(group);
+    expect(mine[0].groupIndex).toBe(0);
+  });
+
+  it('switches to the other spread when one is chosen', () => {
+    const c = createCharacter({ background: hermit, featureOptions: { [group]: '1' } });
+    const mine = gatherGrants(c, withHermit()).choices.filter((x) => x.source === 'Hermit');
+    expect(mine).toHaveLength(1);
+    expect(mine[0].weights).toEqual([1, 1, 1]);
+    expect(mine[0].count).toBe(3);
+  });
+
+  it('falls back to the first spread when the stored index is nonsense', () => {
+    const c = createCharacter({ background: hermit, featureOptions: { [group]: '7' } });
+    expect(gatherGrants(c, withHermit()).choices.find((x) => x.source === 'Hermit')!.weights).toEqual([2, 1]);
+  });
+
+  it('applies the picks at the sizes they were chosen at', () => {
+    const c = createCharacter({
+      background: hermit,
+      abilityChoices: { [key(0)]: { con: 2, wis: 1 } }
+    });
+    const g = buildGraph(c, undefined, gatherGrants(c, withHermit()));
+    expect(g.get('ability.con.score')).toBe(12);
+    expect(g.get('ability.wis.score')).toBe(11);
+    expect(g.get('ability.cha.score')).toBe(10);
+  });
+
+  // Picks belonging to the spread that is *not* in force must not leak in.
+  it('ignores picks stored against the other alternative', () => {
+    const c = createCharacter({
+      background: hermit,
+      featureOptions: { [group]: '1' },
+      abilityChoices: { [key(0)]: { con: 2, wis: 1 }, [key(1)]: { con: 1, wis: 1, cha: 1 } }
+    });
+    const g = buildGraph(c, undefined, gatherGrants(c, withHermit()));
+    expect(g.get('ability.con.score')).toBe(11);
+    expect(g.get('ability.wis.score')).toBe(11);
+    expect(g.get('ability.cha.score')).toBe(11);
+  });
+});
