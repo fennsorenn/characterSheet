@@ -88,7 +88,12 @@ in this repo.
   covers half the sheet to type a number that is nearly always a small nudge from
   the one already there. Where the pointer is coarse, a number opens a dial
   instead: an arrow above and below each digit, the new value and the change it
-  would make shown together, nothing written until Apply. Stepping carries rather
+  would make shown together, nothing written until Apply. The number is one
+  field, not one per digit — a caret you can see and move, ordinary selection
+  and backspace — lined up under the arrows by setting the letter-spacing of
+  tabular numerals to the column pitch. Typing replaces the digit the caret is
+  in front of and moves on, so the columns never shift out from under the arrows
+  mid-edit. Stepping carries rather
   than cycling — ▲ over the tens of 99 gives 109, not 9. Digit counts come from
   each field's own bounds, and the ceiling is what sizes it (a field with `min: 0`
   and no maximum is not one digit wide). The mode lives under **More** in the dock:
