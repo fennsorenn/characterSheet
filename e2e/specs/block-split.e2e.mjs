@@ -1,4 +1,4 @@
-import { cell, buildCell, assert, assertEqual } from '../harness.mjs';
+import { block, cell, buildCell, assert, assertEqual } from '../harness.mjs';
 
 // Picking what a character *is* and reading what that gave them are two jobs.
 // They used to share one block, with the selectors crammed into the Features
@@ -45,7 +45,7 @@ export default async function ({ page }) {
     ['Inventory', 'item'],
     ['Spells', 'spell']
   ]) {
-    const ph = await cell(page, title).locator('.quickadd input').first().getAttribute('placeholder');
+    const ph = await block(page, title).locator('.quickadd input').first().getAttribute('placeholder');
     assert(new RegExp(noun, 'i').test(ph ?? ''), `${title} still has its own quick-add (${ph})`);
   }
 }

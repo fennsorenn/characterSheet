@@ -191,6 +191,12 @@ export interface Character {
   noteTabs?: { open: string[]; active: string | null };
   /** Features the player wrote themselves; everything else is derived. */
   customFeatures?: CustomFeature[];
+  /** Movement, senses and proficiencies added by hand (see CustomGrant). */
+  customGrants?: CustomGrant[];
+  /** Skills the game doesn't have. */
+  customSkills?: CustomSkill[];
+  /** Attacks that aren't a weapon in the pack. */
+  customAttacks?: CustomAttack[];
   /** Short notes pinned to exact spots on the sheet (see reminders.ts). */
   reminders?: Reminder[];
   /**
@@ -228,6 +234,56 @@ export interface CustomFeature {
 
 /** The source recorded on custom features, and the second half of their key. */
 export const CUSTOM_SOURCE = 'Custom';
+
+/**
+ * Movement, a sense, or a proficiency the player adds by hand.
+ *
+ * Written as a grant rather than as its own kind of thing, so it merges into the
+ * same pool a race or feat feeds and every consumer — the traits rows, the
+ * weapon-proficiency check, the skill tiers — picks it up with no extra wiring.
+ * The category is a plain string here because the typed union lives with the
+ * grant engine, which already depends on this module.
+ */
+export type CustomGrant =
+  | { id: string; kind: 'speed' | 'sense'; name: string; feet: number }
+  | { id: string; kind: 'set'; category: string; member: string };
+
+/** A custom grant before it has an id — distributed, so the union survives. */
+export type NewCustomGrant = CustomGrant extends infer T
+  ? T extends CustomGrant
+    ? Omit<T, 'id'>
+    : never
+  : never;
+
+/**
+ * A skill the game doesn't have — a homebrew one, or a tool used like a skill.
+ * It names its own governing ability, since nothing else knows it.
+ */
+export interface CustomSkill {
+  id: string;
+  name: string;
+  ability: Ability;
+  proficiency: ProficiencyLevel;
+}
+
+/**
+ * An attack that isn't a weapon in the pack: a natural weapon, a breath weapon,
+ * an unarmed strike, something improvised. The to-hit is assembled the same way
+ * a weapon's is (ability + proficiency + a flat bonus) so it explains itself;
+ * damage stays text, because "2d6 + 3 fire" is what people actually write.
+ */
+export interface CustomAttack {
+  id: string;
+  name: string;
+  /** Governing ability, or undefined for a flat bonus with no ability behind it. */
+  ability?: Ability;
+  proficient?: boolean;
+  /** Flat bonus on top (magic, a feature). */
+  bonus?: number;
+  /** Free text, e.g. "2d6 + 3 fire". Rolled if it parses as dice. */
+  damage?: string;
+  range?: string;
+}
 
 /** A single notes document (markdown content). */
 export interface NoteDoc {
@@ -300,6 +356,9 @@ export function createCharacter(partial: Partial<Character> = {}): Character {
     notes: partial.notes,
     noteTabs: partial.noteTabs,
     customFeatures: partial.customFeatures,
+    customGrants: partial.customGrants,
+    customSkills: partial.customSkills,
+    customAttacks: partial.customAttacks,
     reminders: partial.reminders,
     layoutPrefs: partial.layoutPrefs
   };

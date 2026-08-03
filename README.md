@@ -88,7 +88,12 @@ in this repo.
   covers half the sheet to type a number that is nearly always a small nudge from
   the one already there. Where the pointer is coarse, a number opens a dial
   instead: an arrow above and below each digit, the new value and the change it
-  would make shown together, nothing written until Apply. Stepping carries rather
+  would make shown together, nothing written until Apply. The number is one
+  field, not one per digit — a caret you can see and move, ordinary selection
+  and backspace — lined up under the arrows by setting the letter-spacing of
+  tabular numerals to the column pitch. Typing replaces the digit the caret is
+  in front of and moves on, so the columns never shift out from under the arrows
+  mid-edit. Stepping carries rather
   than cycling — ▲ over the tens of 99 gives 109, not 9. Digit counts come from
   each field's own bounds, and the ceiling is what sizes it (a field with `min: 0`
   and no maximum is not one digit wide). The mode lives under **More** in the dock:
@@ -110,6 +115,18 @@ in this repo.
   device* on one of yours. It is a copy, not a link — the two diverge from that
   moment, since there is no sane merge for a character edited in both places — so
   it takes a fresh id and a name free in the library it lands in ("Bran (2)").
+- **Your own movement, proficiencies, skills and attacks** — a speed, a sense,
+  a language, a tool, a weapon or armor proficiency, a resistance or immunity
+  typed by hand becomes a **grant from "Custom"**, joining the same pool a race
+  or feat feeds. Nothing downstream knows the difference: a typed weapon
+  proficiency reaches the attack rows, a typed skill proficiency reaches the
+  graph, a typed swim speed reaches the traits row, and a chip the player added
+  is the only kind with a ✕ on it. Skills and attacks the game doesn't have are
+  documents of their own — a custom skill names its governing ability, a custom
+  attack its ability, proficiency and flat bonus — and both become **nodes on the
+  same calc graph**, so they explain themselves in the popover and take Bless and
+  exhaustion like anything else. Their node ids are keyed by entry id rather than
+  name, so renaming one doesn't strand the reminders pinned to it.
 - **Custom entries** — an item, spell or feature added by hand has no catalog
   text behind it, so its window holds a description you write instead, stored on
   the character. A description you have written always wins over catalog content,

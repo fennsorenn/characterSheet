@@ -5,7 +5,9 @@ import {
   SKILLS,
   SKILL_ABILITY,
   PROFICIENCY_MULTIPLIER,
-  skillNodeId
+  skillNodeId,
+  customSkillNode,
+  customAttackNode
 } from './abilities.js';
 import { totalLevel, type Character } from './schema.js';
 import {
@@ -106,6 +108,16 @@ export function buildGraph(
     );
   }
 
+  // Skills the game doesn't have. Same arithmetic as the fixed ones, so they
+  // explain themselves in the popover exactly the same way.
+  for (const skill of character.customSkills ?? []) {
+    const id = customSkillNode(skill.id);
+    g.set(`${id}.profMult`, PROFICIENCY_MULTIPLIER[skill.proficiency ?? 'none']);
+    g.define(id, [`ability.${skill.ability}.mod`, 'prof.bonus', `${id}.profMult`], (c) =>
+      c.get(`ability.${skill.ability}.mod`) + Math.floor(c.get('prof.bonus') * c.get(`${id}.profMult`))
+    );
+  }
+
   // Initiative and the passive scores. Perception is the one every sheet shows;
   // investigation and insight are defined too, since a table that asks for them
   // asks often and the arithmetic is the same.
@@ -141,6 +153,22 @@ export function buildGraph(
   // each `attack.<id>.hit` node here (the weapon ids only exist at this point,
   // so exhaustionModifiers — which is id-agnostic — can't reach them).
   const exhaustion = character.exhaustion ?? 0;
+
+  // Attacks that aren't a weapon in the pack (a bite, a breath weapon). Built
+  // the same way, so exhaustion and Bless reach them like any other attack roll.
+  for (const atk of character.customAttacks ?? []) {
+    const node = customAttackNode(atk.id);
+    const abilMod = atk.ability ? `ability.${atk.ability}.mod` : null;
+    g.define(node, abilMod ? [abilMod, 'prof.bonus'] : ['prof.bonus'], (c) =>
+      (abilMod ? c.get(abilMod) : 0) +
+      (atk.proficient ? c.get('prof.bonus') : 0) +
+      (atk.bonus ?? 0)
+    );
+    if (exhaustion > 0) {
+      g.addModifier(node, { source: `Exhaustion ${exhaustion}`, value: -2 * exhaustion });
+    }
+  }
+
   if (lookup) {
     const weaponProfs = weaponProficiencySet(
       grants.sets.filter((s) => s.category === 'weaponProf').map((s) => s.member)

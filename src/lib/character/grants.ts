@@ -1,6 +1,6 @@
 import { ABILITIES, ABILITY_NAMES, SKILLS, type Ability } from './abilities.js';
 import type { Character, CharacterModifier } from './schema.js';
-import { allFeatRefs } from './schema.js';
+import { allFeatRefs, CUSTOM_SOURCE } from './schema.js';
 import type { Catalog, NamedEntry } from '../data/catalog.js';
 
 /**
@@ -60,7 +60,21 @@ export interface GrantChoice {
   count: number;
   /** Bonus per pick, for ability choices. */
   amount: number;
+  /**
+   * Per-pick amounts for an uneven spread — 2024 backgrounds give "+2 and +1",
+   * not "+1 twice". Slot j is worth `weights[j]`; `amount` covers the even case.
+   */
+  weights?: number[];
   label: string;
+  /**
+   * Mutually exclusive spreads: a 2024 background offers *either* +2/+1 to two
+   * abilities *or* +1 to each of three, and exactly one of them applies. The
+   * pool carries only the active one; `groupOptions` names the rest so the
+   * picker can offer the switch, and the pick is stored under `group`.
+   */
+  group?: string;
+  groupOptions?: string[];
+  groupIndex?: number;
 }
 
 export type Universe = 'skill' | 'ability' | 'damage' | 'language' | 'tool' | 'weapon' | 'armor' | 'open';
@@ -73,8 +87,14 @@ export interface GrantPool {
 
 export const GRANT_PREFIX = 'grant:';
 /** Storage key for the i-th choose block of `field` on `source`. */
-export function grantKey(source: string, field: string, index: number): string {
+export function grantKey(source: string, field: string, index: number | string): string {
   return `${GRANT_PREFIX}${source}|${field}|${index}`;
+}
+
+/** Which alternative is in force, defaulting to the first and never off the end. */
+function clampIndex(stored: string | undefined, length: number): number {
+  const n = Number(stored);
+  return Number.isInteger(n) && n >= 0 && n < length ? n : 0;
 }
 
 export const DAMAGE_TYPES = [
@@ -121,6 +141,26 @@ function parseChoose(
   key: string,
   opts: { source: string; field: string; index: number; category: SetCategory | 'ability'; universe: Universe; amount: number }
 ): GrantChoice | undefined {
+  // `{ choose: { weighted: { from, weights } } }` — an uneven spread, one
+  // ability per weight. Read as an even choice it becomes "+1 to any two",
+  // which is both the wrong sizes and the wrong abilities.
+  if (key === 'choose' && value && typeof value === 'object' && 'weighted' in value) {
+    const w = (value as { weighted?: { from?: unknown; weights?: unknown } }).weighted ?? {};
+    const from = arr(w.from).map(String);
+    const weights = arr(w.weights).filter((n): n is number => typeof n === 'number');
+    if (!weights.length) return undefined;
+    return {
+      key: grantKey(opts.source, opts.field, opts.index),
+      source: opts.source,
+      category: opts.category,
+      from,
+      universe: from.length ? undefined : opts.universe,
+      count: weights.length,
+      amount: weights[0],
+      weights,
+      label: describeWeighted(weights, from, opts.category)
+    };
+  }
   // `{ choose: { from, count?, amount? } }`
   if (key === 'choose' && value && typeof value === 'object') {
     const c = value as { from?: unknown; count?: unknown; amount?: unknown };
@@ -153,6 +193,17 @@ function parseChoose(
     };
   }
   return undefined;
+}
+
+/** "+2/+1 to Con, Wis or Cha" — the spread first, since that is what is chosen. */
+export function describeWeighted(
+  weights: number[],
+  from: string[],
+  category: SetCategory | 'ability' = 'ability'
+): string {
+  const spread = weights.map((w) => `+${w}`).join('/');
+  const pool = from.map((m) => memberLabel(category, m).slice(0, 3)).join(', ');
+  return pool ? `${spread} among ${pool}` : spread;
 }
 
 function anyUniverse(key: string, fallback: Universe): Universe {
@@ -243,20 +294,45 @@ function gatherFrom(entry: NamedEntry, character: Character, pool: GrantPool): v
   const source = entry.name;
 
   // Ability scores: `ability: [{con:1}]` (fixed) or `[{choose:{from,amount,count}}]`.
-  arr(entry.ability).forEach((blk, i) => {
-    if (!blk || typeof blk !== 'object' || (blk as { hidden?: boolean }).hidden) return;
-    const o = blk as Record<string, unknown>;
-    if ('choose' in o) {
-      const choice = parseChoose(o.choose, 'choose', {
-        source, field: 'ability', index: i, category: 'ability', universe: 'ability', amount: 1
-      });
-      if (choice) {
-        pool.choices.push(choice);
-        const picks = character.abilityChoices[choice.key] ?? {};
-        for (const a of ABILITIES) {
-          const v = picks[a];
-          if (typeof v === 'number' && v) pool.numeric.push({ target: `ability.${a}.score`, source, value: v, combine: 'sum' });
-        }
+  // More than one `ability` block means alternatives, not a sum: a 2024
+  // background offers +2/+1 *or* +1/+1/+1, and one of them applies. Applying
+  // both would hand out five points and prompt for picks twice.
+  const blocks = arr(entry.ability).filter(
+    (blk) => blk && typeof blk === 'object' && !(blk as { hidden?: boolean }).hidden
+  ) as Record<string, unknown>[];
+  const parsed = blocks.map((o, i) =>
+    'choose' in o
+      ? parseChoose(o.choose, 'choose', {
+          source, field: 'ability', index: i, category: 'ability', universe: 'ability', amount: 1
+        })
+      : undefined
+  );
+  const alternatives = blocks.length > 1 && parsed.every(Boolean);
+  const group = alternatives ? grantKey(source, 'ability', 'alt') : undefined;
+  const active = alternatives ? clampIndex(character.featureOptions[group!], blocks.length) : 0;
+
+  blocks.forEach((o, i) => {
+    if (alternatives && i !== active) return;
+    const choice = parsed[i];
+    if (choice) {
+      pool.choices.push(
+        group
+          ? {
+              ...choice,
+              group,
+              groupIndex: i,
+              // Just the spread in the switcher — the pool it comes from is the
+              // same for every alternative and is already in the full label.
+              groupOptions: parsed.map((p, n) =>
+                p?.weights ? p.weights.map((w) => `+${w}`).join('/') : (p?.label ?? `Option ${n + 1}`)
+              )
+            }
+          : choice
+      );
+      const picks = character.abilityChoices[choice.key] ?? {};
+      for (const a of ABILITIES) {
+        const v = picks[a];
+        if (typeof v === 'number' && v) pool.numeric.push({ target: `ability.${a}.score`, source, value: v, combine: 'sum' });
       }
       return;
     }
@@ -310,7 +386,34 @@ export function gatherGrants(character: Character, catalog: Catalog): GrantPool 
     const entry = findRef(catalog.entries.class, cls);
     if (entry) gatherClass(entry, character, pool, i === 0);
   });
+  gatherCustom(character, pool);
   return pool;
+}
+
+/**
+ * The player's own movement, senses and proficiencies, merged into the same
+ * pool as everything a race or feat grants.
+ *
+ * Doing it here rather than in each block means a hand-added weapon proficiency
+ * reaches the attack rows, a hand-added skill proficiency reaches the graph, and
+ * a hand-added swim speed reaches the traits row — none of which know it was
+ * typed rather than granted.
+ */
+export function gatherCustom(character: Character, pool: GrantPool): void {
+  for (const g of character.customGrants ?? []) {
+    if (g.kind === 'set') {
+      if (!g.member.trim()) continue;
+      pool.sets.push({ category: g.category as SetCategory, member: g.member.trim(), source: CUSTOM_SOURCE });
+    } else if (Number.isFinite(g.feet)) {
+      const prefix = g.kind === 'speed' ? 'speed' : 'sense';
+      pool.numeric.push({
+        target: `${prefix}.${g.name.trim().toLowerCase()}`,
+        source: CUSTOM_SOURCE,
+        value: g.feet,
+        combine: 'max'
+      });
+    }
+  }
 }
 
 /** Numeric grants as graph modifiers (sum-combined targets; max ones are skipped by the graph). */

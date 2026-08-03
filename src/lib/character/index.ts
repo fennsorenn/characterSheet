@@ -52,6 +52,7 @@ export {
   effectModifiers
 } from './effects.js';
 export { buildGraph, skillNodeId } from './buildGraph.js';
+export { customSkillNode, customAttackNode } from './abilities.js';
 export {
   computeEquipmentEffects,
   weaponAttacks,
@@ -133,7 +134,14 @@ export {
   uniqueCustomFeatureName,
   featureMetaKey
 } from './features.js';
-export { CUSTOM_SOURCE, type CustomFeature } from './schema.js';
+export {
+  CUSTOM_SOURCE,
+  type CustomFeature,
+  type CustomGrant,
+  type NewCustomGrant,
+  type CustomSkill,
+  type CustomAttack
+} from './schema.js';
 export {
   anchors,
   remindersAt,

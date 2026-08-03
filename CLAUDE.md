@@ -5,11 +5,12 @@
 Do **not** run the whole browser suite after every small change — it takes
 several minutes and most of it is unrelated to whatever just moved.
 
-- While iterating: `npm run check`, `npm test` (unit, seconds), and the
-  **relevant** spec(s) only — `E2E_DATA_ZIP=/tmp/5etools.zip E2E_SPEC=<name> npm run e2e`.
-- Before pushing something to be deployed, or when a change touches shared
-  machinery (layout, stores, the dock, `NumberField`, …): one full
-  `E2E_DATA_ZIP=/tmp/5etools.zip npm run e2e`.
+- While iterating, and before any ordinary commit: `npm run check`, `npm test`
+  (unit, seconds), and the **relevant** spec(s) only —
+  `E2E_DATA_ZIP=/tmp/5etools.zip E2E_SPEC=<name> npm run e2e`. This is the
+  default; do not reach past it because a change "feels" wide-reaching.
+- The full `E2E_DATA_ZIP=/tmp/5etools.zip npm run e2e` is for **deploys**, or
+  when explicitly asked for. It takes minutes and sometimes gets OOM-killed.
 
 The dataset lives at `/tmp/5etools.zip`; without `E2E_DATA_ZIP` the browser
 suite skips itself, so a "pass" with no output means nothing ran.

@@ -51,7 +51,8 @@ export default async function ({ page }) {
   assert(/current hit points/i.test(await dial(page).innerText()), 'the dial names the field');
 
   // Three digits for hit points, one arrow above and below each.
-  assertEqual(await dial(page).locator('.col .digit').count(), 3, 'a digit per place');
+  assertEqual(await dial(page).locator('input.digits').count(), 1, 'one field for the number');
+  assertEqual(await dial(page).locator('input.digits').inputValue().then((v) => v.length), 3, 'three digits wide');
   assertEqual(await dial(page).locator('.arrow.up').count(), 3, 'an arrow above each');
   assertEqual(await dial(page).locator('.arrow.down').count(), 3, 'and below');
   assertEqual(
@@ -94,6 +95,72 @@ export default async function ({ page }) {
   assertEqual(await dial(page).count(), 0, 'Escape closes the dial');
   assertEqual(await storedHp(page), before + 10, 'without applying the change');
 
+  // --- The number is one field: tapping it raises the keyboard ---
+  await hpCurrent(page).click();
+  await page.waitForSelector('.dial[role=dialog]', { timeout: 5000 });
+  const digitField = dial(page).locator('input.digits');
+  assertEqual(await digitField.getAttribute('inputmode'), 'numeric', 'a numeric field');
+  assertEqual(await digitField.getAttribute('maxlength'), '3', 'holding one character per place');
+
+  // Its digits sit under their arrows: tabular numerals at the column pitch.
+  const aligned = await page.evaluate(() => {
+    const inp = document.querySelector('.dial input.digits');
+    const box = inp.getBoundingClientRect();
+    const style = getComputedStyle(inp);
+    const pitch = parseFloat(style.letterSpacing) + (box.width + 6.4) / inp.value.length - parseFloat(style.letterSpacing);
+    void pitch;
+    // Measure the first digit's centre from the indent, and compare with the
+    // first arrow's; if the spacing is wrong they drift by a column.
+    const first = document.querySelector('.dial .arrow.up').getBoundingClientRect();
+    const ratio = (box.width + 6.4) / 3; // column pitch, trailing space included
+    const digitCentre = box.left + parseFloat(style.textIndent) + (ratio - parseFloat(style.letterSpacing)) / 2;
+    return {
+      offBy: Math.abs(digitCentre - (first.left + first.width / 2)),
+      lastOffBy: Math.abs(digitCentre + 2 * ratio - (
+        [...document.querySelectorAll('.dial .arrow.up')].at(-1).getBoundingClientRect().left +
+        first.width / 2
+      ))
+    };
+  });
+  assert(aligned.offBy < 2, `the first digit sits under its arrow (off by ${aligned.offBy.toFixed(1)}px)`);
+  assert(aligned.lastOffBy < 2, `and so does the last (off by ${aligned.lastOffBy.toFixed(1)}px)`);
+
+  // Typing replaces the digit the caret is in front of and moves on, so three
+  // places take three keystrokes in the one field.
+  await digitField.click();
+  await digitField.evaluate((el) => el.setSelectionRange(0, 0));
+  await page.keyboard.type('142');
+  await page.waitForTimeout(250);
+  assertEqual(await digitField.inputValue(), '142', 'the field reads what was typed');
+  assertEqual(Number(await dial(page).locator('.val').inputValue()), 142, 'and that is the value');
+  await dial(page).locator('button.primary').click();
+  await page.waitForTimeout(400);
+  assertEqual(await storedHp(page), 142, 'and Apply writes it');
+
+  // Backspace clears a place rather than closing the gap, so the columns hold.
+  await hpCurrent(page).click();
+  await page.waitForSelector('.dial[role=dialog]', { timeout: 5000 });
+  await dial(page).locator('input.digits').click();
+  await dial(page).locator('input.digits').evaluate((el) => el.setSelectionRange(3, 3));
+  await page.keyboard.press('Backspace');
+  await page.waitForTimeout(250);
+  assertEqual(await dial(page).locator('input.digits').inputValue(), '140', 'the ones went to zero');
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(200);
+
+  // A digit is a digit, not a step: 9 in the tens of a 1–30 score is 90, which
+  // the ceiling answers rather than the tens becoming "+90".
+  const str = cell(page, 'Ability Scores').locator('.ability', { hasText: 'Str' }).locator('.number-field').first();
+  await str.click();
+  await page.waitForSelector('.dial[role=dialog]', { timeout: 5000 });
+  await dial(page).locator('input.digits').click();
+  await dial(page).locator('input.digits').evaluate((el) => el.setSelectionRange(0, 0));
+  await page.keyboard.type('9');
+  await page.waitForTimeout(250);
+  assertEqual(Number(await dial(page).locator('.val').inputValue()), 30, 'clamped to the ceiling');
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(200);
+
   // --- The value inside the dial stays a field, on every device ---
   // The dial exists so a keyboard doesn't come up unasked, not to lock it away:
   // tapping the number is the way back to typing.
@@ -125,7 +192,11 @@ export default async function ({ page }) {
   const score = cell(page, 'Ability Scores').locator('.ability', { hasText: 'Str' }).locator('.number-field').first();
   await score.click();
   await page.waitForSelector('.dial[role=dialog]', { timeout: 5000 });
-  assertEqual(await dial(page).locator('.col .digit').count(), 2, 'an ability score is two digits');
+  assertEqual(
+    await dial(page).locator('input.digits').inputValue().then((v) => v.length),
+    2,
+    'an ability score is two digits wide'
+  );
   // 10 by default: the tens can go up (20) but the hundreds do not exist, and
   // down from 10 would leave 0, below the floor of 1.
   await dial(page).locator('.arrow.down').first().click();

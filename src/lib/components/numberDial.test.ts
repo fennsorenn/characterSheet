@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   canBeNegative,
+  setDigit,
   digitCells,
   digitsFor,
   flipSign,
@@ -59,6 +60,29 @@ describe('stepDigit', () => {
   it('places digits by position, largest first', () => {
     expect(placeOf(0, 3)).toBe(100);
     expect(placeOf(2, 3)).toBe(1);
+  });
+});
+
+// Typing is not stepping: a digit typed into a cell is that digit.
+describe('setDigit', () => {
+  it('replaces the digit at that place, leaving the rest', () => {
+    expect(setDigit(142, 100, 9)).toBe(942);
+    expect(setDigit(142, 10, 0)).toBe(102);
+    expect(setDigit(142, 1, 7)).toBe(147);
+  });
+
+  it('does not carry — a 9 in the tens is 9x, not "+90"', () => {
+    expect(setDigit(99, 10, 1)).toBe(19);
+    expect(setDigit(5, 100, 3)).toBe(305);
+  });
+
+  it('still answers to the bounds', () => {
+    expect(setDigit(10, 10, 9, 1, 30)).toBe(30); // 90 asked for, 30 is the ceiling
+    expect(setDigit(10, 10, 0, 1, 30)).toBe(1); // 0 asked for, 1 is the floor
+  });
+
+  it('keeps the sign it was given', () => {
+    expect(setDigit(-12, 1, 5, -99, 99)).toBe(-15);
   });
 });
 

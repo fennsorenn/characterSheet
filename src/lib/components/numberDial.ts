@@ -48,6 +48,27 @@ export function stepDigit(
   return clampValue(value + place * dir, min, max);
 }
 
+/**
+ * Replace the digit at `place`, keeping the rest of the number.
+ *
+ * Typing is not stepping: a digit typed into a cell *is* that digit, so this
+ * substitutes rather than adding, and never carries. The result is still
+ * clamped — typing 9 into the tens of an ability score asks for 9x, and the
+ * field's ceiling answers.
+ */
+export function setDigit(
+  value: number,
+  place: number,
+  digit: number,
+  min = -Infinity,
+  max = Infinity
+): number {
+  const sign = value < 0 ? -1 : 1;
+  const magnitude = Math.abs(Math.trunc(value));
+  const current = Math.floor(magnitude / place) % 10;
+  return clampValue(sign * (magnitude + (digit - current) * place), min, max);
+}
+
 /** Whether a field can hold a negative number at all — decides the sign cell. */
 export function canBeNegative(min: number): boolean {
   return min < 0;

@@ -152,6 +152,15 @@ export function assertEqual(actual, expected, message) {
 
 export const cell = (page, title) => page.locator('.cell', { hasText: title });
 
+/**
+ * One block by its heading. Narrower than `cell`: a split cell holds two blocks,
+ * and `cell` matches on text anywhere inside it — so "Skills" also matches the
+ * traits block's "Choose 2 skills", and Inventory's cell may lead with Attacks.
+ * Use this whenever the assertion is about one block's own controls.
+ */
+export const block = (page, title) =>
+  page.locator('section.block', { has: page.locator(`h3:text-is("${title}")`) }).first();
+
 /** The dock: one edge-anchored surface holding what three bars used to. */
 export const dock = (page) => page.locator('aside.dock');
 
@@ -199,10 +208,11 @@ export async function selectTemplate(page, value) {
 /** The block holding the race/background/class/feat selectors. */
 export const buildCell = (page) => cell(page, 'Race, Class & Feats');
 
-/** Add a race or feat via the build block's browse overlay. */
+/** Add a race, background or feat via the build block's browse overlay. */
 export async function browseAdd(page, kind, name) {
   const build = buildCell(page);
   if (kind === 'race') await build.locator('.line', { hasText: 'Race' }).locator('.choose').click();
+  else if (kind === 'background') await build.locator('.line', { hasText: 'Background' }).locator('.choose').click();
   else await build.locator('.line.feats .choose', { hasText: 'Feat' }).click();
   await page.waitForSelector('.overlay', { timeout: 5000 });
   await page.fill('.overlay input.search', name);
