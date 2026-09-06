@@ -24,6 +24,12 @@ export interface Overlay {
   sourceId: string;
   /** Human label for the manager UI (repo meta name, or the sourceId). */
   label: string;
+  /**
+   * Where this overlay was fetched from, when it came from a URL. Absent for
+   * one loaded off disk, which has no address to hand another device. Kept so a
+   * character referencing this source can record a link that re-fetches it.
+   */
+  url?: string;
   entries: Record<Category, NamedEntry[]>;
   classData: ClassData;
   counts: Record<Category, number>;
@@ -110,11 +116,16 @@ function overlayItems(doc: OverlayDoc): NamedEntry[] {
 }
 
 /** Parse a loose document into a fully-formed, counted {@link Overlay}. */
-export function parseOverlay(doc: OverlayDoc, sourceId: string, label?: string): Overlay {
+export function parseOverlay(
+  doc: OverlayDoc,
+  sourceId: string,
+  label?: string,
+  url?: string
+): Overlay {
   const { entries, classData } = parseOverlayEntries(doc);
   const counts = {} as Record<Category, number>;
   for (const c of CATEGORIES) counts[c] = entries[c].length;
-  return { sourceId, label: label ?? sourceId, entries, classData, counts };
+  return { sourceId, label: label ?? sourceId, url, entries, classData, counts };
 }
 
 /** True if the overlay contributed no recognised content (all categories empty). */

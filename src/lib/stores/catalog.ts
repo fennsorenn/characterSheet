@@ -13,6 +13,9 @@ import {
   deleteOverlay,
   clearOverlays,
   fetchRepoFile,
+  CATEGORIES,
+  repoFileUrl,
+  fetchSourceJson,
   type Overlay,
   type RepoConfig,
   type RepoSource,
@@ -44,6 +47,28 @@ const state = writable<CatalogState>({ base: null, overlays: [], stage: 'idle', 
 const composed = derived(state, ($s) =>
   $s.base ? composeCatalog($s.base, $s.overlays) : null
 );
+
+/**
+ * Every source id the catalog currently provides, lowercased.
+ *
+ * Derived by scanning the composed catalog rather than tracked alongside it, so
+ * it cannot fall out of step with what is actually loaded. Active overlay ids
+ * are unioned in explicitly: an overlay whose content is all class features
+ * contributes no `entries` rows but is still loaded, and reporting it missing
+ * would send the user to re-download something they already have.
+ */
+export const loadedSources = derived([composed, state], ([$c, $s]) => {
+  const ids = new Set<string>();
+  if ($c) {
+    for (const category of CATEGORIES) {
+      for (const entry of $c.entries[category] ?? []) {
+        if (entry?.source) ids.add(String(entry.source).toLowerCase());
+      }
+    }
+  }
+  for (const o of $s.overlays) ids.add(o.sourceId.toLowerCase());
+  return ids;
+});
 
 /** Search index rebuilt whenever the composed catalog changes. */
 export const searchIndex = derived(composed, ($c) => ($c ? new SearchIndex($c) : null));
@@ -168,11 +193,31 @@ async function addOverlay(overlay: Overlay): Promise<void> {
 /** Fetch a source from a repo index, parse it, and activate it as an overlay. */
 export async function addOverlayFromRepo(config: RepoConfig, source: RepoSource): Promise<void> {
   const doc = await fetchRepoFile(config, source.path);
-  const overlay = parseOverlay(doc, source.sourceId, source.name);
+  const overlay = parseOverlay(doc, source.sourceId, source.name, repoFileUrl(config, source.path));
   if (isEmptyOverlay(overlay)) {
     throw new Error(`"${source.name}" has no content this app can use.`);
   }
   await addOverlay(overlay);
+}
+
+/**
+ * Fetch a source document by URL and activate it as an overlay, remembering the
+ * URL on the overlay. This is what a character's recorded {@link SourceLink}
+ * is redeemed through: one call takes a stored link to loaded content.
+ */
+export async function addOverlayFromUrl(url: string, label?: string): Promise<Overlay> {
+  const doc = await fetchSourceJson(url);
+  const meta = doc._meta as { sources?: { json?: string; full?: string }[] } | undefined;
+  const src = meta?.sources?.[0];
+  // The document's own declared id wins: it is what the refs were written
+  // against, and a URL's filename is not reliably the source id.
+  const sourceId = src?.json ?? label ?? url.split('/').pop()?.replace(/\.json$/i, '') ?? url;
+  const overlay = parseOverlay(doc, sourceId, src?.full ?? label ?? sourceId, url);
+  if (isEmptyOverlay(overlay)) {
+    throw new Error(`"${overlay.label}" has no content this app can use.`);
+  }
+  await addOverlay(overlay);
+  return overlay;
 }
 
 /** Parse a user-picked JSON file and activate it as an overlay. */

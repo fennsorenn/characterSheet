@@ -6,7 +6,10 @@
     toggleAttuned,
     setItemQuantity,
     removeInventoryItem,
-    renameInventoryItem
+    renameInventoryItem,
+    toggleContainer,
+    setIsContainer,
+    setItemContainer
   } from '../stores/character.js';
   import { catalogLookup } from '../stores/catalog.js';
   import { openDetail } from '../stores/detail.js';
@@ -19,18 +22,39 @@
   import UiIcon from './UiIcon.svelte';
   import QuickAdd from './QuickAdd.svelte';
   import { scrollStyle, resizePersist } from './scrollCell.js';
+  import { defaultOptions } from '../layout/blocks.js';
+  import {
+    inventoryTree,
+    containerOpen,
+    contentsCount,
+    containerRows,
+    type InventoryNode
+  } from '../character/inventory.js';
+  import CoinFields from './CoinFields.svelte';
 
   let {
     variant = 'full',
     height = undefined,
     editing = false,
-    onResize = undefined
+    onResize = undefined,
+    options = {}
   }: {
     variant?: string;
     height?: number;
     editing?: boolean;
     onResize?: (h: number) => void;
+    options?: Record<string, boolean>;
   } = $props();
+
+  // The currency row is an option, not a variant: it is one line item, and the
+  // standalone Currency block is this same row placed on its own.
+  const on = $derived({ ...defaultOptions('inventory', variant), ...options });
+
+  // Containment is a parent pointer on a flat array; the tree is built only
+  // for rendering, and every node carries its original index so the actions
+  // below stay index-based exactly as before.
+  const tree = $derived(inventoryTree($character));
+  const containers = $derived(containerRows($character));
 
   // Inline rename: which row is being edited and its working text.
   let editingIndex = $state<number | null>(null);
@@ -91,6 +115,101 @@
   }
 </script>
 
+
+{#snippet row(node: InventoryNode)}
+  {@const item = node.item}
+  {@const i = node.index}
+  {@const note = effectNote(item.name, item.source)}
+  {@const ic = iconFor(item.name, item.source)}
+  {@const open = item.id ? containerOpen($character, item.id) : true}
+  <li class:is-container={item.isContainer}>
+    <div class="row">
+      {#if item.isContainer && item.id}
+        <button
+          class="disclose"
+          aria-expanded={open}
+          title={open ? 'Collapse' : 'Expand'}
+          onclick={() => toggleContainer(item.id!)}
+        >{open ? '▾' : '▸'}</button>
+      {:else}
+        <span class="disclose spacer" aria-hidden="true"></span>
+      {/if}
+      <label class="equip" title="Equipped">
+        <input type="checkbox" checked={item.equipped} disabled={!$canEditPlay} onchange={() => toggleEquipped(i)} />
+      </label>
+      <span class="qty">
+        <NumberField value={item.quantity} min={0} onchange={(v) => setItemQuantity(i, v)} digits={3} />
+      </span>
+      <span class="itemicon" title={iconLabel(ic)}><Icon name={ic} /></span>
+      {#if editingIndex === i}
+        <!-- svelte-ignore a11y_autofocus -->
+        <input
+          class="rename"
+          autofocus
+          bind:value={editValue}
+          onkeydown={onRenameKey}
+          onblur={commitRename}
+        />
+      {:else}
+        <button
+          class="name"
+          class:equipped={item.equipped}
+          title={readable(item) ? 'Show details' : 'Describe this item'}
+          onclick={(e) => openItemDetail(item, e.currentTarget)}
+        >{item.label ?? item.name}</button>
+        {#if item.isContainer}
+          <span class="count">{contentsCount(node)}</span>
+        {/if}
+        {#if $canEditBuild}
+          <button class="edit" title="Rename item" aria-label="Rename item" onclick={() => startRename(i, item.label ?? item.name)}><UiIcon name="pencil" size="0.85em" /></button>
+        {/if}
+      {/if}
+      {#if needsAttune(item.name, item.source)}
+        <button
+          class="attune"
+          class:on={item.attuned}
+          disabled={!$canEditPlay || (!item.attuned && attunedCount >= ATTUNEMENT_LIMIT)}
+          title={item.attuned ? 'Attuned' : 'Attune'}
+          onclick={() => toggleAttuned(i)}
+        ><UiIcon name="star" filled={item.attuned} size="0.9em" /></button>
+      {/if}
+      <span class="src">{item.source}</span>
+      {#if note}<span class="note">{note}</span>{/if}
+      {#if $canEditBuild}
+        <button
+          class="ctoggle"
+          class:on={item.isContainer}
+          title={item.isContainer ? 'Stop this holding items' : 'Make this a container'}
+          aria-label="Toggle container"
+          onclick={() => setIsContainer(i, !item.isContainer)}
+        >▣</button>
+        <select
+          class="parent"
+          title="Put inside"
+          value={item.container ?? ''}
+          onchange={(e) => setItemContainer(i, (e.currentTarget as HTMLSelectElement).value || undefined)}
+        >
+          <option value="">—</option>
+          {#each containers as c (c.item.id)}
+            {#if c.item.id !== item.id}
+              <option value={c.item.id}>{c.item.label ?? c.item.name}</option>
+            {/if}
+          {/each}
+        </select>
+        <button class="rm" aria-label="Remove" onclick={() => removeInventoryItem(i)}>×</button>
+      {/if}
+    </div>
+    <Reminders anchor={anchors.item(item)} />
+    {#if node.children.length > 0 && open}
+      <ul class="contents">
+        {#each node.children as child (child.item.id ?? child.item.name + child.item.source)}
+          {@render row(child)}
+        {/each}
+      </ul>
+    {/if}
+  </li>
+{/snippet}
+
 <section class="block" data-variant={variant}>
   <header class="head">
     <h3>Inventory</h3>
@@ -98,6 +217,9 @@
       Attuned {attunedCount}/{ATTUNEMENT_LIMIT}
     </span>
   </header>
+  {#if on.currency}
+    <div class="currency-row"><CoinFields /></div>
+  {/if}
   {#if $character.inventory.length === 0}
     <p class="empty">Nothing yet — add items with quick add below. Equip armor to see AC update.</p>
   {:else}
@@ -107,53 +229,8 @@
       use:resizePersist={{ editing, height, onResize }}
     >
     <ul>
-      {#each $character.inventory as item, i (item.name + item.source)}
-        {@const note = effectNote(item.name, item.source)}
-        {@const ic = iconFor(item.name, item.source)}
-        <li>
-          <div class="row">
-          <label class="equip" title="Equipped">
-            <input type="checkbox" checked={item.equipped} disabled={!$canEditPlay} onchange={() => toggleEquipped(i)} />
-          </label>
-          <span class="qty">
-            <NumberField value={item.quantity} min={0} onchange={(v) => setItemQuantity(i, v)} digits={3} />
-          </span>
-          <span class="itemicon" title={iconLabel(ic)}><Icon name={ic} /></span>
-          {#if editingIndex === i}
-            <!-- svelte-ignore a11y_autofocus -->
-            <input
-              class="rename"
-              autofocus
-              bind:value={editValue}
-              onkeydown={onRenameKey}
-              onblur={commitRename}
-            />
-          {:else}
-            <button
-              class="name"
-              class:equipped={item.equipped}
-              title={readable(item) ? 'Show details' : 'Describe this item'}
-              onclick={(e) => openItemDetail(item, e.currentTarget)}
-            >{item.label ?? item.name}</button>
-            {#if $canEditBuild}
-              <button class="edit" title="Rename item" aria-label="Rename item" onclick={() => startRename(i, item.label ?? item.name)}><UiIcon name="pencil" size="0.85em" /></button>
-            {/if}
-          {/if}
-          {#if needsAttune(item.name, item.source)}
-            <button
-              class="attune"
-              class:on={item.attuned}
-              disabled={!$canEditPlay || (!item.attuned && attunedCount >= ATTUNEMENT_LIMIT)}
-              title={item.attuned ? 'Attuned' : 'Attune'}
-              onclick={() => toggleAttuned(i)}
-            ><UiIcon name="star" filled={item.attuned} size="0.9em" /></button>
-          {/if}
-          <span class="src">{item.source}</span>
-          {#if note}<span class="note">{note}</span>{/if}
-          {#if $canEditBuild}<button class="rm" aria-label="Remove" onclick={() => removeInventoryItem(i)}>×</button>{/if}
-          </div>
-          <Reminders anchor={anchors.item(item)} />
-        </li>
+      {#each tree as node (node.item.id ?? node.item.name + node.item.source)}
+        {@render row(node)}
       {/each}
     </ul>
     </div>
@@ -162,6 +239,15 @@
 </section>
 
 <style>
+  .contents { list-style: none; margin: 0; padding: 0 0 0 1.1rem; border-left: 1px solid var(--line, #e5e5e5); }
+  .disclose { background: none; border: none; cursor: pointer; padding: 0; width: 1em; color: var(--muted, #777); font-size: 0.8em; }
+  .disclose.spacer { cursor: default; }
+  li.is-container > .row .name { font-weight: 600; }
+  .count { font-size: 0.7rem; color: var(--muted, #777); background: var(--chip, #eee); border-radius: 999px; padding: 0 0.35em; }
+  .ctoggle { background: none; border: none; cursor: pointer; padding: 0; color: var(--muted, #bbb); font-size: 0.8em; }
+  .ctoggle.on { color: var(--accent, #36c); }
+  .parent { font-size: 0.7rem; max-width: 7rem; }
+  .currency-row { padding: 0.15rem 0 0.35rem; border-bottom: 1px solid var(--line, #e5e5e5); margin-bottom: 0.35rem; }
   .block { border: 1px solid var(--line); border-radius: 8px; padding: 0.75rem 1rem; }
   .head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 0.6rem; }
   h3 { margin: 0; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }

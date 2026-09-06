@@ -19,6 +19,28 @@ export interface CatalogRef {
   source: string;
 }
 
+/**
+ * Where a content source can be fetched from again.
+ *
+ * A character references catalog content by `{name, source}` alone, which is
+ * enough to *look up* an entry but not to *obtain* one: open a character on a
+ * device that never loaded the Obojima brew and every ref from it dangles with
+ * no hint about where it came from. Recording the link on the document means
+ * the character carries its own dependencies — it travels to another device,
+ * another browser, or a local copy without a separate registry to keep in sync.
+ *
+ * `id` is the catalog source id (an overlay's `sourceId`, e.g.
+ * "ObojimaTallGrass"), matched case-insensitively like every other source
+ * comparison here.
+ */
+export interface SourceLink {
+  id: string;
+  /** Human label for the manager UI, e.g. "Obojima: Tales from the Tall Grass". */
+  label?: string;
+  /** https URL the source document can be re-fetched from. */
+  url: string;
+}
+
 export interface ClassEntry {
   name: string;
   source: string;
@@ -26,6 +48,34 @@ export interface ClassEntry {
   subclass?: string;
   /** Hit die faces for this class (d10 → 10), used by rest/level-up. */
   hitDie?: number;
+}
+
+/** The five 5e coin denominations, richest first (the order sheets print them). */
+export const COINS = ['pp', 'gp', 'ep', 'sp', 'cp'] as const;
+export type Coin = (typeof COINS)[number];
+
+/** Coins carried, by denomination. */
+export type Currency = Record<Coin, number>;
+
+export function emptyCurrency(): Currency {
+  return { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 };
+}
+
+/**
+ * A character's coins, defaulting every denomination to zero.
+ *
+ * The field is optional so documents written before it existed stay valid, and
+ * so a character who has never held a coin carries no dead weight; every reader
+ * goes through here rather than repeating the fallback.
+ */
+export function currencyOf(character: Character): Currency {
+  return { ...emptyCurrency(), ...(character.currency ?? {}) };
+}
+
+/** Whether any coins are held at all — used to keep an empty purse quiet. */
+export function hasCoins(character: Character): boolean {
+  const c = currencyOf(character);
+  return COINS.some((k) => (c[k] ?? 0) > 0);
 }
 
 /** A pool of hit dice of one size; `used` are spent (recover on a long rest). */
@@ -36,6 +86,24 @@ export interface HitDicePool {
 }
 
 export interface InventoryItem extends CatalogRef {
+  /**
+   * Stable identity for this row, used to say what sits inside what.
+   *
+   * Name+source would have been enough to *address* a row — it is what the
+   * list keys on and what `addInventoryItem` dedupes by — but containment
+   * outlives those: swap a Backpack for a Bag of Holding and everything inside
+   * should follow, and a future second entry of one name must not silently
+   * adopt the other's contents. Optional on the type so documents written
+   * before it existed stay valid; `ensureInventoryIds` fills them in on load.
+   */
+  id?: string;
+  /** The `id` of the container this sits inside, or absent for a loose item. */
+  container?: string;
+  /**
+   * Whether this row can hold other rows. Explicit rather than inferred from
+   * having children, so an empty pouch is still a pouch you can put things in.
+   */
+  isContainer?: boolean;
   quantity: number;
   equipped: boolean;
   /** Attuned to (gates magic bonuses on items that require attunement). */
@@ -148,6 +216,11 @@ export interface Character {
   /** Base armor class before dex/modifiers, e.g. 10 unarmored, 14 chain shirt. */
   acBase: number;
   inventory: InventoryItem[];
+  /**
+   * Coins carried. Optional: absent means an empty purse, so documents written
+   * before currency existed need no migration. Read it with {@link currencyOf}.
+   */
+  currency?: Currency;
   spells: SpellRef[];
   modifiers: CharacterModifier[];
   /** Limited-use features (uses tracked as a spent pool). */
@@ -185,10 +258,26 @@ export interface Character {
   /** Enabled optional class-feature variants (isClassFeatureVariant), keyed by
    * `name|source|level`. Off by default; enabling adds the variant as a feature. */
   variantChoices: Record<string, boolean>;
+  /**
+   * Download links for the content sources this character references, so a
+   * device missing one can fetch it rather than silently rendering unresolved
+   * refs. Only sources with a known origin are listed; the base dataset and
+   * hand-written `Custom` entries have none.
+   */
+  sources?: SourceLink[];
   /** Notes: a tree of folders and markdown documents. */
   notes?: NoteNode[];
   /** Open note tabs + active tab, so the notes view is restored on reload. */
   noteTabs?: { open: string[]; active: string | null };
+  /**
+   * Ids of inventory containers the player has collapsed.
+   *
+   * Containers default to open, so the *closed* ones are what needs recording:
+   * an absent field means everything is expanded, and a container added later
+   * shows its contents rather than hiding them. Persisted like {@link noteTabs}
+   * so the state follows the character between devices.
+   */
+  containersCollapsed?: string[];
   /** Features the player wrote themselves; everything else is derived. */
   customFeatures?: CustomFeature[];
   /** Movement, senses and proficiencies added by hand (see CustomGrant). */
@@ -334,6 +423,7 @@ export function createCharacter(partial: Partial<Character> = {}): Character {
     hp: partial.hp ?? { max: 10, current: 10, temp: 0 },
     acBase: partial.acBase ?? 10,
     inventory: partial.inventory ?? [],
+    currency: partial.currency,
     spells: partial.spells ?? [],
     modifiers: partial.modifiers ?? [],
     resources: partial.resources ?? [],
@@ -353,8 +443,10 @@ export function createCharacter(partial: Partial<Character> = {}): Character {
     featChoices: partial.featChoices ?? {},
     featureMeta: partial.featureMeta ?? {},
     variantChoices: partial.variantChoices ?? {},
+    sources: partial.sources,
     notes: partial.notes,
     noteTabs: partial.noteTabs,
+    containersCollapsed: partial.containersCollapsed,
     customFeatures: partial.customFeatures,
     customGrants: partial.customGrants,
     customSkills: partial.customSkills,

@@ -24,6 +24,8 @@ export {
   fetchRepoFile,
   supportedProps,
   mergeRepoIndex,
+  repoFileUrl,
+  fetchSourceJson,
   propsByPath,
   REPO_PRESETS,
   SUPPORTED_PROPS,

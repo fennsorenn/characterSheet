@@ -122,7 +122,20 @@ export const BLOCK_META: Record<string, BlockMeta> = {
     label: 'Inventory',
     variants: [{ key: 'full', label: 'Full', verbosity: 'full' }],
     defaultVariant: 'full',
-    defaultSize: 'wide'
+    defaultSize: 'wide',
+    // A row, not an arrangement — so an option rather than a second variant.
+    // The standalone Currency block is the same row placed on its own, which is
+    // why turning this off costs nothing.
+    options: [{ key: 'currency', label: 'Currency', default: true }]
+  },
+  currency: {
+    label: 'Currency',
+    variants: [
+      { key: 'full', label: 'Full', verbosity: 'full' },
+      { key: 'compact', label: 'Compact (non-zero only)', verbosity: 'compact' }
+    ],
+    defaultVariant: 'full',
+    defaultSize: 'narrow'
   },
   spells: {
     label: 'Spells',

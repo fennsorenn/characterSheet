@@ -1,4 +1,5 @@
 import { syncHitDice } from '../character/hitDice.js';
+import { ensureInventoryIds } from '../character/inventory.js';
 import { writable, derived, readable, get } from 'svelte/store';
 import {
   ABILITIES,
@@ -51,13 +52,23 @@ import {
   castingAbility as resolveCastingAbility
 } from '../character/index.js';
 import {
+  referencedSources,
+  setSourceLink,
+  removeSourceLink,
+  linkFor,
+  sourceKey,
+  sourceStatuses
+} from '../character/sources.js';
+import type { SourceLink, Coin } from '../character/schema.js';
+import { currencyOf } from '../character/schema.js';
+import {
   classifyAbility,
   classifyAc,
   type FleetingContribution,
   type AcContribution,
   type OverrideKind
 } from '../character/overrides.js';
-import { catalogLookup, catalogState } from './catalog.js';
+import { catalogLookup, catalogState, loadedSources } from './catalog.js';
 import { loadLocal, saveLocal } from './characters.js';
 import { apiGetCharacter, apiPutCharacter } from '../api/client.js';
 
@@ -99,7 +110,7 @@ function setActive(ref: CharacterRef, doc: Character | null) {
   activeRef = null; // suppress the save triggered by loading
   // Characters saved before hit dice followed the classes carry stale pools;
   // reconcile on load rather than waiting for the first unrelated edit.
-  store.set(syncHitDice(createCharacter(doc ?? {})));
+  store.set(ensureInventoryIds(syncHitDice(createCharacter(doc ?? {}))));
   activeRef = ref;
 }
 
@@ -321,6 +332,27 @@ export const acOverride = derived([store, catalogLookup, grantPool, graph], ([$c
 
 export type { OverrideKind };
 
+/**
+ * This character's content sources, each marked loaded or missing, with the
+ * download link the document carries when it has one. Drives the sources panel.
+ */
+export const characterSources = derived([store, loadedSources], ([$c, $loaded]) =>
+  sourceStatuses($c, $loaded)
+);
+
+/** Just the sources the catalog cannot currently resolve. */
+export const missingCharacterSources = derived(characterSources, ($s) =>
+  $s.filter((x) => !x.loaded)
+);
+
+/**
+ * Learn download links as a side effect of normal use: whenever the active
+ * overlays change, any that this character references and that arrived from a
+ * URL get recorded on the document. Guarded inside `captureSourceLinks`, so a
+ * catalog change that teaches us nothing writes nothing.
+ */
+catalogState.subscribe(($cat) => captureSourceLinks($cat.overlays));
+
 export const character = { subscribe: store.subscribe };
 
 /**
@@ -352,6 +384,102 @@ export function setCharacterLayoutPref(category: string, id: string | undefined)
 // --- Reminders (short notes pinned to a row or block on the sheet) ---
 
 /** Pin a reminder at an anchor. Blank text is ignored. */
+/**
+ * Record where one of this character's content sources can be downloaded.
+ *
+ * Stored on the document rather than in a user-level registry so it travels
+ * with the character — to another device, another browser, or a local copy —
+ * which is the case the feature exists for.
+ */
+/**
+ * Set one coin denomination. Clamped at zero and rounded, since a purse holds a
+ * whole number of coins and a negative one is always a typo.
+ */
+/** Put a row inside a container (or take it out, with `undefined`). */
+export function setItemContainer(index: number, containerId: string | undefined) {
+  update((c) => {
+    const row = c.inventory[index];
+    if (!row) return c;
+    // A row cannot hold itself; deeper cycles are broken when the tree is built.
+    if (containerId && containerId === row.id) return c;
+    const inventory = c.inventory.map((it, n) =>
+      n === index ? { ...it, container: containerId } : it
+    );
+    return { ...c, inventory };
+  });
+}
+
+/** Mark a row as able to hold others, or stop it being one. */
+export function setIsContainer(index: number, isContainer: boolean) {
+  update((c) => {
+    const row = c.inventory[index];
+    if (!row) return c;
+    const inventory = c.inventory.map((it, n) =>
+      n === index ? { ...it, isContainer: isContainer || undefined } : it
+    );
+    // Emptying a container leaves its contents loose rather than hidden.
+    const freed = isContainer
+      ? inventory
+      : inventory.map((it) => (it.container === row.id ? { ...it, container: undefined } : it));
+    return { ...c, inventory: freed };
+  });
+}
+
+/** Expand or collapse one container, persisting the choice. */
+export function toggleContainer(id: string) {
+  update((c) => {
+    const collapsed = c.containersCollapsed ?? [];
+    const next = collapsed.includes(id)
+      ? collapsed.filter((x) => x !== id)
+      : [...collapsed, id];
+    return { ...c, containersCollapsed: next };
+  });
+}
+
+export function setCoin(coin: Coin, value: number) {
+  update((c) => ({
+    ...c,
+    currency: { ...currencyOf(c), [coin]: Math.max(0, Math.round(value || 0)) }
+  }));
+}
+
+export function recordSourceLink(link: SourceLink) {
+  update((c) => setSourceLink(c, link));
+}
+
+/** Forget a stored download link (the source itself is untouched). */
+export function forgetSourceLink(id: string) {
+  update((c) => removeSourceLink(c, id));
+}
+
+/**
+ * Record links for every source this character uses that is currently loaded
+ * from a known URL and not already recorded.
+ *
+ * Called after a catalog change so the document learns its own dependencies as
+ * a side effect of normal use: load the Obojima brew once, and the character
+ * that references it carries the link from then on. Only adds — an existing
+ * link is left alone, since the player may have corrected it by hand.
+ */
+export function captureSourceLinks(overlays: { sourceId: string; label: string; url?: string }[]) {
+  const current = get(store);
+  const needed = new Set(referencedSources(current).map(sourceKey));
+  const additions = overlays.filter(
+    (o) => o.url && needed.has(sourceKey(o.sourceId)) && !linkFor(current, o.sourceId)
+  );
+  // Bail before touching the store: `update` notifies the autosave subscriber
+  // unconditionally, so a no-op capture would PUT the character to the server
+  // on every catalog change.
+  if (additions.length === 0) return;
+  update((c) => {
+    let next = c;
+    for (const o of additions) {
+      next = setSourceLink(next, { id: o.sourceId, label: o.label, url: o.url! });
+    }
+    return next;
+  });
+}
+
 export function addReminder(anchor: string, text: string) {
   update((c) => withReminders(c, addReminderPure(c.reminders, anchor, text, crypto.randomUUID())));
 }
@@ -722,7 +850,17 @@ export function setItemQuantity(index: number, quantity: number) {
 }
 
 export function removeInventoryItem(index: number) {
-  update((c) => ({ ...c, inventory: c.inventory.filter((_, n) => n !== index) }));
+  update((c) => {
+    const gone = c.inventory[index];
+    const inventory = c.inventory.filter((_, n) => n !== index);
+    // Deleting a container must not leave its contents pointing at nothing:
+    // the tree would surface them anyway, but the document would carry a
+    // dangling pointer for good.
+    const freed = gone?.id
+      ? inventory.map((i) => (i.container === gone.id ? { ...i, container: undefined } : i))
+      : inventory;
+    return { ...c, inventory: freed };
+  });
 }
 
 /** Set (or clear, when blank) a custom display name for an inventory item. */
