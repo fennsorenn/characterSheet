@@ -6,7 +6,9 @@ import {
   flatten,
   contentsCount,
   containerOpen,
-  containerRows
+  containerRows,
+  containsDeep,
+  dropItem
 } from './inventory.js';
 
 const item = (over: Partial<InventoryItem>): InventoryItem => ({
@@ -123,5 +125,94 @@ describe('containerRows', () => {
       inventory: [item({ id: 'flask', name: 'Flask', isContainer: true })]
     });
     expect(containerRows(c).map((n) => n.item.name)).toEqual(['Flask']);
+  });
+});
+
+describe('containsDeep', () => {
+  it('sees a direct child', () => {
+    expect(containsDeep(packed(), 'pack', 'oil')).toBe(true);
+  });
+
+  it('sees a grandchild', () => {
+    const c = createCharacter({
+      inventory: [
+        item({ id: 'pack', name: 'Backpack', isContainer: true }),
+        item({ id: 'pouch', name: 'Pouch', isContainer: true, container: 'pack' }),
+        item({ id: 'herb', name: 'Herb', container: 'pouch' })
+      ]
+    });
+    expect(containsDeep(c, 'pack', 'herb')).toBe(true);
+  });
+
+  it('is false for an unrelated row, and does not hang on a cycle', () => {
+    expect(containsDeep(packed(), 'pack', 'sword')).toBe(false);
+    const cyc = createCharacter({
+      inventory: [
+        item({ id: 'a', name: 'A', container: 'b' }),
+        item({ id: 'b', name: 'B', container: 'a' })
+      ]
+    });
+    expect(containsDeep(cyc, 'zzz', 'a')).toBe(false);
+  });
+});
+
+describe('dropItem', () => {
+  it('makes the target a container and puts the row inside it', () => {
+    const c = createCharacter({
+      inventory: [item({ id: 'sack', name: 'Sack' }), item({ id: 'rope', name: 'Rope' })]
+    });
+    const out = dropItem(c, 1, 0);
+    expect(out.inventory[0].isContainer).toBe(true);
+    expect(out.inventory[1].container).toBe('sack');
+  });
+
+  it('takes a row back out when dropped on nothing', () => {
+    const out = dropItem(packed(), 1, null);
+    expect(out.inventory[1].container).toBeUndefined();
+  });
+
+  it('leaves the document untouched when the move changes nothing', () => {
+    const c = packed();
+    // Already in that container, dropped on itself, and a loose row taken out.
+    expect(dropItem(c, 1, 0)).toBe(c);
+    expect(dropItem(c, 1, 1)).toBe(c);
+    expect(dropItem(c, 3, null)).toBe(c);
+  });
+
+  it('refuses to put a container inside its own contents', () => {
+    const c = packed();
+    // Backpack (0) dropped onto Oil (1), which is inside it.
+    expect(dropItem(c, 0, 1)).toBe(c);
+  });
+
+  it('keeps container-ness once earned, so an emptied bag stays a bag', () => {
+    const c = createCharacter({
+      inventory: [item({ id: 'sack', name: 'Sack' }), item({ id: 'rope', name: 'Rope' })]
+    });
+    const filled = dropItem(c, 1, 0);
+    const emptied = dropItem(filled, 1, null);
+    expect(emptied.inventory[0].isContainer).toBe(true);
+  });
+
+  it('moves a row straight from one container to another', () => {
+    const c = createCharacter({
+      inventory: [
+        item({ id: 'pack', name: 'Backpack', isContainer: true }),
+        item({ id: 'oil', name: 'Oil', container: 'pack' }),
+        item({ id: 'chest', name: 'Chest' })
+      ]
+    });
+    const out = dropItem(c, 1, 2);
+    expect(out.inventory[1].container).toBe('chest');
+    expect(out.inventory[2].isContainer).toBe(true);
+  });
+
+  it('does not mutate the character it was given', () => {
+    const c = createCharacter({
+      inventory: [item({ id: 'sack', name: 'Sack' }), item({ id: 'rope', name: 'Rope' })]
+    });
+    dropItem(c, 1, 0);
+    expect(c.inventory[0].isContainer).toBeUndefined();
+    expect(c.inventory[1].container).toBeUndefined();
   });
 });

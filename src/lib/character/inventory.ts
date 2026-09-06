@@ -119,6 +119,79 @@ export function inventoryTree(character: Character): InventoryNode[] {
   return roots;
 }
 
+/**
+ * Whether `descendantId` sits inside `ancestorId`, at any depth.
+ *
+ * Walks *up* from the candidate rather than down from the ancestor: containment
+ * is stored as a parent pointer, so upward is the direction the data already
+ * runs, and a malformed cycle terminates on the guard rather than the shape of
+ * the tree.
+ */
+export function containsDeep(
+  character: Character,
+  ancestorId: string,
+  descendantId: string
+): boolean {
+  const byId = new Map((character.inventory ?? []).map((i) => [i.id, i] as const));
+  const seen = new Set<string>();
+  let cur = byId.get(descendantId);
+  while (cur?.container) {
+    if (cur.container === ancestorId) return true;
+    if (seen.has(cur.container)) return false;
+    seen.add(cur.container);
+    cur = byId.get(cur.container);
+  }
+  return false;
+}
+
+/**
+ * Drop the row at `fromIndex` onto the one at `ontoIndex`, or onto nothing
+ * (`null`) to take it back out to the top level.
+ *
+ * Dropping onto a row is what *makes* that row a container — there is no
+ * separate "this is a container" step, because the only reason to say so is
+ * that you are putting something in it. Container-ness is then sticky: empty a
+ * backpack and it stays a backpack, ready to be filled again, and containers
+ * that arrived empty from an import keep their identity.
+ *
+ * Returns the character unchanged when the move is a no-op or would be illegal
+ * (onto itself, onto its own contents), so the caller needs no guards and the
+ * store writes nothing.
+ */
+export function dropItem(
+  character: Character,
+  fromIndex: number,
+  ontoIndex: number | null
+): Character {
+  const inventory = character.inventory ?? [];
+  const from = inventory[fromIndex];
+  if (!from) return character;
+
+  if (ontoIndex === null) {
+    if (!from.container) return character;
+    return {
+      ...character,
+      inventory: inventory.map((it, n) => (n === fromIndex ? { ...it, container: undefined } : it))
+    };
+  }
+
+  const onto = inventory[ontoIndex];
+  if (!onto || fromIndex === ontoIndex) return character;
+  if (!from.id || !onto.id) return character;
+  if (from.container === onto.id) return character;
+  // Putting a bag inside something it already holds would strand both.
+  if (containsDeep(character, from.id, onto.id)) return character;
+
+  return {
+    ...character,
+    inventory: inventory.map((it, n) => {
+      if (n === fromIndex) return { ...it, container: onto.id };
+      if (n === ontoIndex) return it.isContainer ? it : { ...it, isContainer: true };
+      return it;
+    })
+  };
+}
+
 /** Rows that can accept contents — every explicit container. */
 export function containerRows(character: Character): InventoryNode[] {
   return flatten(inventoryTree(character)).filter((n) => n.item.isContainer);

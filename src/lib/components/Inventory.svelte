@@ -8,8 +8,7 @@
     removeInventoryItem,
     renameInventoryItem,
     toggleContainer,
-    setIsContainer,
-    setItemContainer
+    dropInventoryItem
   } from '../stores/character.js';
   import { catalogLookup } from '../stores/catalog.js';
   import { openDetail } from '../stores/detail.js';
@@ -27,7 +26,7 @@
     inventoryTree,
     containerOpen,
     contentsCount,
-    containerRows,
+    containsDeep,
     type InventoryNode
   } from '../character/inventory.js';
   import CoinFields from './CoinFields.svelte';
@@ -54,7 +53,71 @@
   // for rendering, and every node carries its original index so the actions
   // below stay index-based exactly as before.
   const tree = $derived(inventoryTree($character));
-  const containers = $derived(containerRows($character));
+
+  // Drag and drop uses the native HTML5 API, the same mechanism the layout
+  // renderer uses for reordering blocks. Dropping a row onto another is the
+  // only way to nest, and the only way to create a container.
+  let dragIndex = $state<number | null>(null);
+  let dropIndex = $state<number | null>(null);
+  let overRoot = $state(false);
+
+  /** Whether the row being dragged may legally land on `node`. */
+  function canDrop(node: InventoryNode): boolean {
+    if (dragIndex === null) return false;
+    const from = $character.inventory[dragIndex];
+    const onto = node.item;
+    if (!from?.id || !onto.id) return false;
+    if (dragIndex === node.index) return false;
+    if (from.container === onto.id) return false;
+    // Refuse to put a bag inside something it already holds.
+    return !containsDeep($character, from.id, onto.id);
+  }
+
+  function onRowDragStart(e: DragEvent, index: number) {
+    // The block itself is draggable in layout edit mode; keep this drag here.
+    e.stopPropagation();
+    dragIndex = index;
+    e.dataTransfer?.setData('text/plain', String(index));
+    if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+  }
+
+  function onRowDragOver(e: DragEvent, node: InventoryNode) {
+    if (!canDrop(node)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    dropIndex = node.index;
+    overRoot = false;
+  }
+
+  function onRowDrop(e: DragEvent, node: InventoryNode) {
+    if (!canDrop(node)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    dropInventoryItem(dragIndex!, node.index);
+    endDrag();
+  }
+
+  /** The list background: dropping here takes a row back out of its container. */
+  function onRootDragOver(e: DragEvent) {
+    if (dragIndex === null) return;
+    if (!$character.inventory[dragIndex]?.container) return;
+    e.preventDefault();
+    dropIndex = null;
+    overRoot = true;
+  }
+
+  function onRootDrop(e: DragEvent) {
+    if (dragIndex === null || !overRoot) return;
+    e.preventDefault();
+    dropInventoryItem(dragIndex, null);
+    endDrag();
+  }
+
+  function endDrag() {
+    dragIndex = null;
+    dropIndex = null;
+    overRoot = false;
+  }
 
   // Inline rename: which row is being edited and its working text.
   let editingIndex = $state<number | null>(null);
@@ -123,7 +186,17 @@
   {@const ic = iconFor(item.name, item.source)}
   {@const open = item.id ? containerOpen($character, item.id) : true}
   <li class:is-container={item.isContainer}>
-    <div class="row">
+    <div
+      class="row"
+      class:dragging={dragIndex === i}
+      class:droptarget={dropIndex === i}
+      draggable={$canEditBuild && editingIndex !== i}
+      ondragstart={(e) => onRowDragStart(e, i)}
+      ondragover={(e) => onRowDragOver(e, node)}
+      ondrop={(e) => onRowDrop(e, node)}
+      ondragend={endDrag}
+      role="group"
+    >
       {#if item.isContainer && item.id}
         <button
           class="disclose"
@@ -176,26 +249,6 @@
       <span class="src">{item.source}</span>
       {#if note}<span class="note">{note}</span>{/if}
       {#if $canEditBuild}
-        <button
-          class="ctoggle"
-          class:on={item.isContainer}
-          title={item.isContainer ? 'Stop this holding items' : 'Make this a container'}
-          aria-label="Toggle container"
-          onclick={() => setIsContainer(i, !item.isContainer)}
-        >▣</button>
-        <select
-          class="parent"
-          title="Put inside"
-          value={item.container ?? ''}
-          onchange={(e) => setItemContainer(i, (e.currentTarget as HTMLSelectElement).value || undefined)}
-        >
-          <option value="">—</option>
-          {#each containers as c (c.item.id)}
-            {#if c.item.id !== item.id}
-              <option value={c.item.id}>{c.item.label ?? c.item.name}</option>
-            {/if}
-          {/each}
-        </select>
         <button class="rm" aria-label="Remove" onclick={() => removeInventoryItem(i)}>×</button>
       {/if}
     </div>
@@ -228,7 +281,12 @@
       style={scrollStyle(editing, height)}
       use:resizePersist={{ editing, height, onResize }}
     >
-    <ul>
+    <ul
+      class:rootdrop={overRoot}
+      ondragover={onRootDragOver}
+      ondrop={onRootDrop}
+      role="list"
+    >
       {#each tree as node (node.item.id ?? node.item.name + node.item.source)}
         {@render row(node)}
       {/each}
@@ -239,14 +297,15 @@
 </section>
 
 <style>
+  .row[draggable='true'] { cursor: grab; }
+  .row.dragging { opacity: 0.45; }
+  .row.droptarget { outline: 2px solid var(--accent, #36c); outline-offset: 1px; border-radius: 4px; }
+  ul.rootdrop { outline: 2px dashed var(--accent, #36c); outline-offset: 2px; border-radius: 4px; }
   .contents { list-style: none; margin: 0; padding: 0 0 0 1.1rem; border-left: 1px solid var(--line, #e5e5e5); }
   .disclose { background: none; border: none; cursor: pointer; padding: 0; width: 1em; color: var(--muted, #777); font-size: 0.8em; }
   .disclose.spacer { cursor: default; }
   li.is-container > .row .name { font-weight: 600; }
   .count { font-size: 0.7rem; color: var(--muted, #777); background: var(--chip, #eee); border-radius: 999px; padding: 0 0.35em; }
-  .ctoggle { background: none; border: none; cursor: pointer; padding: 0; color: var(--muted, #bbb); font-size: 0.8em; }
-  .ctoggle.on { color: var(--accent, #36c); }
-  .parent { font-size: 0.7rem; max-width: 7rem; }
   .currency-row { padding: 0.15rem 0 0.35rem; border-bottom: 1px solid var(--line, #e5e5e5); margin-bottom: 0.35rem; }
   .block { border: 1px solid var(--line); border-radius: 8px; padding: 0.75rem 1rem; }
   .head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 0.6rem; }

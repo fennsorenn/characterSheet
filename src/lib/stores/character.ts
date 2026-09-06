@@ -1,5 +1,5 @@
 import { syncHitDice } from '../character/hitDice.js';
-import { ensureInventoryIds } from '../character/inventory.js';
+import { ensureInventoryIds, dropItem } from '../character/inventory.js';
 import { writable, derived, readable, get } from 'svelte/store';
 import {
   ABILITIES,
@@ -395,34 +395,13 @@ export function setCharacterLayoutPref(category: string, id: string | undefined)
  * Set one coin denomination. Clamped at zero and rounded, since a purse holds a
  * whole number of coins and a negative one is always a typo.
  */
-/** Put a row inside a container (or take it out, with `undefined`). */
-export function setItemContainer(index: number, containerId: string | undefined) {
-  update((c) => {
-    const row = c.inventory[index];
-    if (!row) return c;
-    // A row cannot hold itself; deeper cycles are broken when the tree is built.
-    if (containerId && containerId === row.id) return c;
-    const inventory = c.inventory.map((it, n) =>
-      n === index ? { ...it, container: containerId } : it
-    );
-    return { ...c, inventory };
-  });
-}
-
-/** Mark a row as able to hold others, or stop it being one. */
-export function setIsContainer(index: number, isContainer: boolean) {
-  update((c) => {
-    const row = c.inventory[index];
-    if (!row) return c;
-    const inventory = c.inventory.map((it, n) =>
-      n === index ? { ...it, isContainer: isContainer || undefined } : it
-    );
-    // Emptying a container leaves its contents loose rather than hidden.
-    const freed = isContainer
-      ? inventory
-      : inventory.map((it) => (it.container === row.id ? { ...it, container: undefined } : it));
-    return { ...c, inventory: freed };
-  });
+/**
+ * Move an inventory row onto another (making that one a container), or out to
+ * the top level with `null`. The rules live in `dropItem` so they can be tested
+ * without a DOM.
+ */
+export function dropInventoryItem(fromIndex: number, ontoIndex: number | null) {
+  update((c) => dropItem(c, fromIndex, ontoIndex));
 }
 
 /** Expand or collapse one container, persisting the choice. */
