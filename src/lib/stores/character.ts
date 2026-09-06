@@ -1,5 +1,5 @@
 import { syncHitDice } from '../character/hitDice.js';
-import { ensureInventoryIds, dropItem } from '../character/inventory.js';
+import { ensureInventoryIds, dropItem, type DropPosition } from '../character/inventory.js';
 import { writable, derived, readable, get } from 'svelte/store';
 import {
   ABILITIES,
@@ -400,8 +400,12 @@ export function setCharacterLayoutPref(category: string, id: string | undefined)
  * the top level with `null`. The rules live in `dropItem` so they can be tested
  * without a DOM.
  */
-export function dropInventoryItem(fromIndex: number, ontoIndex: number | null) {
-  update((c) => dropItem(c, fromIndex, ontoIndex));
+export function dropInventoryItem(
+  fromIndex: number,
+  ontoIndex: number | null,
+  position: DropPosition = 'inside'
+) {
+  update((c) => dropItem(c, fromIndex, ontoIndex, position));
 }
 
 /** Expand or collapse one container, persisting the choice. */
@@ -838,7 +842,13 @@ export function removeInventoryItem(index: number) {
     const freed = gone?.id
       ? inventory.map((i) => (i.container === gone.id ? { ...i, container: undefined } : i))
       : inventory;
-    return { ...c, inventory: freed };
+    // Removing the last thing in a bag leaves a bag that is no longer one.
+    const parent = gone?.container;
+    const pruned =
+      parent && !freed.some((i) => i.container === parent)
+        ? freed.map((i) => (i.id === parent && i.isContainer ? { ...i, isContainer: false } : i))
+        : freed;
+    return { ...c, inventory: pruned };
   });
 }
 

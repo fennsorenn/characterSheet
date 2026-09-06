@@ -185,13 +185,33 @@ describe('dropItem', () => {
     expect(dropItem(c, 0, 1)).toBe(c);
   });
 
-  it('keeps container-ness once earned, so an emptied bag stays a bag', () => {
+  it('stops being a container when its last occupant leaves', () => {
     const c = createCharacter({
       inventory: [item({ id: 'sack', name: 'Sack' }), item({ id: 'rope', name: 'Rope' })]
     });
     const filled = dropItem(c, 1, 0);
+    expect(filled.inventory[0].isContainer).toBe(true);
     const emptied = dropItem(filled, 1, null);
+    expect(emptied.inventory[0].isContainer).toBe(false);
+  });
+
+  it('keeps a container that still holds something', () => {
+    const emptied = dropItem(packed(), 1, null);
+    // Backpack still has Book in it.
     expect(emptied.inventory[0].isContainer).toBe(true);
+  });
+
+  it('demotes the old container when the row moves into a different one', () => {
+    const c = createCharacter({
+      inventory: [
+        item({ id: 'sack', name: 'Sack', isContainer: true }),
+        item({ id: 'rope', name: 'Rope', container: 'sack' }),
+        item({ id: 'chest', name: 'Chest' })
+      ]
+    });
+    const out = dropItem(c, 1, 2);
+    expect(out.inventory.find((i) => i.id === 'sack')!.isContainer).toBe(false);
+    expect(out.inventory.find((i) => i.id === 'chest')!.isContainer).toBe(true);
   });
 
   it('moves a row straight from one container to another', () => {
@@ -214,5 +234,60 @@ describe('dropItem', () => {
     dropItem(c, 1, 0);
     expect(c.inventory[0].isContainer).toBeUndefined();
     expect(c.inventory[1].container).toBeUndefined();
+  });
+});
+
+describe('dropItem reordering', () => {
+  const list = () =>
+    createCharacter({
+      inventory: [
+        item({ id: 'a', name: 'A' }),
+        item({ id: 'b', name: 'B' }),
+        item({ id: 'c', name: 'C' })
+      ]
+    });
+
+  it('places a row before the target when dropped above it', () => {
+    const out = dropItem(list(), 2, 0, 'before');
+    expect(out.inventory.map((i) => i.name)).toEqual(['C', 'A', 'B']);
+  });
+
+  it('places a row after the target when dropped below it', () => {
+    const out = dropItem(list(), 0, 2, 'after');
+    expect(out.inventory.map((i) => i.name)).toEqual(['B', 'C', 'A']);
+  });
+
+  it('reorders without nesting — the target does not become a container', () => {
+    const out = dropItem(list(), 2, 0, 'before');
+    expect(out.inventory.every((i) => !i.isContainer)).toBe(true);
+    expect(out.inventory.every((i) => !i.container)).toBe(true);
+  });
+
+  it('adopts the target\'s parent, so dropping beside a nested row joins it', () => {
+    const c = createCharacter({
+      inventory: [
+        item({ id: 'pack', name: 'Backpack', isContainer: true }),
+        item({ id: 'oil', name: 'Oil', container: 'pack' }),
+        item({ id: 'rope', name: 'Rope' })
+      ]
+    });
+    const out = dropItem(c, 2, 1, 'after');
+    expect(out.inventory.find((i) => i.id === 'rope')!.container).toBe('pack');
+  });
+
+  it('lifts a row out of its container when dropped beside a top-level row', () => {
+    const out = dropItem(packed(), 1, 3, 'before');
+    const oil = out.inventory.find((i) => i.id === 'oil')!;
+    expect(oil.container).toBeUndefined();
+  });
+
+  it('leaves the document alone when the row is already in that slot', () => {
+    const c = list();
+    expect(dropItem(c, 0, 1, 'before')).toBe(c);
+  });
+
+  it('still refuses to reorder a container in among its own contents', () => {
+    const c = packed();
+    expect(dropItem(c, 0, 1, 'before')).toBe(c);
   });
 });

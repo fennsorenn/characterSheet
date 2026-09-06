@@ -27,7 +27,8 @@
     containerOpen,
     contentsCount,
     containsDeep,
-    type InventoryNode
+    type InventoryNode,
+    type DropPosition
   } from '../character/inventory.js';
   import CoinFields from './CoinFields.svelte';
 
@@ -54,69 +55,103 @@
   // below stay index-based exactly as before.
   const tree = $derived(inventoryTree($character));
 
-  // Drag and drop uses the native HTML5 API, the same mechanism the layout
-  // renderer uses for reordering blocks. Dropping a row onto another is the
-  // only way to nest, and the only way to create a container.
+  // Dragging runs on pointer events rather than the HTML5 drag API, so one code
+  // path covers mouse, touch and pen. That matters here: HTML5 drag does not
+  // fire on touch at all, and this sheet is used on a tablet.
+  //
+  // The gesture starts from a grip rather than the row, because the list is
+  // height-capped and scrollable — a touch-drag anywhere else has to stay a
+  // scroll. The grip carries `touch-action: none`, which is what stops the
+  // browser claiming the gesture before we see it.
   let dragIndex = $state<number | null>(null);
   let dropIndex = $state<number | null>(null);
   let overRoot = $state(false);
+  let dropPos = $state<DropPosition>('inside');
+  let listEl = $state<HTMLElement | null>(null);
 
-  /** Whether the row being dragged may legally land on `node`. */
-  function canDrop(node: InventoryNode): boolean {
+  /** Whether the row being dragged may legally land on the row at `ontoIndex`. */
+  function allowedTarget(ontoIndex: number, pos: DropPosition = 'inside'): boolean {
     if (dragIndex === null) return false;
     const from = $character.inventory[dragIndex];
-    const onto = node.item;
-    if (!from?.id || !onto.id) return false;
-    if (dragIndex === node.index) return false;
-    if (from.container === onto.id) return false;
-    // Refuse to put a bag inside something it already holds.
+    const onto = $character.inventory[ontoIndex];
+    if (!from?.id || !onto?.id) return false;
+    if (dragIndex === ontoIndex) return false;
+    // Nesting into the container it already sits in is a no-op; reordering
+    // beside a sibling is not, so only `inside` is ruled out here.
+    if (pos === 'inside' && from.container === onto.id) return false;
     return !containsDeep($character, from.id, onto.id);
   }
 
-  function onRowDragStart(e: DragEvent, index: number) {
-    // The block itself is draggable in layout edit mode; keep this drag here.
-    e.stopPropagation();
-    dragIndex = index;
-    e.dataTransfer?.setData('text/plain', String(index));
-    if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
-  }
-
-  function onRowDragOver(e: DragEvent, node: InventoryNode) {
-    if (!canDrop(node)) return;
+  function onGripDown(e: PointerEvent, index: number) {
+    // Claim the gesture: without capture the pointer is lost the moment it
+    // leaves the grip, which is immediately. Guarded because capture throws
+    // when the pointer id is not one the browser is tracking.
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch {
+      /* capture is an optimisation, not a requirement */
+    }
     e.preventDefault();
     e.stopPropagation();
-    dropIndex = node.index;
+    dragIndex = index;
+    dropIndex = null;
     overRoot = false;
   }
 
-  function onRowDrop(e: DragEvent, node: InventoryNode) {
-    if (!canDrop(node)) return;
-    e.preventDefault();
-    e.stopPropagation();
-    dropInventoryItem(dragIndex!, node.index);
-    endDrag();
-  }
-
-  /** The list background: dropping here takes a row back out of its container. */
-  function onRootDragOver(e: DragEvent) {
+  function onGripMove(e: PointerEvent) {
     if (dragIndex === null) return;
-    if (!$character.inventory[dragIndex]?.container) return;
     e.preventDefault();
+    autoScroll(e.clientY);
+
+    // Pointer capture sends every move to the grip, so the row under the
+    // finger has to be found by hit-testing rather than by its own events.
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const rowEl = el?.closest<HTMLElement>('[data-inv-index]');
+    if (rowEl) {
+      const idx = Number(rowEl.dataset.invIndex);
+      // Where in the row decides the gesture: the outer quarters place the item
+      // beside the target (reorder), the middle half puts it inside.
+      const box = rowEl.getBoundingClientRect();
+      const ratio = box.height ? (e.clientY - box.top) / box.height : 0.5;
+      const pos: DropPosition = ratio < 0.25 ? 'before' : ratio > 0.75 ? 'after' : 'inside';
+      if (Number.isInteger(idx) && allowedTarget(idx, pos)) {
+        dropIndex = idx;
+        dropPos = pos;
+        overRoot = false;
+        return;
+      }
+      dropIndex = null;
+      overRoot = false;
+      return;
+    }
+    // Rows fill the list, so there is no reliable empty background to aim at:
+    // the way out of a container is an explicit strip, shown only while
+    // dragging something that is in one.
     dropIndex = null;
-    overRoot = true;
+    overRoot = !!el?.closest('[data-inv-out]');
   }
 
-  function onRootDrop(e: DragEvent) {
-    if (dragIndex === null || !overRoot) return;
-    e.preventDefault();
-    dropInventoryItem(dragIndex, null);
+  function onGripUp() {
+    if (dragIndex === null) return;
+    if (dropIndex !== null) dropInventoryItem(dragIndex, dropIndex, dropPos);
+    else if (overRoot) dropInventoryItem(dragIndex, null);
     endDrag();
+  }
+
+  /** Nudge the scroll container when the pointer nears its edge. */
+  function autoScroll(clientY: number) {
+    const box = listEl?.getBoundingClientRect();
+    if (!listEl || !box) return;
+    const margin = 36;
+    if (clientY < box.top + margin) listEl.scrollTop -= 12;
+    else if (clientY > box.bottom - margin) listEl.scrollTop += 12;
   }
 
   function endDrag() {
     dragIndex = null;
     dropIndex = null;
     overRoot = false;
+    dropPos = 'inside';
   }
 
   // Inline rename: which row is being edited and its working text.
@@ -189,14 +224,22 @@
     <div
       class="row"
       class:dragging={dragIndex === i}
-      class:droptarget={dropIndex === i}
-      draggable={$canEditBuild && editingIndex !== i}
-      ondragstart={(e) => onRowDragStart(e, i)}
-      ondragover={(e) => onRowDragOver(e, node)}
-      ondrop={(e) => onRowDrop(e, node)}
-      ondragend={endDrag}
-      role="group"
+      class:droptarget={dropIndex === i && dropPos === 'inside'}
+      class:dropbefore={dropIndex === i && dropPos === 'before'}
+      class:dropafter={dropIndex === i && dropPos === 'after'}
+      data-inv-index={i}
     >
+      {#if $canEditBuild}
+        <button
+          class="grip"
+          aria-label="Drag to move this into a container"
+          title="Drag onto another item to put it inside"
+          onpointerdown={(e) => onGripDown(e, i)}
+          onpointermove={onGripMove}
+          onpointerup={onGripUp}
+          onpointercancel={endDrag}
+        >⠿</button>
+      {/if}
       {#if item.isContainer && item.id}
         <button
           class="disclose"
@@ -278,15 +321,14 @@
   {:else}
     <div
       class="listscroll"
+      bind:this={listEl}
       style={scrollStyle(editing, height)}
       use:resizePersist={{ editing, height, onResize }}
     >
-    <ul
-      class:rootdrop={overRoot}
-      ondragover={onRootDragOver}
-      ondrop={onRootDrop}
-      role="list"
-    >
+    {#if dragIndex !== null && $character.inventory[dragIndex]?.container}
+      <div class="takeout" class:over={overRoot} data-inv-out>Drop here to take out of its container</div>
+    {/if}
+    <ul>
       {#each tree as node (node.item.id ?? node.item.name + node.item.source)}
         {@render row(node)}
       {/each}
@@ -297,10 +339,36 @@
 </section>
 
 <style>
-  .row[draggable='true'] { cursor: grab; }
+  .grip {
+    background: none;
+    border: none;
+    padding: 0 0.15rem;
+    cursor: grab;
+    color: var(--muted, #aaa);
+    font-size: 0.9em;
+    line-height: 1;
+    /* The list scrolls; without this the browser takes the gesture first. */
+    touch-action: none;
+  }
+  .grip:active { cursor: grabbing; }
   .row.dragging { opacity: 0.45; }
+  .row.dropbefore { box-shadow: inset 0 2px 0 0 var(--accent, #36c); }
+  .row.dropafter { box-shadow: inset 0 -2px 0 0 var(--accent, #36c); }
   .row.droptarget { outline: 2px solid var(--accent, #36c); outline-offset: 1px; border-radius: 4px; }
-  ul.rootdrop { outline: 2px dashed var(--accent, #36c); outline-offset: 2px; border-radius: 4px; }
+  .takeout {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    margin-bottom: 0.25rem;
+    padding: 0.35rem 0.5rem;
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--muted, #777);
+    border: 1px dashed var(--line, #ccc);
+    border-radius: 4px;
+    background: var(--bg, #fff);
+  }
+  .takeout.over { border-color: var(--accent, #36c); color: var(--accent, #36c); border-style: solid; }
   .contents { list-style: none; margin: 0; padding: 0 0 0 1.1rem; border-left: 1px solid var(--line, #e5e5e5); }
   .disclose { background: none; border: none; cursor: pointer; padding: 0; width: 1em; color: var(--muted, #777); font-size: 0.8em; }
   .disclose.spacer { cursor: default; }

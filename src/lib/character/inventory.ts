@@ -144,24 +144,38 @@ export function containsDeep(
   return false;
 }
 
+/** Where a dropped row lands relative to the row under the pointer. */
+export type DropPosition = 'inside' | 'before' | 'after';
+
+/** Clear the container flag on `id` if nothing is left inside it. */
+function pruneIfEmpty(inventory: InventoryItem[], id: string | undefined): InventoryItem[] {
+  if (!id) return inventory;
+  if (inventory.some((i) => i.container === id)) return inventory;
+  return inventory.map((i) => (i.id === id && i.isContainer ? { ...i, isContainer: false } : i));
+}
+
 /**
- * Drop the row at `fromIndex` onto the one at `ontoIndex`, or onto nothing
- * (`null`) to take it back out to the top level.
+ * Move the row at `fromIndex` relative to the row at `ontoIndex`, or out to the
+ * top level with `ontoIndex` of `null`.
  *
- * Dropping onto a row is what *makes* that row a container — there is no
- * separate "this is a container" step, because the only reason to say so is
- * that you are putting something in it. Container-ness is then sticky: empty a
- * backpack and it stays a backpack, ready to be filled again, and containers
- * that arrived empty from an import keep their identity.
+ * `position` is what separates the two gestures a tree has to support from one
+ * pointer: dropping *on* a row puts the item inside it — which is also what
+ * makes that row a container, since the only reason to call something a
+ * container is that you are putting something in it — while dropping just above
+ * or below a row places the item beside it as a sibling, reordering the list.
  *
- * Returns the character unchanged when the move is a no-op or would be illegal
- * (onto itself, onto its own contents), so the caller needs no guards and the
- * store writes nothing.
+ * A container that loses its last occupant stops being a container, so an
+ * emptied bag does not linger as a bag with `(0)` beside it.
+ *
+ * Returns the character unchanged when the move is a no-op or illegal (onto
+ * itself, into its own contents), so callers need no guards and the store
+ * writes nothing.
  */
 export function dropItem(
   character: Character,
   fromIndex: number,
-  ontoIndex: number | null
+  ontoIndex: number | null,
+  position: DropPosition = 'inside'
 ): Character {
   const inventory = character.inventory ?? [];
   const from = inventory[fromIndex];
@@ -169,27 +183,44 @@ export function dropItem(
 
   if (ontoIndex === null) {
     if (!from.container) return character;
-    return {
-      ...character,
-      inventory: inventory.map((it, n) => (n === fromIndex ? { ...it, container: undefined } : it))
-    };
+    const cleared = inventory.map((it, n) =>
+      n === fromIndex ? { ...it, container: undefined } : it
+    );
+    return { ...character, inventory: pruneIfEmpty(cleared, from.container) };
   }
 
   const onto = inventory[ontoIndex];
   if (!onto || fromIndex === ontoIndex) return character;
   if (!from.id || !onto.id) return character;
-  if (from.container === onto.id) return character;
   // Putting a bag inside something it already holds would strand both.
   if (containsDeep(character, from.id, onto.id)) return character;
 
-  return {
-    ...character,
-    inventory: inventory.map((it, n) => {
+  const previousParent = from.container;
+
+  if (position === 'inside') {
+    if (from.container === onto.id) return character;
+    const next = inventory.map((it, n) => {
       if (n === fromIndex) return { ...it, container: onto.id };
       if (n === ontoIndex) return it.isContainer ? it : { ...it, isContainer: true };
       return it;
-    })
-  };
+    });
+    return { ...character, inventory: pruneIfEmpty(next, previousParent) };
+  }
+
+  // Sibling of the target: same parent, and moved next to it in the array,
+  // which is what the rendered order follows.
+  const rest = inventory.filter((_, n) => n !== fromIndex);
+  const targetAt = rest.findIndex((i) => i.id === onto.id);
+  if (targetAt < 0) return character;
+  const insertAt = position === 'before' ? targetAt : targetAt + 1;
+  const moved = { ...from, container: onto.container };
+  const next = [...rest.slice(0, insertAt), moved, ...rest.slice(insertAt)];
+  // Nothing actually moved: same parent, same slot. Compared by id and parent
+  // rather than by object identity — `moved` is a fresh object either way, so
+  // an identity check would never see a no-op.
+  const sameOrder = next.every((it, n) => it.id === inventory[n]?.id);
+  if (sameOrder && moved.container === from.container) return character;
+  return { ...character, inventory: pruneIfEmpty(next, previousParent) };
 }
 
 /** Rows that can accept contents — every explicit container. */
