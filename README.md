@@ -115,6 +115,24 @@ in this repo.
   device* on one of yours. It is a copy, not a link — the two diverge from that
   moment, since there is no sane merge for a character edited in both places — so
   it takes a fresh id and a name free in the library it lands in ("Bran (2)").
+- **Sharing with a GM** (`server/`, `src/lib/stores/serverSync.ts`,
+  `GmLinkPanel.svelte`) — an account character can be linked to a GM's
+  campaign tool (rpg_manager), read-only or read & write. The player makes a
+  one-time code under **Share with GM**; the GM's server trades it for a token
+  bound to that one character, and from then on reads the sheet, writes hit
+  points, conditions, exhaustion and spent uses, and follows an event stream —
+  server to server, with no shared account. The API is in
+  [`docs/gm-link-api.md`](docs/gm-link-api.md). Two things make this work with a
+  whole-document autosave. Each character has a server-side **`rev`**: a save
+  names the rev it builds on, a stale one gets 409 and the server's copy, and
+  the sheet **rebases** its unsaved edits onto it (a three-way merge —
+  `src/lib/character/rebase.ts` — where what the sheet didn't touch takes the
+  server's value and a value both changed keeps the sheet's). And the open sheet
+  follows its own event stream, folding in someone else's change as it lands, so
+  a GM's damage shows within a second and the next autosave keeps it. Derived
+  numbers exist only where the dataset is loaded, so each save also carries a
+  small **summary** (`src/lib/character/summary.ts`: level, AC, saves, passives,
+  speed, languages, resource and slot maxima) that the GM tool reads instead.
 - **Your own movement, proficiencies, skills and attacks** — a speed, a sense,
   a language, a tool, a weapon or armor proficiency, a resistance or immunity
   typed by hand becomes a **grant from "Custom"**, joining the same pool a race
