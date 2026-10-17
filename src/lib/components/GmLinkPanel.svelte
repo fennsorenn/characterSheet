@@ -230,7 +230,7 @@
   .code .meta { color: var(--muted); font-size: 0.8rem; flex: 1 1 10rem; }
   .left { font-variant-numeric: tabular-nums; }
 
-  .primary { font-weight: 600; border: 1px solid var(--accent); background: var(--accent); color: #fff; }
+  .primary { font: inherit; font-weight: 600; padding: 0.4rem 0.85rem; border: 1px solid var(--accent); border-radius: 6px; background: var(--accent); color: #fff; cursor: pointer; }
   .danger { color: var(--danger, #c0392b); }
   .err { color: var(--danger, #c0392b); font-size: 0.8rem; margin: 0.5rem 0 0; }
   .none { color: var(--muted); font-size: 0.8rem; margin: 0; }
