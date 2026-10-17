@@ -98,9 +98,10 @@ purpose). A code is consumed by the first exchange that names it.
 }
 ```
 
-- `doc` — the full character document as the sheet stores it
-  (`src/lib/character/schema.ts`). Opaque to the GM tool; provided for
-  completeness.
+- `doc` — the character document as the sheet stores it
+  (`src/lib/character/schema.ts`), minus the player's `notes` and `noteTabs`
+  (a private journal, not part of the sheet). Opaque to the GM tool; provided
+  for completeness.
 - `summary` — see [Summary](#summary). `null` until the player's sheet has
   saved once with a dataset loaded.
 - `status` — see [Status](#status).

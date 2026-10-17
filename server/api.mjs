@@ -253,6 +253,15 @@ async function linkRoutes(store, hub, req, res, me, slug, id) {
 
 // --- GM-link API (bearer token, server to server) -----------------------------
 
+/**
+ * The document as a GM tool sees it: everything but the player's notes, which
+ * are a journal rather than part of the sheet.
+ */
+function shareableDoc(doc) {
+  const { notes: _notes, noteTabs: _tabs, ...rest } = doc ?? {};
+  return rest;
+}
+
 const extError = (res, code, error, reason, extra) => sendJson(res, code, { error, code: reason, ...extra });
 
 function bearer(req) {
@@ -306,7 +315,7 @@ async function handleExt(store, hub, req, res, path) {
       updatedAt: record.updatedAt,
       summary: record.summary ?? null,
       status: statusOf(record.doc, record.summary),
-      doc: record.doc
+      doc: shareableDoc(record.doc)
     });
   }
 

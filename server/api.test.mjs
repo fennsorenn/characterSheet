@@ -235,9 +235,14 @@ describe('GM API', () => {
 
   it('reads the character with summary and status', async () => {
     const cookie = await signup();
-    await call('PUT', '/api/characters/bran', { cookie, body: { name: 'Bran', doc: charDoc(), summary } });
+    await call('PUT', '/api/characters/bran', {
+      cookie,
+      body: { name: 'Bran', doc: charDoc({ notes: [{ id: 'n', name: 'Diary' }], noteTabs: { open: ['n'], active: 'n' } }), summary }
+    });
     const { token } = await linkedToken(cookie, 'read');
     const r = await call('GET', '/api/ext/character', { token });
+    expect(r.body.doc).not.toHaveProperty('notes'); // a journal, not part of the sheet
+    expect(r.body.doc).not.toHaveProperty('noteTabs');
     expect(r.status).toBe(200);
     expect(r.body).toMatchObject({
       id: 'char-1',
