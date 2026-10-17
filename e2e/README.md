@@ -29,6 +29,7 @@ no-op rather than a failure.
 | `E2E_BASE_URL` | spawns `vite`            | reuse an already-running server instead of spawning  |
 | `E2E_PORT`     | `4321`                   | port to spawn `vite` on                              |
 | `E2E_SPEC`     | —                        | substring filter, e.g. `E2E_SPEC=grants`             |
+| `PW_CHROMIUM_PATH` | Playwright's own build | Chromium executable to launch instead            |
 
 ## Running
 

@@ -94,6 +94,8 @@ const store = writable<Character>(createCharacter());
  */
 export type CharacterRef = { scope: 'local' | 'user'; slug: string } | null;
 let activeRef: CharacterRef = null;
+/** The open character's source, for UI that only applies to one kind (sharing with a GM). */
+export const activeCharacter = writable<CharacterRef>(null);
 
 /** Identifies this tab to the server, so its own saves aren't echoed back to it. */
 const clientId = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : String(Math.random());
@@ -123,6 +125,7 @@ function setActive(ref: CharacterRef, doc: Character | null) {
   activeRef = null; // suppress the save triggered by loading
   store.set(normalizeDoc(doc));
   activeRef = ref;
+  activeCharacter.set(ref);
 }
 
 /**
@@ -204,11 +207,7 @@ export async function openUserCharacter(slug: string): Promise<boolean> {
 export function detachCharacter() {
   stopRemote();
   activeRef = null;
-}
-
-/** The slug of the open server-side character, or null (local / none). */
-export function activeUserSlug(): string | null {
-  return activeRef?.scope === 'user' ? activeRef.slug : null;
+  activeCharacter.set(null);
 }
 
 /**
