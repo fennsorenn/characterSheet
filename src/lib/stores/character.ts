@@ -70,7 +70,9 @@ import {
 } from '../character/overrides.js';
 import { catalogLookup, catalogState, loadedSources } from './catalog.js';
 import { loadLocal, saveLocal } from './characters.js';
-import { apiGetCharacter, apiPutCharacter } from '../api/client.js';
+import { apiGetCharacter, apiPutCharacter, characterEventsUrl } from '../api/client.js';
+import { createServerSync, type ServerSync } from './serverSync.js';
+import { computeSummary, type CharacterSummary } from '../character/summary.js';
 
 const EMPTY_POOL: GrantPool = { numeric: [], sets: [], choices: [] };
 
@@ -92,26 +94,99 @@ const store = writable<Character>(createCharacter());
  */
 export type CharacterRef = { scope: 'local' | 'user'; slug: string } | null;
 let activeRef: CharacterRef = null;
-let saveTimer: ReturnType<typeof setTimeout> | undefined;
+
+/** Identifies this tab to the server, so its own saves aren't echoed back to it. */
+const clientId = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : String(Math.random());
+
+/** The server-side character's autosave + live updates; null for local ones. */
+let remote: { sync: ServerSync; detach: () => void } | null = null;
 
 store.subscribe((c) => {
   if (!activeRef) return;
   if (activeRef.scope === 'local') {
     saveLocal(activeRef.slug, c.name, c);
   } else {
-    const slug = activeRef.slug;
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => apiPutCharacter(slug, c.name, c).catch(() => {}), 500);
+    remote?.sync.schedule();
   }
 });
 
-/** Load a character into the editor and bind autosave to a source. */
-function setActive(ref: CharacterRef, doc: Character | null) {
-  activeRef = null; // suppress the save triggered by loading
+/** The shape the sheet holds a document in, whether loaded or pushed by the server. */
+function normalizeDoc(doc: Partial<Character> | null): Character {
   // Characters saved before hit dice followed the classes carry stale pools;
   // reconcile on load rather than waiting for the first unrelated edit.
-  store.set(ensureInventoryIds(syncHitDice(createCharacter(doc ?? {}))));
+  return ensureInventoryIds(syncHitDice(createCharacter(doc ?? {})));
+}
+
+/** Load a character into the editor and bind autosave to a source. */
+function setActive(ref: CharacterRef, doc: Character | null) {
+  stopRemote();
+  activeRef = null; // suppress the save triggered by loading
+  store.set(normalizeDoc(doc));
   activeRef = ref;
+}
+
+/**
+ * Bind autosave for a server-side character: saves name the `rev` they build
+ * on and rebase on conflict, and the sheet's event stream folds in what a GM
+ * (or another device) changed as soon as it lands. See serverSync.ts.
+ */
+function startRemote(slug: string, rev: number, summary: unknown) {
+  let frozen: { doc: Character; summary: CharacterSummary | undefined } | null = null;
+  const sync = createServerSync({
+    doc: get(store),
+    rev,
+    summary,
+    put: async ({ doc, baseRev, summary }) => {
+      const r = await apiPutCharacter(slug, doc.name, doc, { baseRev, summary, clientId });
+      if (r.conflict && r.doc && typeof r.rev === 'number') return { conflict: true, rev: r.rev, doc: r.doc };
+      if (!r.error && typeof r.rev === 'number') return { ok: true, rev: r.rev };
+      return { error: r.error ?? 'Save failed.' };
+    },
+    // Once detached the store may already hold another character, so a save
+    // still owed to this one works from a snapshot taken at detach time.
+    read: () => frozen?.doc ?? get(store),
+    write: (doc) => {
+      if (!frozen) store.set(doc);
+    },
+    summarize: () => (frozen ? frozen.summary : get(characterSummary)),
+    normalize: normalizeDoc
+  });
+
+  // A new summary (the dataset finished loading, a GM's exhaustion changed the
+  // saves) is worth saving on its own; the sync skips it when nothing moved.
+  const unsubSummary = characterSummary.subscribe(() => sync.schedule());
+
+  let events: EventSource | null = null;
+  if (typeof EventSource !== 'undefined') {
+    events = new EventSource(characterEventsUrl(slug, clientId));
+    events.addEventListener('change', (e) => {
+      const d = JSON.parse((e as MessageEvent).data);
+      sync.applyRemote(d.rev, d.doc);
+    });
+    // On (re)connect: catch up on anything written while the stream was down.
+    events.addEventListener('ready', async (e) => {
+      const { rev: serverRev } = JSON.parse((e as MessageEvent).data);
+      if (serverRev <= sync.rev) return;
+      const r = await apiGetCharacter(slug).catch(() => null);
+      if (r?.doc && typeof r.rev === 'number') sync.applyRemote(r.rev, r.doc);
+    });
+    events.addEventListener('deleted', () => events?.close());
+  }
+
+  remote = {
+    sync,
+    detach() {
+      frozen = { doc: get(store), summary: get(characterSummary) };
+      unsubSummary();
+      events?.close();
+      void sync.flush().finally(() => sync.stop());
+    }
+  };
+}
+
+function stopRemote() {
+  remote?.detach();
+  remote = null;
 }
 
 export function openLocalCharacter(slug: string): boolean {
@@ -120,13 +195,20 @@ export function openLocalCharacter(slug: string): boolean {
   return !!doc;
 }
 export async function openUserCharacter(slug: string): Promise<boolean> {
-  const res = await apiGetCharacter(slug).catch(() => ({ doc: undefined }));
+  const res = await apiGetCharacter(slug).catch(() => ({ doc: undefined, rev: undefined, summary: undefined }));
   setActive({ scope: 'user', slug }, res.doc ?? null);
+  if (res.doc) startRemote(slug, res.rev ?? 0, res.summary ?? undefined);
   return !!res.doc;
 }
 /** Stop autosaving (e.g. when leaving a sheet for an overview). */
 export function detachCharacter() {
+  stopRemote();
   activeRef = null;
+}
+
+/** The slug of the open server-side character, or null (local / none). */
+export function activeUserSlug(): string | null {
+  return activeRef?.scope === 'user' ? activeRef.slug : null;
 }
 
 /**
@@ -181,6 +263,18 @@ export const featureResourceList = derived([store, catalogState, graph], ([$c, $
         )
       : []
   ).map((r): FeatureResource & { used: number } => ({ ...r, used: Math.min($c.featureResourceUsed[r.key] ?? 0, r.max) }))
+);
+
+/**
+ * The GM-facing digest saved alongside a server-side character (see
+ * character/summary.ts). Undefined until a dataset is loaded: without the
+ * catalog the graph is missing class features and armor, and a summary built
+ * from it would be wrong rather than stale.
+ */
+export const characterSummary = derived(
+  [store, graph, grantPool, computedSlots, featureResourceList, catalogState],
+  ([$c, $g, $grants, $slots, $fr, $cat]): CharacterSummary | undefined =>
+    $cat.catalog ? computeSummary({ character: $c, graph: $g, grants: $grants, slots: $slots, featureResources: $fr }) : undefined
 );
 
 /** Set spent uses of an implicit feature resource (clamped to [0, max]). */

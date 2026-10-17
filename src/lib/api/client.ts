@@ -28,12 +28,28 @@ export const apiLogout = () => req<object>('/api/auth/logout', { method: 'POST' 
 
 export const apiListCharacters = () => req<{ characters: CharacterSummary[] }>('/api/characters');
 export const apiGetCharacter = (slug: string) =>
-  req<{ doc?: Character; error?: string }>(`/api/characters/${encodeURIComponent(slug)}`);
-export const apiPutCharacter = (slug: string, name: string, doc: Character) =>
-  req<{ slug?: string; error?: string }>(`/api/characters/${encodeURIComponent(slug)}`, {
-    method: 'PUT',
-    body: JSON.stringify({ name, doc })
-  });
+  req<{ doc?: Character; rev?: number; summary?: unknown; error?: string }>(`/api/characters/${encodeURIComponent(slug)}`);
+
+/**
+ * Save a character. With `baseRev` the server refuses (409) to overwrite a
+ * newer copy and answers `{ conflict, rev, doc }` instead. `summary` is the
+ * GM-facing digest (see character/summary.ts); `clientId` keeps this tab's
+ * own save from being echoed back on its event stream.
+ */
+export const apiPutCharacter = (
+  slug: string,
+  name: string,
+  doc: Character,
+  opts: { baseRev?: number; summary?: unknown; clientId?: string } = {}
+) =>
+  req<{ slug?: string; rev?: number; conflict?: boolean; doc?: Character; error?: string }>(
+    `/api/characters/${encodeURIComponent(slug)}`,
+    { method: 'PUT', body: JSON.stringify({ name, doc, ...opts }) }
+  );
+
+/** The sheet's own event stream: changes someone else made to this character. */
+export const characterEventsUrl = (slug: string, clientId: string) =>
+  `/api/characters/${encodeURIComponent(slug)}/events?client=${encodeURIComponent(clientId)}`;
 export const apiDeleteCharacter = (slug: string) =>
   req<object>(`/api/characters/${encodeURIComponent(slug)}`, { method: 'DELETE' });
 
@@ -55,3 +71,33 @@ export const apiPutTemplates = <T>(templates: TemplateDoc<T>) =>
     method: 'PUT',
     body: JSON.stringify({ templates })
   });
+
+/**
+ * GM links: a player shares one character with a GM tool (rpg_manager) by
+ * minting a one-time code the GM enters there. `read` lets the tool see the
+ * sheet; `write` also lets it set hit points, conditions and spent uses.
+ */
+export type LinkAccess = 'read' | 'write';
+export interface GmLink {
+  id: string;
+  access: LinkAccess;
+  label: string;
+  createdAt: number;
+  lastUsedAt: number | null;
+}
+export interface PendingLinkCode {
+  id: string;
+  access: LinkAccess;
+  expiresAt: number;
+}
+const linksUrl = (slug: string) => `/api/characters/${encodeURIComponent(slug)}/links`;
+
+export const apiListLinks = (slug: string) =>
+  req<{ links?: GmLink[]; pending?: PendingLinkCode[]; error?: string }>(linksUrl(slug));
+export const apiCreateLinkCode = (slug: string, access: LinkAccess) =>
+  req<{ id?: string; code?: string; access?: LinkAccess; expiresAt?: number; error?: string }>(linksUrl(slug), {
+    method: 'POST',
+    body: JSON.stringify({ access })
+  });
+export const apiRevokeLink = (slug: string, id: string) =>
+  req<{ ok?: boolean; error?: string }>(`${linksUrl(slug)}/${encodeURIComponent(id)}`, { method: 'DELETE' });

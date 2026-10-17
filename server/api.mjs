@@ -172,7 +172,7 @@ async function handle(store, hub, req, res, path, url) {
 
     if (method === 'GET') {
       const rec = store.getCharacterRecord(me, slug);
-      return rec ? sendJson(res, 200, { doc: rec.doc, rev: rec.rev }) : sendJson(res, 404, { error: 'Not found.' });
+      return rec ? sendJson(res, 200, { doc: rec.doc, rev: rec.rev, summary: rec.summary }) : sendJson(res, 404, { error: 'Not found.' });
     }
     if (method === 'PUT') {
       const { name, doc, baseRev, summary, clientId } = await readBody(req);
