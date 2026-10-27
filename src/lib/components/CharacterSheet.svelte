@@ -17,7 +17,9 @@
   } from '../stores/layout.js';
   import { screenController } from '../stores/layout.js';
   import { screenCategory } from '../stores/screen.js';
-  import { templateManagerOpen } from '../stores/ui.js';
+  import { templateManagerOpen, gmLinkOpen } from '../stores/ui.js';
+  import { activeCharacter } from '../stores/character.js';
+  import GmLinkPanel from './GmLinkPanel.svelte';
   import { reminderMode, toggleReminderMode, stranded } from '../stores/reminders.js';
   import { removeReminder } from '../stores/character.js';
   import { anchorLabel } from '../character/index.js';
@@ -80,6 +82,10 @@
 
   {#if $templateManagerOpen}
     <TemplateManager onClose={() => templateManagerOpen.set(false)} />
+  {/if}
+
+  {#if $gmLinkOpen && $activeCharacter?.scope === 'user'}
+    <GmLinkPanel slug={$activeCharacter.slug} onClose={() => gmLinkOpen.set(false)} />
   {/if}
 
   {#if $reminderMode}

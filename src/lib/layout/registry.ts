@@ -4,6 +4,7 @@ import Defenses from '../components/Defenses.svelte';
 import Saves from '../components/Saves.svelte';
 import Skills from '../components/Skills.svelte';
 import Inventory from '../components/Inventory.svelte';
+import Currency from '../components/Currency.svelte';
 import SpellList from '../components/SpellList.svelte';
 import HitPoints from '../components/HitPoints.svelte';
 import SpellSlots from '../components/SpellSlots.svelte';
@@ -38,6 +39,7 @@ const COMPONENTS: Record<string, BlockComponent> = {
   saves: Saves as BlockComponent,
   skills: Skills as BlockComponent,
   inventory: Inventory as BlockComponent,
+  currency: Currency as BlockComponent,
   spells: SpellList as BlockComponent,
   hitPoints: HitPoints as BlockComponent,
   spellSlots: SpellSlots as BlockComponent,

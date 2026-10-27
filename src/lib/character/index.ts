@@ -15,6 +15,8 @@ export {
   allFeatRefs,
   emptySpellSlots,
   type Character,
+  type Coin,
+  type Currency,
   type ClassEntry,
   type CatalogRef,
   type InventoryItem,
@@ -136,6 +138,10 @@ export {
 } from './features.js';
 export {
   CUSTOM_SOURCE,
+  COINS,
+  emptyCurrency,
+  currencyOf,
+  hasCoins,
   type CustomFeature,
   type CustomGrant,
   type NewCustomGrant,

@@ -36,3 +36,5 @@ export function toggleBuffMode() {
  */
 export const templateManagerOpen = writable(false);
 export const dataPanelOpen = writable(false);
+/** The "Share with GM" panel (account characters only). */
+export const gmLinkOpen = writable(false);

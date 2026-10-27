@@ -1,4 +1,5 @@
 import { syncHitDice } from '../character/hitDice.js';
+import { ensureInventoryIds, dropItem, type DropPosition } from '../character/inventory.js';
 import { writable, derived, readable, get } from 'svelte/store';
 import {
   ABILITIES,
@@ -51,15 +52,27 @@ import {
   castingAbility as resolveCastingAbility
 } from '../character/index.js';
 import {
+  referencedSources,
+  setSourceLink,
+  removeSourceLink,
+  linkFor,
+  sourceKey,
+  sourceStatuses
+} from '../character/sources.js';
+import type { SourceLink, Coin } from '../character/schema.js';
+import { currencyOf } from '../character/schema.js';
+import {
   classifyAbility,
   classifyAc,
   type FleetingContribution,
   type AcContribution,
   type OverrideKind
 } from '../character/overrides.js';
-import { catalogLookup, catalogState } from './catalog.js';
+import { catalogLookup, catalogState, loadedSources } from './catalog.js';
 import { loadLocal, saveLocal } from './characters.js';
-import { apiGetCharacter, apiPutCharacter } from '../api/client.js';
+import { apiGetCharacter, apiPutCharacter, characterEventsUrl } from '../api/client.js';
+import { createServerSync, type ServerSync } from './serverSync.js';
+import { computeSummary, type CharacterSummary } from '../character/summary.js';
 
 const EMPTY_POOL: GrantPool = { numeric: [], sets: [], choices: [] };
 
@@ -81,26 +94,102 @@ const store = writable<Character>(createCharacter());
  */
 export type CharacterRef = { scope: 'local' | 'user'; slug: string } | null;
 let activeRef: CharacterRef = null;
-let saveTimer: ReturnType<typeof setTimeout> | undefined;
+/** The open character's source, for UI that only applies to one kind (sharing with a GM). */
+export const activeCharacter = writable<CharacterRef>(null);
+
+/** Identifies this tab to the server, so its own saves aren't echoed back to it. */
+const clientId = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : String(Math.random());
+
+/** The server-side character's autosave + live updates; null for local ones. */
+let remote: { sync: ServerSync; detach: () => void } | null = null;
 
 store.subscribe((c) => {
   if (!activeRef) return;
   if (activeRef.scope === 'local') {
     saveLocal(activeRef.slug, c.name, c);
   } else {
-    const slug = activeRef.slug;
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => apiPutCharacter(slug, c.name, c).catch(() => {}), 500);
+    remote?.sync.schedule();
   }
 });
 
-/** Load a character into the editor and bind autosave to a source. */
-function setActive(ref: CharacterRef, doc: Character | null) {
-  activeRef = null; // suppress the save triggered by loading
+/** The shape the sheet holds a document in, whether loaded or pushed by the server. */
+function normalizeDoc(doc: Partial<Character> | null): Character {
   // Characters saved before hit dice followed the classes carry stale pools;
   // reconcile on load rather than waiting for the first unrelated edit.
-  store.set(syncHitDice(createCharacter(doc ?? {})));
+  return ensureInventoryIds(syncHitDice(createCharacter(doc ?? {})));
+}
+
+/** Load a character into the editor and bind autosave to a source. */
+function setActive(ref: CharacterRef, doc: Character | null) {
+  stopRemote();
+  activeRef = null; // suppress the save triggered by loading
+  store.set(normalizeDoc(doc));
   activeRef = ref;
+  activeCharacter.set(ref);
+}
+
+/**
+ * Bind autosave for a server-side character: saves name the `rev` they build
+ * on and rebase on conflict, and the sheet's event stream folds in what a GM
+ * (or another device) changed as soon as it lands. See serverSync.ts.
+ */
+function startRemote(slug: string, rev: number, summary: unknown) {
+  let frozen: { doc: Character; summary: CharacterSummary | undefined } | null = null;
+  const sync = createServerSync({
+    doc: get(store),
+    rev,
+    summary,
+    put: async ({ doc, baseRev, summary }) => {
+      const r = await apiPutCharacter(slug, doc.name, doc, { baseRev, summary, clientId });
+      if (r.conflict && r.doc && typeof r.rev === 'number') return { conflict: true, rev: r.rev, doc: r.doc };
+      if (!r.error && typeof r.rev === 'number') return { ok: true, rev: r.rev };
+      return { error: r.error ?? 'Save failed.' };
+    },
+    // Once detached the store may already hold another character, so a save
+    // still owed to this one works from a snapshot taken at detach time.
+    read: () => frozen?.doc ?? get(store),
+    write: (doc) => {
+      if (!frozen) store.set(doc);
+    },
+    summarize: () => (frozen ? frozen.summary : get(characterSummary)),
+    normalize: normalizeDoc
+  });
+
+  // A new summary (the dataset finished loading, a GM's exhaustion changed the
+  // saves) is worth saving on its own; the sync skips it when nothing moved.
+  const unsubSummary = characterSummary.subscribe(() => sync.schedule());
+
+  let events: EventSource | null = null;
+  if (typeof EventSource !== 'undefined') {
+    events = new EventSource(characterEventsUrl(slug, clientId));
+    events.addEventListener('change', (e) => {
+      const d = JSON.parse((e as MessageEvent).data);
+      sync.applyRemote(d.rev, d.doc);
+    });
+    // On (re)connect: catch up on anything written while the stream was down.
+    events.addEventListener('ready', async (e) => {
+      const { rev: serverRev } = JSON.parse((e as MessageEvent).data);
+      if (serverRev <= sync.rev) return;
+      const r = await apiGetCharacter(slug).catch(() => null);
+      if (r?.doc && typeof r.rev === 'number') sync.applyRemote(r.rev, r.doc);
+    });
+    events.addEventListener('deleted', () => events?.close());
+  }
+
+  remote = {
+    sync,
+    detach() {
+      frozen = { doc: get(store), summary: get(characterSummary) };
+      unsubSummary();
+      events?.close();
+      void sync.flush().finally(() => sync.stop());
+    }
+  };
+}
+
+function stopRemote() {
+  remote?.detach();
+  remote = null;
 }
 
 export function openLocalCharacter(slug: string): boolean {
@@ -109,13 +198,16 @@ export function openLocalCharacter(slug: string): boolean {
   return !!doc;
 }
 export async function openUserCharacter(slug: string): Promise<boolean> {
-  const res = await apiGetCharacter(slug).catch(() => ({ doc: undefined }));
+  const res = await apiGetCharacter(slug).catch(() => ({ doc: undefined, rev: undefined, summary: undefined }));
   setActive({ scope: 'user', slug }, res.doc ?? null);
+  if (res.doc) startRemote(slug, res.rev ?? 0, res.summary ?? undefined);
   return !!res.doc;
 }
 /** Stop autosaving (e.g. when leaving a sheet for an overview). */
 export function detachCharacter() {
+  stopRemote();
   activeRef = null;
+  activeCharacter.set(null);
 }
 
 /**
@@ -170,6 +262,18 @@ export const featureResourceList = derived([store, catalogState, graph], ([$c, $
         )
       : []
   ).map((r): FeatureResource & { used: number } => ({ ...r, used: Math.min($c.featureResourceUsed[r.key] ?? 0, r.max) }))
+);
+
+/**
+ * The GM-facing digest saved alongside a server-side character (see
+ * character/summary.ts). Undefined until a dataset is loaded: without the
+ * catalog the graph is missing class features and armor, and a summary built
+ * from it would be wrong rather than stale.
+ */
+export const characterSummary = derived(
+  [store, graph, grantPool, computedSlots, featureResourceList, catalogState],
+  ([$c, $g, $grants, $slots, $fr, $cat]): CharacterSummary | undefined =>
+    $cat.catalog ? computeSummary({ character: $c, graph: $g, grants: $grants, slots: $slots, featureResources: $fr }) : undefined
 );
 
 /** Set spent uses of an implicit feature resource (clamped to [0, max]). */
@@ -321,6 +425,27 @@ export const acOverride = derived([store, catalogLookup, grantPool, graph], ([$c
 
 export type { OverrideKind };
 
+/**
+ * This character's content sources, each marked loaded or missing, with the
+ * download link the document carries when it has one. Drives the sources panel.
+ */
+export const characterSources = derived([store, loadedSources], ([$c, $loaded]) =>
+  sourceStatuses($c, $loaded)
+);
+
+/** Just the sources the catalog cannot currently resolve. */
+export const missingCharacterSources = derived(characterSources, ($s) =>
+  $s.filter((x) => !x.loaded)
+);
+
+/**
+ * Learn download links as a side effect of normal use: whenever the active
+ * overlays change, any that this character references and that arrived from a
+ * URL get recorded on the document. Guarded inside `captureSourceLinks`, so a
+ * catalog change that teaches us nothing writes nothing.
+ */
+catalogState.subscribe(($cat) => captureSourceLinks($cat.overlays));
+
 export const character = { subscribe: store.subscribe };
 
 /**
@@ -352,6 +477,85 @@ export function setCharacterLayoutPref(category: string, id: string | undefined)
 // --- Reminders (short notes pinned to a row or block on the sheet) ---
 
 /** Pin a reminder at an anchor. Blank text is ignored. */
+/**
+ * Record where one of this character's content sources can be downloaded.
+ *
+ * Stored on the document rather than in a user-level registry so it travels
+ * with the character — to another device, another browser, or a local copy —
+ * which is the case the feature exists for.
+ */
+/**
+ * Set one coin denomination. Clamped at zero and rounded, since a purse holds a
+ * whole number of coins and a negative one is always a typo.
+ */
+/**
+ * Move an inventory row onto another (making that one a container), or out to
+ * the top level with `null`. The rules live in `dropItem` so they can be tested
+ * without a DOM.
+ */
+export function dropInventoryItem(
+  fromIndex: number,
+  ontoIndex: number | null,
+  position: DropPosition = 'inside'
+) {
+  update((c) => dropItem(c, fromIndex, ontoIndex, position));
+}
+
+/** Expand or collapse one container, persisting the choice. */
+export function toggleContainer(id: string) {
+  update((c) => {
+    const collapsed = c.containersCollapsed ?? [];
+    const next = collapsed.includes(id)
+      ? collapsed.filter((x) => x !== id)
+      : [...collapsed, id];
+    return { ...c, containersCollapsed: next };
+  });
+}
+
+export function setCoin(coin: Coin, value: number) {
+  update((c) => ({
+    ...c,
+    currency: { ...currencyOf(c), [coin]: Math.max(0, Math.round(value || 0)) }
+  }));
+}
+
+export function recordSourceLink(link: SourceLink) {
+  update((c) => setSourceLink(c, link));
+}
+
+/** Forget a stored download link (the source itself is untouched). */
+export function forgetSourceLink(id: string) {
+  update((c) => removeSourceLink(c, id));
+}
+
+/**
+ * Record links for every source this character uses that is currently loaded
+ * from a known URL and not already recorded.
+ *
+ * Called after a catalog change so the document learns its own dependencies as
+ * a side effect of normal use: load the Obojima brew once, and the character
+ * that references it carries the link from then on. Only adds — an existing
+ * link is left alone, since the player may have corrected it by hand.
+ */
+export function captureSourceLinks(overlays: { sourceId: string; label: string; url?: string }[]) {
+  const current = get(store);
+  const needed = new Set(referencedSources(current).map(sourceKey));
+  const additions = overlays.filter(
+    (o) => o.url && needed.has(sourceKey(o.sourceId)) && !linkFor(current, o.sourceId)
+  );
+  // Bail before touching the store: `update` notifies the autosave subscriber
+  // unconditionally, so a no-op capture would PUT the character to the server
+  // on every catalog change.
+  if (additions.length === 0) return;
+  update((c) => {
+    let next = c;
+    for (const o of additions) {
+      next = setSourceLink(next, { id: o.sourceId, label: o.label, url: o.url! });
+    }
+    return next;
+  });
+}
+
 export function addReminder(anchor: string, text: string) {
   update((c) => withReminders(c, addReminderPure(c.reminders, anchor, text, crypto.randomUUID())));
 }
@@ -722,7 +926,23 @@ export function setItemQuantity(index: number, quantity: number) {
 }
 
 export function removeInventoryItem(index: number) {
-  update((c) => ({ ...c, inventory: c.inventory.filter((_, n) => n !== index) }));
+  update((c) => {
+    const gone = c.inventory[index];
+    const inventory = c.inventory.filter((_, n) => n !== index);
+    // Deleting a container must not leave its contents pointing at nothing:
+    // the tree would surface them anyway, but the document would carry a
+    // dangling pointer for good.
+    const freed = gone?.id
+      ? inventory.map((i) => (i.container === gone.id ? { ...i, container: undefined } : i))
+      : inventory;
+    // Removing the last thing in a bag leaves a bag that is no longer one.
+    const parent = gone?.container;
+    const pruned =
+      parent && !freed.some((i) => i.container === parent)
+        ? freed.map((i) => (i.id === parent && i.isContainer ? { ...i, isContainer: false } : i))
+        : freed;
+    return { ...c, inventory: pruned };
+  });
 }
 
 /** Set (or clear, when blank) a custom display name for an inventory item. */

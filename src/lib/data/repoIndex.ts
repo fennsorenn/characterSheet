@@ -138,9 +138,25 @@ export async function fetchRepoFile(
   config: RepoConfig,
   path: string
 ): Promise<Record<string, unknown>> {
+  return fetchSourceJson(repoFileUrl(config, path));
+}
+
+/**
+ * The absolute URL a repo-relative path resolves to. Exposed so an overlay can
+ * record where it came from and be re-fetched later without the repo config.
+ */
+export function repoFileUrl(config: RepoConfig, path: string): string {
   // Repo paths contain spaces and other characters; encode each segment.
   const encoded = path.split('/').map(encodeURIComponent).join('/');
-  return fetchJson<Record<string, unknown>>(`${rawBase(config)}/${encoded}`);
+  return `${rawBase(config)}/${encoded}`;
+}
+
+/**
+ * Fetch a source document by absolute URL, via the same direct-then-proxy path
+ * the repo index uses.
+ */
+export function fetchSourceJson(url: string): Promise<Record<string, unknown>> {
+  return fetchJson<Record<string, unknown>>(url);
 }
 
 /**

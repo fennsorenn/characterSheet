@@ -2,6 +2,7 @@
   import { catalogState, importFile, importUrl, resetCatalog } from '../stores/catalog.js';
   import { CATEGORIES } from '../data/index.js';
   import PrereleaseManager from './PrereleaseManager.svelte';
+  import CharacterSources from './CharacterSources.svelte';
 
   let url = $state(
     'https://github.com/5etools-mirror-3/5etools-src/releases/download/v2.30.0/5etools-v2.30.0.zip'
@@ -41,6 +42,8 @@
     </div>
     <hr class="sep" />
     <PrereleaseManager />
+    <hr class="sep" />
+    <CharacterSources />
   {:else}
     <p class="intro">
       This app ships without game data. Supply the 5etools release zip to begin —

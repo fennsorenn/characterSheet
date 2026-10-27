@@ -18,7 +18,7 @@ import {
   type LayoutLibrary
 } from './library.js';
 import { addBlock, setSize } from './operations.js';
-import { allBlockTypes, BLOCK_META } from './blocks.js';
+import { allBlockTypes, BLOCK_META, resolveOptions } from './blocks.js';
 import { SCREEN_CATEGORIES } from './screen.js';
 import {
   defaultTemplate,
@@ -73,7 +73,17 @@ describe('shipped templates', () => {
       // and only when the abilities block already folds saving throws in.
       const missing = allBlockTypes().filter((type) => !present.includes(type));
       const foldsSaves = t.blocks.some((b) => b.type === 'abilityScores' && b.variant === 'withSaves');
-      expect(missing, `${t.id} omits only what it absorbs`).toEqual(foldsSaves ? ['saves'] : []);
+      // Currency is a row the inventory block carries as an option, so a
+      // template showing it there needs no separate block — the same absorption
+      // the abilities block performs for saves.
+      const foldsCurrency = t.blocks.some(
+        (b) => b.type === 'inventory' && resolveOptions(b).currency
+      );
+      const absorbed = [
+        ...(foldsSaves ? ['saves'] : []),
+        ...(foldsCurrency ? ['currency'] : [])
+      ].sort();
+      expect([...missing].sort(), `${t.id} omits only what it absorbs`).toEqual(absorbed);
       for (const b of t.blocks) {
         expect(BLOCK_VARIANTS[b.type], `${t.id}: ${b.type} variant ${b.variant}`).toContain(b.variant);
       }

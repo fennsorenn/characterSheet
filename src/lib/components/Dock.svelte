@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { character, clearAllManualModifiers, clearManualModifier, MANUAL_SOURCE, characterLayoutPrefs, setCharacterLayoutPref } from '../stores/character.js';
-  import { buffMode, toggleBuffMode, templateManagerOpen, dataPanelOpen } from '../stores/ui.js';
+  import { activeCharacter, character, clearAllManualModifiers, clearManualModifier, MANUAL_SOURCE, characterLayoutPrefs, setCharacterLayoutPref } from '../stores/character.js';
+  import { buffMode, toggleBuffMode, templateManagerOpen, dataPanelOpen, gmLinkOpen } from '../stores/ui.js';
   import { reminderMode, toggleReminderMode } from '../stores/reminders.js';
   import { diceOpen } from '../stores/dice.js';
   import { catalogState } from '../stores/catalog.js';
@@ -199,6 +199,12 @@
   <button class="db wide" onclick={() => { closeDock(); openPrint(); }}>
     <span class="g">⎙</span><span class="lb">Print / PDF</span>
   </button>
+  {#if $activeCharacter?.scope === 'user'}
+    <!-- Only account characters: a GM tool reaches the sheet through the server. -->
+    <button class="db wide" class:on={$gmLinkOpen} title="Let your GM's campaign tool see (or update) this character" onclick={() => { closeDock(); gmLinkOpen.update((v) => !v); }}>
+      <span class="g">⇄</span><span class="lb">Share with GM</span>
+    </button>
+  {/if}
   <button class="db wide" class:on={$dataPanelOpen} onclick={() => dataPanelOpen.update((v) => !v)}>
     <span class="g">↧</span>
     <span class="lb">{$catalogState.catalog ? 'Data' : 'Load data'}</span>

@@ -35,7 +35,9 @@ if (!specs.length) {
 }
 
 const server = await ensureServer();
-const browser = await chromium.launch();
+// PW_CHROMIUM_PATH: a Chromium build other than the one this Playwright
+// version would download (e.g. a newer headless shell already installed).
+const browser = await chromium.launch(process.env.PW_CHROMIUM_PATH ? { executablePath: process.env.PW_CHROMIUM_PATH } : {});
 let failed = 0;
 
 for (const file of specs) {
